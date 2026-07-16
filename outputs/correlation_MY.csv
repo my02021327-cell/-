@@ -1,0 +1,11 @@
+﻿variable,label,spearman_rho
+유입_VS,Feed VS (invest VS),-0.787
+VS_load_ratio,VS load ratio,-0.787
+VS_in,VS load (OLR proxy),-0.685
+VFA_TAlk_ratio,VFA/Alkalinity,-0.165
+소화조_VFA,Digester VFA,-0.141
+투입량합계,Total feed,-0.021
+소화조_온도,Digester temp.,0.002
+소화조_pH,Digester pH,0.16
+소화조_TAlk,Total Alkalinity,0.282
+유입_pH,Feed pH,0.635

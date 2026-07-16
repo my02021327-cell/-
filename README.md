@@ -33,6 +33,7 @@
 | `ensemble.py` | Base Model 정의 + `NNLSStackingEnsemble` (비음수 스태킹) |
 | `train.py` | 학습·평가 파이프라인(엔드투엔드) |
 | `signal.py` | 신호등 관제 등급 분류 + 예측 시각화 |
+| `eda.py` | 운전변수–수율 Spearman 상관분석(보고서 재현·검증) |
 
 ### Feature Engineering
 핵심 운전변수에 대해 **rolling window(7·14·30일)** 평균·표준편차와
@@ -58,7 +59,23 @@
 pip install -r requirements.txt
 python -m src.train      # 학습·평가·시각화 (outputs/ 생성)
 python -m src.signal     # 신호등 요약·그래프 재생성(선택)
+python -m src.eda        # 운전변수–수율 Spearman 상관분석(선택)
 ```
+
+## EDA — Spearman 상관분석 (보고서 재현)
+
+`src/eda.py` 로 산출한 운전변수–수율(MY) Spearman 상관은 보고서 결과와 일치한다.
+
+| 변수 | ρ | 보고서 |
+|------|:---:|:---:|
+| 유입_VS (투입 VS) | **-0.79** | ≈-0.78 ✓ |
+| VS_in (OLR 대용) | **-0.69** | ≈-0.67 ✓ |
+| VFA/알칼리도 비 | **-0.17** | ≈-0.18 ✓ |
+| 소화조 온도 | **+0.00** | ≈+0.01 ✓ |
+| 소화조 pH·알칼리도 | **+** | 양(+) ✓ |
+
+→ 투입 유기물강도(VS)와 부하율이 수율과 강한 음의 상관, 온도는 거의 무상관.
+산출물: `outputs/correlation_MY.csv`, `outputs/correlation_MY.png`
 
 ## 결과 (2023 홀드아웃)
 
