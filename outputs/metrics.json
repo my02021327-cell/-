@@ -1,0 +1,186 @@
+{
+  "n_features": 101,
+  "n_train": 1061,
+  "n_holdout": 152,
+  "holdout_year": 2023,
+  "results": {
+    "RandomForest": {
+      "methane": {
+        "R2": 0.5316,
+        "RMSE": 751.1967,
+        "MAE": 634.4008
+      },
+      "MY": {
+        "R2": 0.3422,
+        "RMSE": 0.1658,
+        "MAE": 0.1338
+      }
+    },
+    "MLP": {
+      "methane": {
+        "R2": -1.3274,
+        "RMSE": 1674.4638,
+        "MAE": 1308.0481
+      },
+      "MY": {
+        "R2": -1.6499,
+        "RMSE": 0.3327,
+        "MAE": 0.2661
+      }
+    },
+    "HistGBM": {
+      "methane": {
+        "R2": -0.0374,
+        "RMSE": 1117.9007,
+        "MAE": 955.933
+      },
+      "MY": {
+        "R2": 0.45,
+        "RMSE": 0.1516,
+        "MAE": 0.107
+      }
+    },
+    "ExtraTrees": {
+      "methane": {
+        "R2": 0.6934,
+        "RMSE": 607.7616,
+        "MAE": 465.8766
+      },
+      "MY": {
+        "R2": 0.5264,
+        "RMSE": 0.1407,
+        "MAE": 0.0914
+      }
+    },
+    "Ensemble_NNLS": {
+      "methane": {
+        "R2": 0.7061,
+        "RMSE": 595.0069,
+        "MAE": 447.2196
+      },
+      "MY": {
+        "R2": 0.7183,
+        "RMSE": 0.1085,
+        "MAE": 0.0701
+      }
+    }
+  },
+  "nnls_weights_normalized": {
+    "methane": {
+      "RandomForest": 0.0,
+      "MLP": 0.0,
+      "HistGBM": 0.0,
+      "ExtraTrees": 1.0
+    },
+    "MY": {
+      "RandomForest": 0.1992,
+      "MLP": 0.0,
+      "HistGBM": 0.3462,
+      "ExtraTrees": 0.4545
+    }
+  },
+  "feature_columns": [
+    "반입량",
+    "투입량합계",
+    "유입_pH",
+    "유입_CODcr",
+    "유입_TS",
+    "유입_VS",
+    "소화조_CODcr",
+    "소화조_TS",
+    "소화조_VS",
+    "소화조_VFA",
+    "소화조_TAlk",
+    "소화조_MAlk",
+    "VS_in",
+    "소화조_pH",
+    "feed_음폐수",
+    "feed_가축분뇨",
+    "feed_음식물",
+    "소화조_온도",
+    "VFA_TAlk_ratio",
+    "VS_load_ratio",
+    "VS_in_rmean7",
+    "VS_in_rstd7",
+    "VS_in_rmean14",
+    "VS_in_rstd14",
+    "VS_in_rmean30",
+    "VS_in_rstd30",
+    "VS_in_lag1",
+    "VS_in_lag7",
+    "VS_in_lag14",
+    "유입_VS_rmean7",
+    "유입_VS_rstd7",
+    "유입_VS_rmean14",
+    "유입_VS_rstd14",
+    "유입_VS_rmean30",
+    "유입_VS_rstd30",
+    "유입_VS_lag1",
+    "유입_VS_lag7",
+    "유입_VS_lag14",
+    "소화조_VS_rmean7",
+    "소화조_VS_rstd7",
+    "소화조_VS_rmean14",
+    "소화조_VS_rstd14",
+    "소화조_VS_rmean30",
+    "소화조_VS_rstd30",
+    "소화조_VS_lag1",
+    "소화조_VS_lag7",
+    "소화조_VS_lag14",
+    "소화조_VFA_rmean7",
+    "소화조_VFA_rstd7",
+    "소화조_VFA_rmean14",
+    "소화조_VFA_rstd14",
+    "소화조_VFA_rmean30",
+    "소화조_VFA_rstd30",
+    "소화조_VFA_lag1",
+    "소화조_VFA_lag7",
+    "소화조_VFA_lag14",
+    "소화조_TAlk_rmean7",
+    "소화조_TAlk_rstd7",
+    "소화조_TAlk_rmean14",
+    "소화조_TAlk_rstd14",
+    "소화조_TAlk_rmean30",
+    "소화조_TAlk_rstd30",
+    "소화조_TAlk_lag1",
+    "소화조_TAlk_lag7",
+    "소화조_TAlk_lag14",
+    "소화조_pH_rmean7",
+    "소화조_pH_rstd7",
+    "소화조_pH_rmean14",
+    "소화조_pH_rstd14",
+    "소화조_pH_rmean30",
+    "소화조_pH_rstd30",
+    "소화조_pH_lag1",
+    "소화조_pH_lag7",
+    "소화조_pH_lag14",
+    "소화조_온도_rmean7",
+    "소화조_온도_rstd7",
+    "소화조_온도_rmean14",
+    "소화조_온도_rstd14",
+    "소화조_온도_rmean30",
+    "소화조_온도_rstd30",
+    "소화조_온도_lag1",
+    "소화조_온도_lag7",
+    "소화조_온도_lag14",
+    "투입량합계_rmean7",
+    "투입량합계_rstd7",
+    "투입량합계_rmean14",
+    "투입량합계_rstd14",
+    "투입량합계_rmean30",
+    "투입량합계_rstd30",
+    "투입량합계_lag1",
+    "투입량합계_lag7",
+    "투입량합계_lag14",
+    "반입량_rmean7",
+    "반입량_rstd7",
+    "반입량_rmean14",
+    "반입량_rstd14",
+    "반입량_rmean30",
+    "반입량_rstd30",
+    "반입량_lag1",
+    "반입량_lag7",
+    "반입량_lag14"
+  ],
+  "signal_light_accuracy": 0.7237
+}
