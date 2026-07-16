@@ -1,0 +1,5 @@
+﻿band,days,pct
+Stable(<0.3),2082,95.1
+Caution(0.3-0.4),86,3.9
+Unstable(0.4-0.8),13,0.6
+Danger(>=0.8),9,0.4

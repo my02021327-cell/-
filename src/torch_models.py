@@ -114,7 +114,7 @@ class _TorchSeqRegressor:
         Xva = torch.tensor(Xs[va_idx]).to(DEVICE)
         Yva = torch.tensor(Ys[va_idx]).to(DEVICE)
 
-        net = self.net_factory(Xs.shape[-1]).to(DEVICE)
+        net = self.net_factory(Xs.shape[-1], self.n_out_).to(DEVICE)
         opt = torch.optim.Adam(net.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         loss_fn = nn.MSELoss()
 
@@ -146,6 +146,9 @@ class _TorchSeqRegressor:
     def fit(self, X, Y):
         X = np.asarray(X, dtype=np.float32)
         Y = np.asarray(Y, dtype=np.float32)
+        if Y.ndim == 1:
+            Y = Y.reshape(-1, 1)
+        self.n_out_ = Y.shape[1]
         self.xscaler = _StandardScaler3D().fit(X)
         self.y_mean_ = Y.mean(axis=0)
         self.y_std_ = Y.std(axis=0) + 1e-8
@@ -167,14 +170,14 @@ class _TorchSeqRegressor:
 def make_lstm(**kw) -> _TorchSeqRegressor:
     # 2 Layer LSTM. hidden=32 가 소규모·국면이동 데이터에서 hidden=64 보다
     # 안정적으로 일반화되어 기본값으로 채택(보고서의 2 Layer 구조는 동일).
-    return _TorchSeqRegressor(lambda nf: _LSTMNet(nf, hidden=32, n_layers=2), **kw)
+    return _TorchSeqRegressor(lambda nf, no: _LSTMNet(nf, hidden=32, n_layers=2, n_out=no), **kw)
 
 
 def make_lstm_wide(**kw) -> _TorchSeqRegressor:
-    return _TorchSeqRegressor(lambda nf: _LSTMNet(nf, hidden=64, n_layers=2), **kw)
+    return _TorchSeqRegressor(lambda nf, no: _LSTMNet(nf, hidden=64, n_layers=2, n_out=no), **kw)
 
 
 def make_transformer(**kw) -> _TorchSeqRegressor:
     return _TorchSeqRegressor(
-        lambda nf: _TransformerNet(nf, d_model=64, heads=4, ff=128, n_layers=2), **kw
+        lambda nf, no: _TransformerNet(nf, d_model=64, heads=4, ff=128, n_layers=2, n_out=no), **kw
     )

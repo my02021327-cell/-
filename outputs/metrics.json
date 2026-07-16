@@ -1,9 +1,10 @@
 {
-  "n_tab_features": 101,
-  "n_seq_features": 20,
+  "target": "methane",
+  "n_tab_features": 107,
+  "n_seq_features": 19,
   "window": 14,
-  "n_train": 1054,
-  "n_holdout": 152,
+  "n_train": 1103,
+  "n_holdout": 154,
   "holdout_year": 2023,
   "base_models": [
     "RandomForest",
@@ -13,79 +14,43 @@
   ],
   "results": {
     "RandomForest": {
-      "methane": {
-        "R2": 0.4357,
-        "RMSE": 824.5235,
-        "MAE": 706.3406
-      },
-      "MY": {
-        "R2": 0.1993,
-        "RMSE": 0.1829,
-        "MAE": 0.1492
-      }
+      "R2": 0.5882,
+      "RMSE": 701.6563,
+      "MAE": 564.9007
     },
     "MLP": {
-      "methane": {
-        "R2": -1.1546,
-        "RMSE": 1611.0878,
-        "MAE": 1088.919
-      },
-      "MY": {
-        "R2": -1.1869,
-        "RMSE": 0.3023,
-        "MAE": 0.2411
-      }
+      "R2": -3.8182,
+      "RMSE": 2400.1992,
+      "MAE": 2026.2125
     },
     "LSTM": {
-      "methane": {
-        "R2": 0.5906,
-        "RMSE": 702.3182,
-        "MAE": 549.7292
-      },
-      "MY": {
-        "R2": 0.2085,
-        "RMSE": 0.1818,
-        "MAE": 0.1297
-      }
+      "R2": 0.1703,
+      "RMSE": 996.0053,
+      "MAE": 811.3338
     },
     "Transformer": {
-      "methane": {
-        "R2": 0.3615,
-        "RMSE": 877.0276,
-        "MAE": 720.7796
-      },
-      "MY": {
-        "R2": 0.3426,
-        "RMSE": 0.1657,
-        "MAE": 0.1136
-      }
+      "R2": 0.3997,
+      "RMSE": 847.2324,
+      "MAE": 705.8719
     },
     "Ensemble_NNLS": {
-      "methane": {
-        "R2": 0.7293,
-        "RMSE": 571.0522,
-        "MAE": 437.3622
-      },
-      "MY": {
-        "R2": 0.3491,
-        "RMSE": 0.1649,
-        "MAE": 0.1337
-      }
+      "R2": 0.5384,
+      "RMSE": 742.9292,
+      "MAE": 612.1771
     }
   },
   "nnls_weights_normalized": {
     "methane": {
-      "RandomForest": 0.4411,
+      "RandomForest": 0.0,
       "MLP": 0.0,
-      "LSTM": 0.4838,
-      "Transformer": 0.0751
-    },
-    "MY": {
-      "RandomForest": 0.7016,
-      "MLP": 0.0,
-      "LSTM": 0.0,
-      "Transformer": 0.2984
+      "LSTM": 0.32,
+      "Transformer": 0.68
     }
   },
-  "signal_light_accuracy": 0.7105
+  "health_distribution_2023": {
+    "Stable": 88,
+    "Caution": 57,
+    "Unstable": 3,
+    "Danger": 6
+  }
 }
