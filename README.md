@@ -29,8 +29,10 @@
 
 | 모듈 | 역할 |
 |------|------|
-| `data.py` | 로딩·병합·전처리 + 시계열 Feature Engineering |
-| `ensemble.py` | Base Model 정의 + `NNLSStackingEnsemble` (비음수 스태킹) |
+| `data.py` | 로딩·병합·전처리 + 시계열 Feature Engineering(테이블) |
+| `sequences.py` | LSTM/Transformer용 과거 W일 시퀀스 텐서 생성 |
+| `torch_models.py` | PyTorch LSTM · Transformer 회귀 모델(다중출력) |
+| `ensemble.py` | 테이블 Base 정의 + `NNLSMetaCombiner`(비음수 스태킹 결합기) |
 | `train.py` | 학습·평가 파이프라인(엔드투엔드) |
 | `signal.py` | 신호등 관제 등급 분류 + 예측 시각화 |
 | `eda.py` | 운전변수–수율 Spearman 상관분석(보고서 재현·검증) |
@@ -41,11 +43,12 @@
 생성한다(총 101개 피처).
 
 ### 앙상블 구조
-- **Base Model** : RandomForest · MLP(신경망) · HistGradientBoosting · ExtraTrees
-  - 보고서의 base 구성은 RF·MLP·LSTM·Transformer 이나, 본 실행 환경은 딥러닝
-    프레임워크(torch/tensorflow) 설치가 프록시 정책으로 차단되어 있어
-    LSTM/Transformer 는 시계열 피처를 입력받는 이질적 sklearn 학습기
-    (HistGBM·ExtraTrees)로 대체하였다. **NNLS 비음수 스태킹 방법론은 동일**하다.
+- **Base Model** : RandomForest · MLP(테이블) + **LSTM · Transformer(PyTorch 시퀀스)**
+  - 보고서와 동일한 base 구성. RF·MLP 는 rolling/lag 테이블 피처를, LSTM·Transformer 는
+    과거 W=14일 원천 운전변수 시퀀스를 입력받는다(입력 표현이 다른 두 계열을 동일
+    라벨 날짜로 정합하여 결합).
+  - LSTM : 2 Layer(hidden=32) / Transformer : 2층 인코더(d=64, head=4, FF=128).
+    시퀀스 모델은 그래디언트 클리핑·타깃 표준화·시드 5개 평균으로 학습 분산을 낮춘다.
 - **Meta Model** : 종속변수별 **NNLS 비음수 가중 선형결합**
   - 단순 K-fold OOF 로 가중치를 학습하면 학습기간 내부 순위가 2023 국면이동
     홀드아웃과 달라 특정 base 를 과대가중한다. 이를 막기 위해 학습기간의
@@ -81,17 +84,23 @@ python -m src.eda        # 운전변수–수율 Spearman 상관분석(선택)
 
 | 모델 | 메탄발생량 R² | RMSE | 수율(MY) R² | RMSE |
 |------|:---:|:---:|:---:|:---:|
-| RandomForest | 0.532 | 751.2 | 0.342 | 0.166 |
-| MLP | -1.327 | 1674.5 | -1.650 | 0.333 |
-| HistGBM | -0.037 | 1117.9 | 0.450 | 0.152 |
-| ExtraTrees | 0.693 | 607.8 | 0.526 | 0.141 |
-| **Ensemble (NNLS)** | **0.706** | **595.0** | **0.718** | **0.109** |
+| RandomForest | 0.436 | 824.5 | 0.199 | 0.183 |
+| MLP | -1.155 | 1611.1 | -1.187 | 0.302 |
+| LSTM (2L, h=32) | 0.591 | 702.3 | 0.209 | 0.182 |
+| Transformer (2L) | 0.362 | 877.0 | 0.343 | 0.166 |
+| **Ensemble (NNLS)** | **0.729** | **571.1** | **0.349** | **0.165** |
 
 - **앙상블이 두 종속변수 모두에서 모든 단일 모델을 능가**한다
-  (수율은 최고 단일모델 대비 R² +0.19).
+  (메탄은 최고 단일모델 LSTM 0.591 → 0.729).
+- LSTM 은 메탄, Transformer 는 수율에 상대적으로 강해 **상호보완적**이며 NNLS 가 이를
+  조합한다(메탄 가중치 LSTM 0.48·RF 0.44, 수율 RF 0.70·Transformer 0.30).
 - MLP 는 2023 국면이동에서 일반화에 실패(R²<0)하며, NNLS 가 이를 **0 가중치**로
   정확히 배제한다 — 보고서의 관찰(“MLP 일반화 실패, 단순·제약 결합이 유리”)과 일치.
-- **신호등 등급(정상/주의/점검/위험) 예측 정확도 72.4%.**
+- **신호등 등급(정상/주의/점검/위험) 예측 정확도 71.1%.**
+
+> 주: 본 수치는 **2023년 전체를 미래 홀드아웃으로 완전히 격리**한 엄격한 평가값이다.
+> 메탄발생량은 보고서 앙상블(R²≈0.83)에 근접하며, 수율은 소규모·국면이동 특성상
+> 홀드아웃 난이도가 높아 더 보수적으로 나타난다.
 
 ### 산출물 (`outputs/`)
 - `metrics.json` — 모델별 R²/RMSE/MAE, NNLS 가중치, 신호등 정확도
