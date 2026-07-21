@@ -28,9 +28,9 @@ save_json("artifacts/importance.json", dict(
 top = freq.head(20)
 fig, ax = plt.subplots(figsize=(7, 6))
 ax.barh(top["taxon"][::-1], top["selection_freq"][::-1], color="#2E75B6")
-ax.axvline(0.70, color="crimson", ls="--", lw=1, label="70% 안정 기준")
-ax.set_xlabel("순열 중요도 상위10 진입 빈도 (5 seed × 10 fold)")
-ax.set_title(f"안정성 선택 — winner={cfg['model_key']} ({res['total_fits']}회)")
+ax.axvline(0.70, color="crimson", ls="--", lw=1, label="70% stability threshold")
+ax.set_xlabel("freq in top-10 permutation importance (5 seed x 10 fold)")
+ax.set_title(f"Stability selection - winner={cfg['model_key']} ({res['total_fits']} fits)")
 ax.legend(fontsize=8); fig.tight_layout()
 fig.savefig("figures/stability_selection.png", dpi=120); plt.close(fig)
 

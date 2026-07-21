@@ -1,0 +1,87 @@
+{
+  "total_fits": 50,
+  "top20": [
+    {
+      "taxon": "Syntrophaceticus",
+      "selection_freq": 0.34
+    },
+    {
+      "taxon": "Alistipes",
+      "selection_freq": 0.32
+    },
+    {
+      "taxon": "Candidatus Caldatribacterium",
+      "selection_freq": 0.3
+    },
+    {
+      "taxon": "Acetomicrobium",
+      "selection_freq": 0.3
+    },
+    {
+      "taxon": "g__unclassified_root",
+      "selection_freq": 0.3
+    },
+    {
+      "taxon": "Sedimentibacter",
+      "selection_freq": 0.3
+    },
+    {
+      "taxon": "Longilinea",
+      "selection_freq": 0.3
+    },
+    {
+      "taxon": "Clostridium",
+      "selection_freq": 0.28
+    },
+    {
+      "taxon": "Syntrophobacter",
+      "selection_freq": 0.28
+    },
+    {
+      "taxon": "Methanoculleus",
+      "selection_freq": 0.26
+    },
+    {
+      "taxon": "Methanosarcina",
+      "selection_freq": 0.26
+    },
+    {
+      "taxon": "Methanobrevibacter",
+      "selection_freq": 0.26
+    },
+    {
+      "taxon": "Candidatus Cloacimonas",
+      "selection_freq": 0.26
+    },
+    {
+      "taxon": "Smithella",
+      "selection_freq": 0.22
+    },
+    {
+      "taxon": "Victivallis",
+      "selection_freq": 0.22
+    },
+    {
+      "taxon": "Acetobacterium",
+      "selection_freq": 0.2
+    },
+    {
+      "taxon": "Mesotoga",
+      "selection_freq": 0.2
+    },
+    {
+      "taxon": "Levilinea",
+      "selection_freq": 0.2
+    },
+    {
+      "taxon": "Methanosaeta",
+      "selection_freq": 0.2
+    },
+    {
+      "taxon": "Dysgonomonas",
+      "selection_freq": 0.2
+    }
+  ],
+  "stable_70": [],
+  "sign_top20": []
+}

@@ -1,0 +1,15 @@
+{
+  "winner": "spls",
+  "cfg": {
+    "model_key": "spls",
+    "transform": "alr",
+    "filter_params": {
+      "min_prevalence": 0.25
+    },
+    "model_kwargs": {
+      "k": 10,
+      "n_components": 2
+    }
+  },
+  "honest_mean": 0.8060943272911171
+}

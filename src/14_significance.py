@@ -21,7 +21,9 @@ fac = PipelineFactory(d["taxonomy"], d["domain_taxa"], d["meta"])
 # 1) 순열검정 (site 그룹 보존 셔플)
 perm = permutation_test(cfg, fac, d, n_perms=500)
 # 2) 부트스트랩 CI (site 단위) — winner seed0 OOF
-oof0 = np.array(nested["results"][winner]["oof_by_seed"]["0"])
+_seed0 = nested["seeds"][0]
+_ob = nested["results"][winner]["oof_by_seed"]
+oof0 = np.array(_ob.get(_seed0, _ob.get(str(_seed0))))
 boot = bootstrap_r2_ci(y, oof0, groups, n_boot=2000)
 # 3) 모델 간 비교 (site 단위 MAE, Wilcoxon + BH)
 per_site_mae = {m: nested["results"][m]["per_site_mae"] for m in nested["results"]}
@@ -34,11 +36,11 @@ save_json("artifacts/significance.json", dict(
                                     perm_mean=perm["perm_mean"]),
     bootstrap=boot, model_comparison=cmp, learning_curve=lc))
 
-# 그림: 순열 귀무분포
+# 그림: 순열 귀무분포 (라벨 영문 — 한글 글리프 tofu 방지)
 fig, ax = plt.subplots(figsize=(6, 4))
-ax.hist(perm["perm_scores"], bins=30, color="#BBBBBB", label="귀무분포(순열)")
-ax.axvline(perm["score"], color="crimson", lw=2, label=f"실제 R²={perm['score']:.2f}")
-ax.set_xlabel("R²"); ax.set_title(f"순열검정 — {winner} (p={perm['pvalue']:.3f})")
+ax.hist(perm["perm_scores"], bins=30, color="#BBBBBB", label="null (permutation)")
+ax.axvline(perm["score"], color="crimson", lw=2, label=f"observed R2={perm['score']:.2f}")
+ax.set_xlabel("R2"); ax.set_title(f"Permutation test - {winner} (p={perm['pvalue']:.3f})")
 ax.legend(fontsize=8); fig.tight_layout()
 fig.savefig("figures/permutation_null.png", dpi=120); plt.close(fig)
 
@@ -47,8 +49,8 @@ if lc:
     ks = [c[0] for c in lc]; ms = [c[1] for c in lc]; sd = [c[2] for c in lc]
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.errorbar(ks, ms, yerr=sd, marker="o", capsize=3, color="#2E75B6")
-    ax.set_xlabel("학습 site 수"); ax.set_ylabel("held-out R²")
-    ax.set_title(f"학습곡선 — {winner}"); ax.grid(alpha=0.3)
+    ax.set_xlabel("# training sites"); ax.set_ylabel("held-out R2")
+    ax.set_title(f"Learning curve - {winner}"); ax.grid(alpha=0.3)
     fig.tight_layout(); fig.savefig("figures/learning_curve.png", dpi=120); plt.close(fig)
 
 # 그림: 예측-관측 산점도(site 색상)
@@ -58,7 +60,8 @@ sc = ax.scatter(y, oof0, c=pd.Categorical(groups).codes, cmap="tab10", s=40,
                 edgecolor="k", linewidth=0.3)
 lim = [min(y.min(), np.nanmin(oof0)), max(y.max(), np.nanmax(oof0))]
 ax.plot(lim, lim, "k--", lw=1)
-ax.set_xlabel("관측 methane"); ax.set_ylabel("예측(OOF)"); ax.set_title(f"예측-관측 — {winner}")
+ax.set_xlabel("observed methane"); ax.set_ylabel("predicted (OOF)")
+ax.set_title(f"Predicted vs observed - {winner}")
 fig.tight_layout(); fig.savefig("figures/pred_vs_obs.png", dpi=120); plt.close(fig)
 
 print(f"순열검정: 실제R²={perm['score']:.3f}, p={perm['pvalue']:.3f} (귀무평균={perm['perm_mean']:.3f})")
