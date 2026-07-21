@@ -23,26 +23,30 @@ KERNEL_TF = ["clr", "hellinger", "rank"]
 TREE_TF = ["prop", "clr", "rank"]
 
 
-class SparsePLS:
+from sklearn.base import BaseEstimator, RegressorMixin
+
+
+class SparsePLS(RegressorMixin, BaseEstimator):
     """sPLS 대용: 단변량 상관 상위 k 특징 선택 후 PLS. 해석 목적(성능보다 희소성)."""
     def __init__(self, k=20, n_components=2):
         self.k = k
         self.n_components = n_components
+
     def _make(self, p):
         k = min(self.k, p)
         return SkPipeline([("sel", SelectKBest(f_regression, k=k)),
                            ("pls", PLSRegression(n_components=min(self.n_components, k)))])
-    def get_params(self, deep=True):
-        return {"k": self.k, "n_components": self.n_components}
-    def set_params(self, **kw):
-        for a, v in kw.items():
-            setattr(self, a, v)
-        return self
+
     def fit(self, X, y):
         self._est = self._make(X.shape[1]).fit(X, y)
+        self.is_fitted_ = True
         return self
+
     def predict(self, X):
         return self._est.predict(X).ravel()
+
+    def __sklearn_is_fitted__(self):
+        return getattr(self, "is_fitted_", False)
 
 
 def _matern():

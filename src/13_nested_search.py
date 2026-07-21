@@ -23,7 +23,11 @@ y, groups = np.asarray(d["y"]), d["groups"].values
 results = {}
 for mk in MODEL_REGISTRY:
     t = time.time()
-    res = nested_cv_oof(mk, fac, d, seeds=SEEDS)
+    try:
+        res = nested_cv_oof(mk, fac, d, seeds=SEEDS)
+    except Exception as e:
+        print(f"{mk:11s} SKIP — 실패: {type(e).__name__}: {e}")
+        continue
     summ = seed_r2_summary(res)
     oof0 = res["oof"][SEEDS[0]]
     modal = modal_config(mk, res["chosen"])
