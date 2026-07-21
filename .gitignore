@@ -4,3 +4,4 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+artifacts/prompt2_run.log

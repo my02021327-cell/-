@@ -1,0 +1,54 @@
+acetoclastic_methanogens:
+  level: genus
+  members:
+  - Methanosaeta
+  - Methanosarcina
+hydrogenotrophic_methanogens:
+  level: genus
+  members:
+  - Methanoculleus
+  - Methanobacterium
+  - Methanobrevibacter
+  - Methanospirillum
+  - Methanolinea
+  - Methanoregula
+  - Methanocorpusculum
+  - Methanothermobacter
+methylotrophic_methanogens:
+  level: genus
+  members:
+  - Methanomassiliicoccus
+syntrophic_bacteria:
+  level: genus
+  members:
+  - Syntrophomonas
+  - Syntrophobacter
+  - Smithella
+  - Syntrophaceticus
+  - Syntrophorhabdus
+  - Pelotomaculum
+  - Candidatus Cloacimonas
+hydrolytic_acidogenic_bacteria:
+  level: genus
+  members:
+  - Clostridium
+  - Bacteroides
+  - Prevotella
+  - Ruminococcus
+  - Christensenella
+  - Fibrobacter
+  - Caldicoprobacter
+  - Proteiniclasticum
+  - Anaerolinea
+vfa_oxidizing_bacteria:
+  level: genus
+  members:
+  - Syntrophaceticus
+  - Tepidanaerobacter
+  - Syntrophomonas
+  - Smithella
+  - Syntrophobacter
+ratios:
+- name: logratio_aceto_hydrogeno_methanogen
+  numerator: acetoclastic_methanogens
+  denominator: hydrogenotrophic_methanogens
