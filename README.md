@@ -55,9 +55,25 @@
 
 ```bash
 pip install -r requirements.txt
-python -m src.train   # 학습·평가·건강 신호등·시각화
-python -m src.eda     # 생물학적 지연·건강 분석
+python -m src.train        # 앙상블 학습·평가·건강 신호등·시각화
+python -m src.eda          # 생물학적 지연·건강 분석
+python -m src.xgb_methane  # XGBoost 2상 집중·투입 lag 선택·persistence 상회 실증
 ```
+
+## XGBoost 2상(메탄생성균 조) 집중 모듈 (`src/xgb_methane.py`)
+
+혐기성 소화조 **2상(메탄생성 단계)** 에 집중한 **XGBoost 단일 모델**. 투입→메탄 **lag
+자동선택**(gain 중요도 최댓값 날), **10~15개 피처 집중**, **결측일 삭제**, 그리고
+**persistence(어제값) 기준을 실제로 상회하는 방안** 을 2023 홀드아웃에서 실증한다.
+상세는 [`REPORT_XGB.md`](REPORT_XGB.md).
+
+- 메탄은 일별 자기상관 0.92 로 persistence(R²≈0.88)가 매우 강함 → 2상 화학상태만의
+  소프트센서(Model-1)는 1일예측서 이를 못 넘음(정직 보고, 가스미터 대체 nowcast 용).
+- **Model-2(제안)** : persistence 앵커 + 체류창 투입부하(HRT 지연) + 관측 staleness +
+  얕은 트리·강정규화·8-시드 평균 → **2023 R² 0.877→0.881, RMSE −1.7%**, fresh·stale
+  전 구간 강건하게 persistence 상회.
+- 산출물 : `outputs/xgb_metrics.json`, `xgb_lag_selection.(csv|png)`,
+  `xgb_feature_importance.png`, `xgb_predictions_2023.(csv|png)`.
 
 ## 결과 (2023 홀드아웃, 목표 = 메탄생성량)
 
