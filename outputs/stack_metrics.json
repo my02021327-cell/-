@@ -1,6 +1,21 @@
 {
   "target": "methane",
-  "design": "RandomForest 단일 + (RF, XGB, persistence) 비음수 Ridge 스태킹",
+  "design": "RF·XGB·SARIMAX(시계열) base + (4입력) 비음수 Ridge 스태킹",
+  "base_learners": [
+    "XGBoost",
+    "RandomForest",
+    "SARIMAX",
+    "persistence"
+  ],
+  "sarimax_order": [
+    1,
+    0,
+    1
+  ],
+  "sarimax_exog": [
+    "load5",
+    "load10"
+  ],
   "features": [
     "투입량합계_lag2",
     "투입량합계_lag3",
@@ -12,14 +27,15 @@
   ],
   "n_features": 7,
   "best_input_methane_lag_day": 2,
-  "cv": "TimeSeriesSplit(n_splits=5) OOF on 2018-2022",
+  "cv": "TimeSeriesSplit(n_splits=5) OOF(RF·XGB) + SARIMAX 인과 1-step",
   "train_n": 1098,
   "test_n": 154,
   "meta_weights": {
-    "XGBoost": 0.2364,
-    "RandomForest": 0.0884,
-    "persistence": 0.6542,
-    "intercept": 148.0
+    "XGBoost": 0.0675,
+    "RandomForest": 0.0831,
+    "SARIMAX": 0.6174,
+    "persistence": 0.23,
+    "intercept": 9.2
   },
   "results_same_rows": {
     "persistence": {
@@ -46,23 +62,32 @@
       "dRMSE_%": 1.72,
       "dMAE_%": -1.38
     },
-    "avg_xgb_rf": {
-      "R2": 0.8774,
-      "RMSE": 382.9,
-      "MAE": 269.1,
+    "sarimax": {
+      "R2": 0.8912,
+      "RMSE": 360.7,
+      "MAE": 262.1,
       "n": 154,
-      "dR2": 0.0004,
-      "dRMSE_%": 0.16,
-      "dMAE_%": -3.02
+      "dR2": 0.0142,
+      "dRMSE_%": 5.95,
+      "dMAE_%": -0.34
+    },
+    "avg_all": {
+      "R2": 0.8857,
+      "RMSE": 369.7,
+      "MAE": 261.0,
+      "n": 154,
+      "dR2": 0.0087,
+      "dRMSE_%": 3.6,
+      "dMAE_%": 0.08
     },
     "stack": {
-      "R2": 0.8829,
-      "RMSE": 374.2,
-      "MAE": 255.8,
+      "R2": 0.8909,
+      "RMSE": 361.1,
+      "MAE": 256.8,
       "n": 154,
-      "dR2": 0.0059,
-      "dRMSE_%": 2.43,
-      "dMAE_%": 2.07
+      "dR2": 0.0139,
+      "dRMSE_%": 5.84,
+      "dMAE_%": 1.68
     }
   },
   "robustness_by_staleness": [
@@ -70,13 +95,13 @@
       "name": "fresh(stale<=1d)",
       "n": 103,
       "persist_RMSE": 269.5,
-      "stack_RMSE": 256.5
+      "stack_RMSE": 249.8
     },
     {
       "name": "stale(>=2d gap)",
       "n": 51,
       "persist_RMSE": 545.4,
-      "stack_RMSE": 538.5
+      "stack_RMSE": 517.4
     }
   ]
 }

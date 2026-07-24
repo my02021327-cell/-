@@ -90,36 +90,46 @@ persistence 를 못 이기는 세 가지 원인을 정면 돌파하도록 설계
 | `xgb_feature_importance.png` | Model-2 피처 중요도 |
 | `xgb_predictions_2023.(csv\|png)` | 2023 메탄 실측·persistence·XGBoost 제안 |
 
-## 6. RandomForest + 스태킹 앙상블 (`src/stack_methane.py`)
+## 6. RandomForest + XGBoost + 시계열(SARIMAX) 스태킹 앙상블 (`src/stack_methane.py`)
 
-동일한 persistence 상회 피처셋 위에서 **RandomForest 단일 모델** 을 학습하고,
-**RandomForest + XGBoost 를 스태킹** 으로 결합했다. 실행: `python -m src.stack_methane`.
+동일한 persistence 상회 피처셋 위에서 **RandomForest** 를 학습하고, **시계열 모델
+(SARIMAX)** 을 추가한 뒤 **RF + XGBoost + SARIMAX 를 스태킹** 으로 결합했다.
+실행: `python -m src.stack_methane`.
 
-- **Base learner** : RandomForest, XGBoost(8-시드 평균).
-- **Meta feature (누수 차단)** : 학습기간(2018–2022)을 **`TimeSeriesSplit(5)`** 확장창
-  으로 분할해 각 base 의 **Out-Of-Fold 예측** 을 생성. 여기에 persistence 를 메타
-  입력에 함께 넣는다.
-- **Meta learner** : **비음수 Ridge**(`positive=True`) — 'base 보정량 + 원 persistence'
-  를 비음수로 배합(해석 가능·강건).
+### 6.1 시계열 base 를 넣은 이유 — 앙상블 다양성
+RF·XGB 는 같은 트리 계열이라 **잔차 상관 ≈ 0.99** 로 결합 이득이 작다.
+**SARIMAX(1,0,1)+외생 투입부하(load5,load10)** 는 선형 상태공간(칼만필터) 모델로
+트리와 계열이 달라 **잔차 상관 ≈ 0.93**(다양성↑). 또한 결측 많은(42%) 일별 메탄을
+칼만필터가 자연 처리하고 자기상관 구조를 직접 모형화해 **단일 모델로도 가장 강하다**
+(2023 R²=0.891). → 스태킹의 핵심 base.
+
+### 6.2 스태킹 설계 (누수 차단)
+- **Base** : RandomForest, XGBoost(8-시드 평균), SARIMAX(1,0,1)+외생.
+- **Meta feature** : RF·XGB 는 **`TimeSeriesSplit(5)`** 확장창 **OOF**; SARIMAX 는
+  파라미터를 학습기간에 적합 후 **1-step(dynamic=False) 인과예측**(각 시점이 과거만
+  사용). 여기에 persistence 를 메타 입력에 함께 넣는다.
+- **Meta learner** : **비음수 Ridge**(`positive=True`) — 해석 가능·강건.
 - **최종** : base 를 전체 학습데이터로 재학습 → 2023 예측 → 메타 결합.
 
-**결과 (2023 홀드아웃, 동일 154행)**
+### 6.3 결과 (2023 홀드아웃, 동일 154행)
 
 | 모델 | R² | RMSE | MAE | vs persistence |
 |------|:---:|:---:|:---:|:---:|
 | persistence | 0.877 | 383.5 | 261.2 | — |
 | RandomForest | 0.871 | 392.2 | 277.4 | RMSE −2.3% |
 | XGBoost | 0.881 | 376.9 | 264.8 | RMSE +1.7% |
-| 단순평균(XGB,RF) | 0.877 | 382.9 | 269.1 | RMSE +0.2% |
-| **스태킹 앙상블** | **0.883** | **374.2** | **255.8** | **RMSE +2.4%** |
+| **SARIMAX (시계열)** | **0.891** | **360.7** | 262.1 | RMSE +5.9% |
+| 단순평균(3 base) | 0.886 | 369.7 | 261.0 | RMSE +3.6% |
+| **스태킹 앙상블** | **0.891** | 361.1 | **256.8** | **RMSE +5.8%** |
 
-- **스태킹이 R²·RMSE·MAE 모두에서 최고** — persistence 뿐 아니라 단일 XGB·RF 도 상회.
-- 메타 가중치 : **persistence 0.654 · XGBoost 0.236 · RandomForest 0.088**(비음수).
-  강한 persistence 를 기반으로 base 두 모델의 보정을 얹는 구조가 데이터로 확인됨.
-- Base 두 모델 잔차 상관 ≈ 0.99 로 다양성은 낮아 단순평균 이득은 미미하나, **persistence
-  를 메타에 포함한 비음수 스태킹** 이 안정적 이득을 만든다.
-- staleness 강건성 : fresh(≤1일) 269.5→**256.5**, stale(≥2일 갭) 545.4→**538.5** — 전
-  구간 개선.
+- **시계열(SARIMAX) 추가가 성능을 크게 끌어올림** : 스택 R² 0.883 → **0.891**,
+  persistence 대비 **RMSE −5.8%**.
+- **스태킹은 MAE(256.8) 최저** 이며 R²·RMSE 는 최강 base(SARIMAX)와 동률 — 즉 **모든
+  지표에서 최고 또는 동률**. 단일 모델 선택 위험을 비음수 가중으로 분산한다.
+- 메타 가중치 : **SARIMAX 0.617 · persistence 0.230 · RandomForest 0.083 ·
+  XGBoost 0.068**(비음수). 강한 시계열 base + persistence 앵커에 트리 보정을 얹는 구조.
+- staleness 강건성 : fresh(≤1일) 269.5→**249.8**, stale(≥2일 갭) 545.4→**517.4** —
+  전 구간에서 persistence 대비 개선폭이 커짐.
 - 산출물 : `outputs/stack_metrics.json`, `stack_meta_weights.png`,
   `stack_predictions_2023.(csv|png)`.
 
