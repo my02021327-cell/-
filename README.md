@@ -58,6 +58,7 @@ pip install -r requirements.txt
 python -m src.train        # 앙상블 학습·평가·건강 신호등·시각화
 python -m src.eda          # 생물학적 지연·건강 분석
 python -m src.xgb_methane  # XGBoost 2상 집중·투입 lag 선택·persistence 상회 실증
+python -m src.stack_methane # RandomForest + XGBoost 스태킹 앙상블(시계열 OOF)
 ```
 
 ## XGBoost 2상(메탄생성균 조) 집중 모듈 (`src/xgb_methane.py`)
@@ -74,6 +75,24 @@ python -m src.xgb_methane  # XGBoost 2상 집중·투입 lag 선택·persistence
   전 구간 강건하게 persistence 상회.
 - 산출물 : `outputs/xgb_metrics.json`, `xgb_lag_selection.(csv|png)`,
   `xgb_feature_importance.png`, `xgb_predictions_2023.(csv|png)`.
+
+### RandomForest + 스태킹 앙상블 (`src/stack_methane.py`)
+
+동일 피처셋에서 **RandomForest** 를 학습하고 **RF + XGBoost 를 스태킹** 으로 결합.
+학습기간을 `TimeSeriesSplit(5)` 확장창으로 나눠 각 base 의 **OOF 예측**(누수 차단)을
+만들고, persistence 를 메타 입력에 함께 넣어 **비음수 Ridge** 로 결합한다.
+
+| 모델 | R² | RMSE | MAE |
+|------|:---:|:---:|:---:|
+| persistence | 0.877 | 383.5 | 261.2 |
+| RandomForest | 0.871 | 392.2 | 277.4 |
+| XGBoost | 0.881 | 376.9 | 264.8 |
+| **스태킹 앙상블** | **0.883** | **374.2** | **255.8** |
+
+메타 가중치 persistence 0.65 · XGB 0.24 · RF 0.09(비음수). **스태킹이 R²·RMSE·MAE
+모두 최고**, persistence·단일 base 를 모두 상회하며 fresh·stale 전 구간 강건.
+산출물 : `outputs/stack_metrics.json`, `stack_meta_weights.png`,
+`stack_predictions_2023.(csv|png)`.
 
 ## 결과 (2023 홀드아웃, 목표 = 메탄생성량)
 

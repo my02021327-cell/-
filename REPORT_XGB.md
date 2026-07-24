@@ -90,7 +90,40 @@ persistence 를 못 이기는 세 가지 원인을 정면 돌파하도록 설계
 | `xgb_feature_importance.png` | Model-2 피처 중요도 |
 | `xgb_predictions_2023.(csv\|png)` | 2023 메탄 실측·persistence·XGBoost 제안 |
 
-## 6. 신뢰도를 더 끌어올리기 위한 확장 방안
+## 6. RandomForest + 스태킹 앙상블 (`src/stack_methane.py`)
+
+동일한 persistence 상회 피처셋 위에서 **RandomForest 단일 모델** 을 학습하고,
+**RandomForest + XGBoost 를 스태킹** 으로 결합했다. 실행: `python -m src.stack_methane`.
+
+- **Base learner** : RandomForest, XGBoost(8-시드 평균).
+- **Meta feature (누수 차단)** : 학습기간(2018–2022)을 **`TimeSeriesSplit(5)`** 확장창
+  으로 분할해 각 base 의 **Out-Of-Fold 예측** 을 생성. 여기에 persistence 를 메타
+  입력에 함께 넣는다.
+- **Meta learner** : **비음수 Ridge**(`positive=True`) — 'base 보정량 + 원 persistence'
+  를 비음수로 배합(해석 가능·강건).
+- **최종** : base 를 전체 학습데이터로 재학습 → 2023 예측 → 메타 결합.
+
+**결과 (2023 홀드아웃, 동일 154행)**
+
+| 모델 | R² | RMSE | MAE | vs persistence |
+|------|:---:|:---:|:---:|:---:|
+| persistence | 0.877 | 383.5 | 261.2 | — |
+| RandomForest | 0.871 | 392.2 | 277.4 | RMSE −2.3% |
+| XGBoost | 0.881 | 376.9 | 264.8 | RMSE +1.7% |
+| 단순평균(XGB,RF) | 0.877 | 382.9 | 269.1 | RMSE +0.2% |
+| **스태킹 앙상블** | **0.883** | **374.2** | **255.8** | **RMSE +2.4%** |
+
+- **스태킹이 R²·RMSE·MAE 모두에서 최고** — persistence 뿐 아니라 단일 XGB·RF 도 상회.
+- 메타 가중치 : **persistence 0.654 · XGBoost 0.236 · RandomForest 0.088**(비음수).
+  강한 persistence 를 기반으로 base 두 모델의 보정을 얹는 구조가 데이터로 확인됨.
+- Base 두 모델 잔차 상관 ≈ 0.99 로 다양성은 낮아 단순평균 이득은 미미하나, **persistence
+  를 메타에 포함한 비음수 스태킹** 이 안정적 이득을 만든다.
+- staleness 강건성 : fresh(≤1일) 269.5→**256.5**, stale(≥2일 갭) 545.4→**538.5** — 전
+  구간 개선.
+- 산출물 : `outputs/stack_metrics.json`, `stack_meta_weights.png`,
+  `stack_predictions_2023.(csv|png)`.
+
+## 7. 신뢰도를 더 끌어올리기 위한 확장 방안
 
 1. **선행(anticipatory) 센서 도입** — 온라인 VFA·가스조성·유량 실시간 계측. 화학상태를
    '동시대'가 아닌 '선행' 정보로 만들면 소프트센서가 persistence 를 넘어설 여지가 커진다.
