@@ -18,7 +18,7 @@
 | **투입 vs 메탄 Lag 임의 선정 후 '가장 가중치 높은 날' 선택** | 투입부하 `lag0…lag15` 을 모두 넣어 학습 → XGBoost **gain 중요도 최댓값 lag** 자동 선택 |
 | **feature 10~15개 집중** | 소프트센서(Model-1) = 2상상태(8)+투입(3)+선택lag(1) = **12개** |
 | **결측치 있는 날 삭제** | 보간 없이 `dropna` (미측정일 제거) |
-| **persistent 대비 신뢰도 개선** | Model-2 가 2023 홀드아웃에서 persistence 상회(아래 §4) |
+| **persistence 예측 미사용** | `persist`(어제 메탄값)를 피처·메타입력에서 제외. persistence 는 비교 baseline 으로만. persist 없이 baseline 상회는 시계열(SARIMAX, §6) |
 
 - 분할: **학습 2018–2022 / 홀드아웃 2023**(미래 정보 누수 차단).
 - lag·이동평균·persistence·staleness 는 **연속 일별 캘린더** 에서 먼저 계산한 뒤
@@ -47,48 +47,35 @@ XGBoost 에 투입하고 **gain 중요도가 가장 높은 lag(day)** 를 선택
 | persistence | **0.836** | 433.7 |
 | XGBoost(2상 화학상태) | -0.089 | 1117.1 |
 
-## 4. persistence 를 이기는 방안 (Model-2) — 홀드아웃 실증
+## 4. Model-2 — 운전변수 전용 예측 (persistence 미사용)
 
-persistence 를 못 이기는 세 가지 원인을 정면 돌파하도록 설계한다.
+> **정책 변경 : persistence(어제 메탄값)를 예측 입력으로 쓰지 않는다.** 이전의
+> 'persistence 앵커링' 방안은 폐기하고, persistence 는 **비교 baseline 으로만** 사용한다.
 
-- **P1 · persistence 앵커링** — 어제 메탄(`persist`)을 **피처로 포함**. 국면이동에도
-  수준을 유지시켜 트리 외삽 문제를 없앤다.
-- **P2 · 체류창 투입부하(HRT 지연)** — 투입량의 5·10일 이동평균(`load5`,`load10`) +
-  선택 lag. 앞으로의 변화를 **선행 지시**(persistence 가 못 보는 미래 신호).
-- **P3 · 관측 staleness** — 마지막 메탄관측 후 경과일(`stale`). persistence 가
-  **낡은(stale) 구간** 에서 모델이 더 크게 기여하도록 학습.
-- **분산 억제** — 얕은 트리(`max_depth=2`)·강한 정규화(`reg_lambda=5`)·**8-시드 평균**
-  으로 소표본 과적합을 눌러 안정적 이득을 확보.
-- **2상 화학피처 제외 이유** — 결측 42%로 표본이 급감(154→79)하고, 학습기 화학–메탄
-  관계가 2023 국면에 **전이되지 않아 홀드아웃 성능을 떨어뜨린다(실측 확인)**. 화학상태는
-  Model-1 과 건강관제(VFA/ALK)에서 제 역할을 한다.
+Model-2 는 투입부하(운전변수)만으로 예측한다 — 투입량 lag(선택 2일)·lag3·lag7 및 체류창
+누적부하(`load5`,`load10`), 총 5개 피처. **과거 메탄을 전혀 쓰지 않는다.**
 
-**결과 (2023 홀드아웃, 동일 154행 공정 비교)**
+**결과 (2023 홀드아웃, 동일 154행)**
 
-| Model-2 (7피처, 8-seed) | R² | RMSE | MAE |
+| Model-2 (5피처, 8-seed) | R² | RMSE | MAE |
 |---|:---:|:---:|:---:|
-| persistence | 0.877 | 383.5 | 261.2 |
-| **XGBoost 제안** | **0.881** | **376.9** | 264.8 |
-| 개선 | +0.004 | **−1.7%** | — |
+| persistence *(비교 baseline)* | 0.877 | 383.5 | 261.2 |
+| XGBoost(운전변수 전용) | 0.597 | 694.0 | 534.5 |
 
-**staleness 구간별 강건성** — 단순 이득이 아니라 전 구간에서 일관되게 우세:
-
-| 구간 | n | persistence RMSE | XGBoost RMSE |
-|------|:---:|:---:|:---:|
-| fresh (경과 ≤1일) | 103 | 269.5 | **265.7** |
-| stale (≥2일 갭) | 51 | 545.4 | **535.1** |
-
-→ persistence 가 신선한 구간에서도, **낡은(갭) 구간에서도** 모두 개선. 즉 이득이
-운영상 가장 필요한 **결측·갱신지연 구간에서 더 크다.**
+- **정직한 결과** : 메탄은 일별 자기상관 0.92 로 매우 매끄러워, **과거 메탄을 안 쓰는**
+  트리 모델(운전변수만)은 강한 persistence baseline 에 크게 못 미친다(R²≈0.60).
+- 즉 **persist 피처 없이 baseline 을 이기는 것은 트리로는 어렵다.** 이를 넘어서는
+  방법이 다음 절의 **시계열 모델(SARIMAX)** 이다(과거 메탄을 상태공간으로 모형화하되
+  `persist` 피처는 쓰지 않음).
 
 ## 5. 산출물 (`outputs/`)
 
 | 파일 | 내용 |
 |------|------|
-| `xgb_metrics.json` | 두 모델 지표·개선율·중요도·구간별 강건성 |
+| `xgb_metrics.json` | 두 모델 지표·중요도(persistence 는 baseline 표기) |
 | `xgb_lag_selection.(csv\|png)` | 투입 lag 후보별 gain 중요도, 선택된 날 |
 | `xgb_feature_importance.png` | Model-2 피처 중요도 |
-| `xgb_predictions_2023.(csv\|png)` | 2023 메탄 실측·persistence·XGBoost 제안 |
+| `xgb_predictions_2023.(csv\|png)` | 2023 메탄 실측·baseline·Model-2 예측 |
 
 ## 6. RandomForest + XGBoost + 시계열(SARIMAX) 스태킹 앙상블 (`src/stack_methane.py`)
 
@@ -103,33 +90,34 @@ RF·XGB 는 같은 트리 계열이라 **잔차 상관 ≈ 0.99** 로 결합 이
 칼만필터가 자연 처리하고 자기상관 구조를 직접 모형화해 **단일 모델로도 가장 강하다**
 (2023 R²=0.891). → 스태킹의 핵심 base.
 
-### 6.2 스태킹 설계 (누수 차단)
-- **Base** : RandomForest, XGBoost(8-시드 평균), SARIMAX(1,0,1)+외생.
+### 6.2 스태킹 설계 (누수 차단, **persistence 예측 미사용**)
+- **Base** : RandomForest, XGBoost(8-시드 평균, 운전변수 전용), SARIMAX(1,0,1)+외생.
 - **Meta feature** : RF·XGB 는 **`TimeSeriesSplit(5)`** 확장창 **OOF**; SARIMAX 는
   파라미터를 학습기간에 적합 후 **1-step(dynamic=False) 인과예측**(각 시점이 과거만
-  사용). 여기에 persistence 를 메타 입력에 함께 넣는다.
+  사용). **persistence 는 메타 입력에서 제외**(예측에 쓰지 않음).
 - **Meta learner** : **비음수 Ridge**(`positive=True`) — 해석 가능·강건.
 - **최종** : base 를 전체 학습데이터로 재학습 → 2023 예측 → 메타 결합.
+- **SARIMAX 는 `persist` 피처를 쓰지 않는 정식 시계열 모델** 이다. 메탄 동특성을
+  상태공간(칼만필터)으로 모형화하고 외생 투입부하를 반영한다.
 
-### 6.3 결과 (2023 홀드아웃, 동일 154행)
+### 6.3 결과 (2023 홀드아웃, 동일 154행 — persistence 는 비교 baseline)
 
-| 모델 | R² | RMSE | MAE | vs persistence |
+| 모델 | R² | RMSE | MAE | vs baseline |
 |------|:---:|:---:|:---:|:---:|
-| persistence | 0.877 | 383.5 | 261.2 | — |
-| RandomForest | 0.871 | 392.2 | 277.4 | RMSE −2.3% |
-| XGBoost | 0.881 | 376.9 | 264.8 | RMSE +1.7% |
-| **SARIMAX (시계열)** | **0.891** | **360.7** | 262.1 | RMSE +5.9% |
-| 단순평균(3 base) | 0.886 | 369.7 | 261.0 | RMSE +3.6% |
-| **스태킹 앙상블** | **0.891** | 361.1 | **256.8** | **RMSE +5.8%** |
+| persistence *(baseline)* | 0.877 | 383.5 | 261.2 | — |
+| RandomForest (운전변수) | 0.603 | 689.2 | 535.9 | RMSE −80% |
+| XGBoost (운전변수) | 0.597 | 694.0 | 534.5 | RMSE −81% |
+| **SARIMAX (시계열)** | **0.891** | **360.7** | 262.1 | **RMSE +5.9%** |
+| **스태킹 앙상블** | **0.891** | 361.1 | 263.3 | **RMSE +5.8%** |
 
-- **시계열(SARIMAX) 추가가 성능을 크게 끌어올림** : 스택 R² 0.883 → **0.891**,
-  persistence 대비 **RMSE −5.8%**.
-- **스태킹은 MAE(256.8) 최저** 이며 R²·RMSE 는 최강 base(SARIMAX)와 동률 — 즉 **모든
-  지표에서 최고 또는 동률**. 단일 모델 선택 위험을 비음수 가중으로 분산한다.
-- 메타 가중치 : **SARIMAX 0.617 · persistence 0.230 · RandomForest 0.083 ·
-  XGBoost 0.068**(비음수). 강한 시계열 base + persistence 앵커에 트리 보정을 얹는 구조.
-- staleness 강건성 : fresh(≤1일) 269.5→**249.8**, stale(≥2일 갭) 545.4→**517.4** —
-  전 구간에서 persistence 대비 개선폭이 커짐.
+- **persist 피처 없이 persistence baseline 을 이기는 것은 시계열 모델(SARIMAX)** 이다
+  (R² 0.891 > 0.877, RMSE −5.8%). 과거 메탄을 안 쓰는 트리(운전변수 전용)는 R²≈0.60 로
+  baseline 에 크게 못 미친다 — 정직히 보고.
+- **메타의 모델선택** : 비음수 Ridge 는 약한 트리를 **0 가중**(XGB=0, RF=0)으로 배제하고
+  SARIMAX 에 ≈0.99 가중을 준다. 즉 스태킹은 유효 base(SARIMAX)로 자동 수렴하며, 향후
+  더 강한 다양성 base 가 추가되면 자연스럽게 결합한다.
+- staleness 강건성 : fresh(≤1일) 269.5→**252.3**, stale(≥2일 갭) 545.4→**515.1** —
+  baseline 대비 전 구간 개선.
 - 산출물 : `outputs/stack_metrics.json`, `stack_meta_weights.png`,
   `stack_predictions_2023.(csv|png)`.
 

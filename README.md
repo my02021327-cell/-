@@ -57,45 +57,45 @@
 pip install -r requirements.txt
 python -m src.train        # 앙상블 학습·평가·건강 신호등·시각화
 python -m src.eda          # 생물학적 지연·건강 분석
-python -m src.xgb_methane  # XGBoost 2상 집중·투입 lag 선택·persistence 상회 실증
+python -m src.xgb_methane  # XGBoost 2상 집중·투입 lag 선택(persistence 예측 미사용)
 python -m src.stack_methane # RF + XGBoost + SARIMAX(시계열) 스태킹 앙상블
 ```
 
 ## XGBoost 2상(메탄생성균 조) 집중 모듈 (`src/xgb_methane.py`)
 
 혐기성 소화조 **2상(메탄생성 단계)** 에 집중한 **XGBoost 단일 모델**. 투입→메탄 **lag
-자동선택**(gain 중요도 최댓값 날), **10~15개 피처 집중**, **결측일 삭제**, 그리고
-**persistence(어제값) 기준을 실제로 상회하는 방안** 을 2023 홀드아웃에서 실증한다.
+자동선택**(gain 중요도 최댓값 날), **10~15개 피처 집중**, **결측일 삭제**.
+**persistence(어제 메탄값)는 예측 입력으로 쓰지 않고 비교 baseline 으로만** 사용한다.
 상세는 [`REPORT_XGB.md`](REPORT_XGB.md).
 
-- 메탄은 일별 자기상관 0.92 로 persistence(R²≈0.88)가 매우 강함 → 2상 화학상태만의
-  소프트센서(Model-1)는 1일예측서 이를 못 넘음(정직 보고, 가스미터 대체 nowcast 용).
-- **Model-2(제안)** : persistence 앵커 + 체류창 투입부하(HRT 지연) + 관측 staleness +
-  얕은 트리·강정규화·8-시드 평균 → **2023 R² 0.877→0.881, RMSE −1.7%**, fresh·stale
-  전 구간 강건하게 persistence 상회.
+- 메탄은 일별 자기상관 0.92 로 persistence(baseline R²≈0.88)가 매우 강함 → 2상 화학상태
+  소프트센서(Model-1)도, 운전변수 전용 Model-2(R²≈0.60)도 과거 메탄 없이는 baseline 을
+  못 넘음(정직 보고). Model-1 은 가스미터 대체 nowcast 용도로 유효.
+- **persist 피처 없이 baseline 을 이기는 방법은 시계열 모델(SARIMAX)** 이며, 아래 스태킹
+  모듈에서 실증(R²=0.891 > 0.877).
 - 산출물 : `outputs/xgb_metrics.json`, `xgb_lag_selection.(csv|png)`,
   `xgb_feature_importance.png`, `xgb_predictions_2023.(csv|png)`.
 
 ### RF + XGBoost + 시계열(SARIMAX) 스태킹 앙상블 (`src/stack_methane.py`)
 
-동일 피처셋에서 **RandomForest** 와 **시계열 모델 SARIMAX(1,0,1)+외생 투입부하** 를
-학습하고 **RF + XGBoost + SARIMAX 를 스태킹** 으로 결합. RF·XGB 는 `TimeSeriesSplit(5)`
-확장창 **OOF**, SARIMAX 는 **1-step 인과예측**(누수 차단)으로 메타피처를 만들고,
-persistence 를 함께 넣어 **비음수 Ridge** 로 결합한다. SARIMAX 는 트리와 계열이 달라
-(잔차 상관 0.93<0.99) 앙상블 다양성을 만든다.
+운전변수 전용 **RandomForest·XGBoost** 와 **시계열 모델 SARIMAX(1,0,1)+외생 투입부하** 를
+학습해 스태킹. RF·XGB 는 `TimeSeriesSplit(5)` 확장창 **OOF**, SARIMAX 는 **1-step 인과예측**
+(누수 차단)으로 메타피처를 만들고 **비음수 Ridge** 로 결합한다. **persistence(어제 메탄값)
+는 예측 입력으로 쓰지 않고 비교 baseline 으로만** 둔다. SARIMAX 는 `persist` 피처 없이
+메탄 동특성을 상태공간으로 모형화하는 정식 시계열 모델이다.
 
 | 모델 | R² | RMSE | MAE |
 |------|:---:|:---:|:---:|
-| persistence | 0.877 | 383.5 | 261.2 |
-| RandomForest | 0.871 | 392.2 | 277.4 |
-| XGBoost | 0.881 | 376.9 | 264.8 |
-| SARIMAX (시계열) | **0.891** | **360.7** | 262.1 |
-| **스태킹 앙상블** | **0.891** | 361.1 | **256.8** |
+| persistence *(baseline)* | 0.877 | 383.5 | 261.2 |
+| RandomForest (운전변수) | 0.603 | 689.2 | 535.9 |
+| XGBoost (운전변수) | 0.597 | 694.0 | 534.5 |
+| **SARIMAX (시계열)** | **0.891** | **360.7** | 262.1 |
+| **스태킹 앙상블** | **0.891** | 361.1 | 263.3 |
 
-메타 가중치 SARIMAX 0.62 · persistence 0.23 · RF 0.08 · XGB 0.07(비음수). **시계열 base
-추가로 스택 R² 0.883→0.891(persistence 대비 RMSE −5.8%)**, MAE 최저이며 fresh·stale 전
-구간 강건. 산출물 : `outputs/stack_metrics.json`, `stack_meta_weights.png`,
-`stack_predictions_2023.(csv|png)`.
+**persist 피처 없이 baseline 을 이기는 것은 시계열(SARIMAX)** 이다(R² 0.891>0.877, RMSE
+−5.8%). 과거 메탄을 안 쓰는 트리는 R²≈0.60 으로 baseline 미달이며, 메타는 이를 0 가중
+배제하고 SARIMAX 에 수렴한다. 산출물 : `outputs/stack_metrics.json`,
+`stack_meta_weights.png`, `stack_predictions_2023.(csv|png)`.
 
 ## 결과 (2023 홀드아웃, 목표 = 메탄생성량)
 

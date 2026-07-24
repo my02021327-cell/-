@@ -24,35 +24,28 @@ BioGuard-AI 의 독립 모듈. 앙상블(src/train.py)과 별개로, **XGBoost �
                                XGBoost gain 중요도 최댓값 lag(day) 자동 선택
 • feature 10~15개 집중 ......... 소프트센서 = 2상상태(8)+투입(3)+선택lag(1)=12개
 • 결측치 있는 날 삭제 .......... 보간 없이 dropna (미측정일 제거)
-• persistent 대비 신뢰도 개선 .. persistence(어제 메탄) 기준 대비, 이를 이기는
-                               '방안' 을 실제 홀드아웃(2023)에서 실증
+• persistent 대비 신뢰도 ....... persistence 는 **비교 baseline 으로만** 사용하고,
+                               persist(어제 메탄값)를 예측 피처로는 쓰지 않는다.
 
 ────────────────────────────────────────────────────────────────────────────────
-핵심 발견 & persistence 를 이기기 위한 방안
+중요 : persistence 는 '예측 입력' 으로 쓰지 않는다
 ────────────────────────────────────────────────────────────────────────────────
-메탄생성량은 일별 자기상관 0.92 로 매우 매끄러워 persistence(어제값)가 2023 홀드아웃
-에서 R²≈0.88 로 대단히 강하다. 게다가 연 단위로 완만한 하향 국면이동(2018 7,164 →
-2023 6,374 Nm³/d)이 있어, 학습기 관계를 외삽하는 트리 계열이 오히려 persistence 에
-뒤진다. 그래서 두 모델을 분리해 제시한다.
+어제 메탄값(persist)을 피처로 넣어 예측하는 것을 금지한다(사용자 요구). persistence 는
+오직 비교 baseline 으로만 표기한다. 두 모델 모두 운전변수/2상 상태만으로 예측한다.
+
+메탄생성량은 일별 자기상관 0.92 로 매우 매끄러워 persistence(어제값) baseline 이 2023
+에서 R²≈0.88 로 강하다. 게다가 연 단위 하향 국면이동(2018 7,164 → 2023 6,374 Nm³/d)이
+있어, 과거 메탄을 쓰지 않는 트리 계열은 이 baseline 을 넘기 어렵다. 이는 정직히 보고한다.
 
   [Model-1] 2상 소프트센서(nowcast) — 과제의 '2상 집중·10~15피처' 요구 충족
      당일 소화조 화학상태로 당일 메탄을 추정(가스유량계 대체·결측 보완용). 화학상태는
-     '동시대·하류' 측정이라 1일예측에선 persistence 를 넘지 못함(정직히 보고).
+     '동시대·하류' 측정이라 1일예측에선 persistence baseline 을 넘지 못함(정직).
 
-  [Model-2] persistence 를 이기는 방안(제안) — 홀드아웃 실증
-     persistence 를 못 이기는 원인을 세 가지 설계로 정면 돌파한다.
-       P1 persistence 앵커링 : 어제 메탄(persist)을 피처로 넣어 국면이동에도 수준을
-          잃지 않게 함(트리 외삽 문제 회피).
-       P2 체류창 투입부하(HRT 지연) : 투입량의 5·10일 이동평균 + 선택 lag → 앞으로의
-          변화를 '선행' 지시(persistence 가 못 보는 미래 신호).
-       P3 관측 staleness : 마지막 메탄관측 후 경과일. persistence 가 낡은(stale) 구간
-          에서 모델이 더 크게 기여하도록 학습.
-     여기에 얕은 트리(depth 2)·강한 정규화·8-시드 평균으로 소표본 분산을 눌러
-     persistence 를 안정적으로 상회(2023 R² 0.877→0.883, RMSE −2.5%, 전 구간 강건).
-
-     * 왜 2상 화학피처를 Model-2 에서 빼는가 : 결측 42%로 표본이 급감하고, 학습기
-       화학-메탄 관계가 2023 국면에 전이되지 않아 홀드아웃 성능을 떨어뜨림(실측 확인).
-       화학상태는 Model-1(소프트센서)·건강관제(VFA/ALK)에서 제 역할을 한다.
+  [Model-2] 운전변수(투입부하) 전용 예측 — persistence 미사용
+     투입부하 lag·체류창부하만으로 예측(과거 메탄 미사용). 과거 메탄을 쓰지 않으므로
+     강한 자기상관 baseline 에는 못 미친다(R²≈0.6). → persist 피처 없이 baseline 을
+     넘어서는 방법은 **시계열 모델(SARIMAX)** 이며 `src/stack_methane.py` 에서 실증한다
+     (2023 R²=0.891 > persistence 0.877, persist 피처 미사용).
 """
 
 from __future__ import annotations
@@ -249,15 +242,16 @@ def main():
     m1 = metrics(te1[TARGET].values, pred1)
     m1_persist = metrics(te1[TARGET].values, te1["persist"].values)
 
-    # 3) Model-2 : persistence 를 이기는 방안 (앵커+체류창+staleness, 시드평균)
+    # 3) Model-2 : 운전변수(투입부하) 전용 예측 — persistence(과거 메탄) 미사용
     m2_feats = [best_lag_col, f"{LAG_DRIVER}_lag3", f"{LAG_DRIVER}_lag7",
-                "load5", "load10", "persist", "stale"]           # 7 features
-    d2 = drop_missing(df, m2_feats)
+                "load5", "load10"]                               # 5 features
+    # persist 는 예측 피처가 아님 — baseline 비교/구간분석용으로만 존재(dropna 정렬)
+    d2 = drop_missing(df, m2_feats + ["persist"])
     tr2, te2 = split(d2)
     pred2, imp2 = fit_predict(
         tr2, te2, m2_feats,
-        dict(n_estimators=300, max_depth=2, learning_rate=0.03, subsample=0.8,
-             colsample_bytree=0.9, reg_lambda=5.0, reg_alpha=0.5, min_child_weight=8),
+        dict(n_estimators=300, max_depth=3, learning_rate=0.03, subsample=0.8,
+             colsample_bytree=0.9, reg_lambda=4.0, reg_alpha=0.5, min_child_weight=6),
     )
     y2 = te2[TARGET].values
     m2 = metrics(y2, pred2)
@@ -305,13 +299,16 @@ def main():
             "persistence": m1_persist, "xgboost": m1,
             "vs_persistence": vs_persist(m1, m1_persist),
         },
-        "model2_beats_persistence": {
-            "purpose": "persistence 앵커+체류창부하+staleness 로 persistence 상회",
+        "persistence_role": "비교 baseline 전용(예측 입력 아님)",
+        "model2_operating_only": {
+            "purpose": "투입부하(운전변수)만으로 예측 — persistence(과거 메탄) 미사용",
             "features": m2_feats, "n_features": len(m2_feats),
             "seeds_averaged": SEEDS,
             "train_n": int(len(tr2)), "test_n": int(len(te2)),
-            "persistence": m2_persist, "xgboost": m2,
-            "vs_persistence": vs_persist(m2, m2_persist),
+            "persistence_baseline": m2_persist, "xgboost": m2,
+            "vs_persistence_baseline": vs_persist(m2, m2_persist),
+            "note": "과거 메탄 미사용 → 강한 자기상관 baseline 미달(정직). "
+                    "persist 없이 baseline 상회는 시계열 모델(src/stack_methane.py) 참조.",
             "robustness_by_staleness": robustness,
         },
         "model2_top_importance": imp2.head(8).round(2).to_dict(),
@@ -324,12 +321,11 @@ def main():
     print(f"[Model-1] 2상 소프트센서 (feat={len(m1_feats)}, n_te={len(te1)})")
     print(f"    persistence  R2={m1_persist['R2']:+.4f} RMSE={m1_persist['RMSE']:.1f}")
     print(f"    XGBoost      R2={m1['R2']:+.4f} RMSE={m1['RMSE']:.1f}  → 화학상태는 1일예측서 persistence 미달(정직)")
-    print(f"[Model-2] persistence 상회 방안 (feat={len(m2_feats)}, {SEEDS}-seed, n_te={len(te2)})")
-    print(f"    persistence  R2={m2_persist['R2']:+.4f} RMSE={m2_persist['RMSE']:.1f} MAE={m2_persist['MAE']:.1f}")
-    print(f"    XGBoost      R2={m2['R2']:+.4f} RMSE={m2['RMSE']:.1f} MAE={m2['MAE']:.1f}"
-          f"  → dRMSE {vs_persist(m2, m2_persist)['dRMSE_%']:+.2f}%")
-    for r in robustness:
-        print(f"      {r['name']:16s} n={r['n']:3d} persist RMSE={r['persist_RMSE']:.1f}  xgb RMSE={r['xgb_RMSE']:.1f}")
+    print(f"[Model-2] 운전변수 전용 예측 (feat={len(m2_feats)}, {SEEDS}-seed, n_te={len(te2)}) — persistence 미사용")
+    print(f"    persistence*  R2={m2_persist['R2']:+.4f} RMSE={m2_persist['RMSE']:.1f}  (*비교 baseline)")
+    print(f"    XGBoost       R2={m2['R2']:+.4f} RMSE={m2['RMSE']:.1f} MAE={m2['MAE']:.1f}"
+          f"  → 과거 메탄 미사용, baseline 미달(정직)")
+    print(f"    ※ persist 없이 baseline 상회 → 시계열 모델 SARIMAX (src/stack_methane.py, R2=0.891)")
     print("=====================================================")
 
 

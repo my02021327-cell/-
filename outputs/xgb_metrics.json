@@ -42,60 +42,58 @@
       "dMAE_%": -182.89
     }
   },
-  "model2_beats_persistence": {
-    "purpose": "persistence 앵커+체류창부하+staleness 로 persistence 상회",
+  "persistence_role": "비교 baseline 전용(예측 입력 아님)",
+  "model2_operating_only": {
+    "purpose": "투입부하(운전변수)만으로 예측 — persistence(과거 메탄) 미사용",
     "features": [
       "투입량합계_lag2",
       "투입량합계_lag3",
       "투입량합계_lag7",
       "load5",
-      "load10",
-      "persist",
-      "stale"
+      "load10"
     ],
-    "n_features": 7,
+    "n_features": 5,
     "seeds_averaged": 8,
     "train_n": 1098,
     "test_n": 154,
-    "persistence": {
+    "persistence_baseline": {
       "R2": 0.877,
       "RMSE": 383.5,
       "MAE": 261.2,
       "n": 154
     },
     "xgboost": {
-      "R2": 0.8812,
-      "RMSE": 376.9,
-      "MAE": 264.8,
+      "R2": 0.5971,
+      "RMSE": 694.0,
+      "MAE": 534.5,
       "n": 154
     },
-    "vs_persistence": {
-      "dR2": 0.0042,
-      "dRMSE_%": 1.72,
-      "dMAE_%": -1.38
+    "vs_persistence_baseline": {
+      "dR2": -0.2799,
+      "dRMSE_%": -80.96,
+      "dMAE_%": -104.63
     },
+    "note": "과거 메탄 미사용 → 강한 자기상관 baseline 미달(정직). persist 없이 baseline 상회는 시계열 모델(src/stack_methane.py) 참조.",
     "robustness_by_staleness": [
       {
         "name": "fresh(stale<=1d)",
         "n": 103,
         "persist_RMSE": 269.5,
-        "xgb_RMSE": 265.7
+        "xgb_RMSE": 696.2
       },
       {
         "name": "stale(>=2d gap)",
         "n": 51,
         "persist_RMSE": 545.4,
-        "xgb_RMSE": 535.1
+        "xgb_RMSE": 689.7
       }
     ]
   },
   "model2_top_importance": {
-    "persist": 71797800.0,
-    "load5": 23694460.0,
-    "투입량합계_lag2": 10528685.0,
-    "load10": 8211012.5,
-    "투입량합계_lag3": 6224740.5,
-    "투입량합계_lag7": 5994287.5,
-    "stale": 5501481.0
+    "load5": 25881270.0,
+    "투입량합계_lag3": 13979927.0,
+    "투입량합계_lag2": 13312088.0,
+    "load10": 9135077.0,
+    "투입량합계_lag7": 8578402.0
   }
 }

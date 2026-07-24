@@ -1,11 +1,11 @@
 {
   "target": "methane",
-  "design": "RF·XGB·SARIMAX(시계열) base + (4입력) 비음수 Ridge 스태킹",
+  "design": "RF·XGB·SARIMAX(시계열) base + 비음수 Ridge 스태킹 (persistence 예측 미사용)",
+  "persistence_role": "비교 baseline 전용(예측 입력 아님)",
   "base_learners": [
     "XGBoost",
     "RandomForest",
-    "SARIMAX",
-    "persistence"
+    "SARIMAX"
   ],
   "sarimax_order": [
     1,
@@ -21,21 +21,18 @@
     "투입량합계_lag3",
     "투입량합계_lag7",
     "load5",
-    "load10",
-    "persist",
-    "stale"
+    "load10"
   ],
-  "n_features": 7,
+  "n_features": 5,
   "best_input_methane_lag_day": 2,
   "cv": "TimeSeriesSplit(n_splits=5) OOF(RF·XGB) + SARIMAX 인과 1-step",
   "train_n": 1098,
   "test_n": 154,
   "meta_weights": {
-    "XGBoost": 0.0675,
-    "RandomForest": 0.0831,
-    "SARIMAX": 0.6174,
-    "persistence": 0.23,
-    "intercept": 9.2
+    "XGBoost": 0.0,
+    "RandomForest": 0.0,
+    "SARIMAX": 0.9914,
+    "intercept": 53.6
   },
   "results_same_rows": {
     "persistence": {
@@ -45,22 +42,22 @@
       "n": 154
     },
     "randomforest": {
-      "R2": 0.8714,
-      "RMSE": 392.2,
-      "MAE": 277.4,
+      "R2": 0.6028,
+      "RMSE": 689.2,
+      "MAE": 535.9,
       "n": 154,
-      "dR2": -0.0056,
-      "dRMSE_%": -2.27,
-      "dMAE_%": -6.2
+      "dR2": -0.2742,
+      "dRMSE_%": -79.71,
+      "dMAE_%": -105.17
     },
     "xgboost": {
-      "R2": 0.8812,
-      "RMSE": 376.9,
-      "MAE": 264.8,
+      "R2": 0.5971,
+      "RMSE": 694.0,
+      "MAE": 534.5,
       "n": 154,
-      "dR2": 0.0042,
-      "dRMSE_%": 1.72,
-      "dMAE_%": -1.38
+      "dR2": -0.2799,
+      "dRMSE_%": -80.96,
+      "dMAE_%": -104.63
     },
     "sarimax": {
       "R2": 0.8912,
@@ -72,22 +69,22 @@
       "dMAE_%": -0.34
     },
     "avg_all": {
-      "R2": 0.8857,
-      "RMSE": 369.7,
-      "MAE": 261.0,
+      "R2": 0.7654,
+      "RMSE": 529.7,
+      "MAE": 411.1,
       "n": 154,
-      "dR2": 0.0087,
-      "dRMSE_%": 3.6,
-      "dMAE_%": 0.08
+      "dR2": -0.1116,
+      "dRMSE_%": -38.12,
+      "dMAE_%": -57.39
     },
     "stack": {
       "R2": 0.8909,
-      "RMSE": 361.1,
-      "MAE": 256.8,
+      "RMSE": 361.2,
+      "MAE": 263.3,
       "n": 154,
       "dR2": 0.0139,
-      "dRMSE_%": 5.84,
-      "dMAE_%": 1.68
+      "dRMSE_%": 5.81,
+      "dMAE_%": -0.8
     }
   },
   "robustness_by_staleness": [
@@ -95,13 +92,13 @@
       "name": "fresh(stale<=1d)",
       "n": 103,
       "persist_RMSE": 269.5,
-      "stack_RMSE": 249.8
+      "stack_RMSE": 252.3
     },
     {
       "name": "stale(>=2d gap)",
       "n": 51,
       "persist_RMSE": 545.4,
-      "stack_RMSE": 517.4
+      "stack_RMSE": 515.1
     }
   ]
 }

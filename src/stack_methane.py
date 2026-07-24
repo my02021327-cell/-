@@ -18,23 +18,32 @@ RF·XGB 는 같은 트리 계열이라 잔차 상관이 ≈0.99 로 매우 높�
 (2023 R²=0.891 > persistence 0.877). → 스태킹의 핵심 base 가 된다.
 
 ────────────────────────────────────────────────────────────────────────────────
+중요 : persistence 는 '예측 입력' 으로 쓰지 않는다
+────────────────────────────────────────────────────────────────────────────────
+어제 메탄값(persist)을 피처·메타입력으로 넣어 예측하는 것을 금지한다. persistence 는
+오직 **비교용 baseline** 으로만 사용한다. 즉 어떤 모델도 persist 피처로 예측하지 않는다.
+SARIMAX 는 persist '피처' 를 쓰지 않는 정식 시계열(상태공간) 모델이며, 메탄 동특성과
+외생 투입부하로 예측한다.
+
+────────────────────────────────────────────────────────────────────────────────
 스태킹 설계 (누수 없는 시계열 OOF)
 ────────────────────────────────────────────────────────────────────────────────
 • Base learner :
-    - RandomForest, XGBoost(8-시드 평균) — persistence 상회 피처셋(투입 lag·체류창부하·
-      persistence·staleness)에서 학습.
+    - RandomForest, XGBoost(8-시드 평균) — 운전변수(투입 lag·체류창부하)만으로 학습.
     - SARIMAX(1,0,1) + 외생[load5,load10] — 일별 캘린더에서 학습, 1-step 인과예측.
 • Meta feature : 학습기간(2018~2022)에서 각 base 의 **인과적 OOF 예측** 생성(누수 차단).
     - RF·XGB : **TimeSeriesSplit** 확장창 OOF.
-    - SARIMAX : 파라미터를 학습기간에 적합 후 **1-step(dynamic=False) 인과 예측**
-      (각 시점은 과거만 사용). 여기에 persistence 를 meta 입력에 함께 넣는다.
+    - SARIMAX : 파라미터를 학습기간에 적합 후 **1-step(dynamic=False) 인과 예측**.
+  (persistence 는 메타 입력에서 제외 — 예측에 쓰지 않음)
 • Meta learner : 비음수 Ridge(`positive=True`). 해석 가능한 가중치 + 강건성.
 • 최종 : base 를 전체 학습데이터로 재학습 → 2023 예측 → 메타로 결합.
 
-메탄은 일별 자기상관 0.92 로 persistence(2023 R²≈0.88)가 매우 강하다. SARIMAX 를 더한
-비음수 스태킹은 persistence·단일 XGB·RF·SARIMAX 를 종합적으로 상회/동률하며(2023
-R² 0.877→**0.891**, RMSE **−5.9%**, MAE 최저), 어떤 단일 base 가 특정 국면에서 무너져도
-가중 배합으로 위험을 분산한다. 실행: `python -m src.stack_methane`.
+메탄은 일별 자기상관 0.92 로 persistence(baseline 2023 R²≈0.88)가 강하다. persist 피처
+없이 이를 이기는 것은 **시계열 모델(SARIMAX)** 이다(2023 R²=**0.891** > persistence
+0.877). 운전변수만 쓰는 트리(RF·XGB)는 과거 메탄을 안 쓰므로 약하고(R²≈0.60), 메타는
+이를 자동 down-weight 하여 스태킹은 SARIMAX 중심으로 수렴한다. 즉 **persistence 를
+예측에 쓰지 않고도** 시계열 base 로 persistence baseline 을 상회한다.
+실행: `python -m src.stack_methane`.
 """
 
 from __future__ import annotations
@@ -63,20 +72,20 @@ from src.xgb_methane import (
 
 warnings.filterwarnings("ignore")
 
-# persistence 상회 피처셋 (xgb_methane Model-2 와 동일 계열)
+# 운전변수 전용 피처셋 (persist/stale 등 과거 메탄 기반 피처 제외 — 예측에 persistence 미사용)
 STACK_FEATS_TEMPLATE = ["{lag}", f"{LAG_DRIVER}_lag3", f"{LAG_DRIVER}_lag7",
-                        "load5", "load10", "persist", "stale"]
+                        "load5", "load10"]
 N_SPLITS = 5
 SARIMAX_ORDER = (1, 0, 1)
 SARIMAX_EXOG = ["load5", "load10"]     # 외생 투입부하(체류창)
-BASE_NAMES = ["XGBoost", "RandomForest", "SARIMAX", "persistence"]
+BASE_NAMES = ["XGBoost", "RandomForest", "SARIMAX"]
 
 XGB_PARAMS = dict(
-    n_estimators=300, max_depth=2, learning_rate=0.03, subsample=0.8,
-    colsample_bytree=0.9, reg_lambda=5.0, reg_alpha=0.5, min_child_weight=8,
+    n_estimators=300, max_depth=3, learning_rate=0.03, subsample=0.8,
+    colsample_bytree=0.9, reg_lambda=4.0, reg_alpha=0.5, min_child_weight=6,
 )
 RF_PARAMS = dict(
-    n_estimators=600, max_depth=6, min_samples_leaf=8, max_features=0.7,
+    n_estimators=600, max_depth=7, min_samples_leaf=6, max_features=0.7,
     random_state=42, n_jobs=4,
 )
 
@@ -123,8 +132,8 @@ def sarimax_causal_predictions(df: pd.DataFrame) -> pd.Series:
 # ──────────────────────────────────────────────────────────────────────────────
 # 시계열 OOF meta feature 생성 → 비음수 Ridge 메타 학습
 # ──────────────────────────────────────────────────────────────────────────────
-def build_oof(Xtr, ytr, sar_tr, persist_tr):
-    """base OOF 예측 생성(누수 차단).
+def build_oof(Xtr, ytr, sar_tr):
+    """base OOF 예측 생성(누수 차단). meta 입력 = [XGB, RF, SARIMAX] (persistence 제외).
     RF·XGB : TimeSeriesSplit 확장창 OOF. SARIMAX : 인과 1-step 예측(사전 계산 sar_tr)."""
     n = len(ytr)
     oof_x = np.full(n, np.nan)
@@ -133,12 +142,12 @@ def build_oof(Xtr, ytr, sar_tr, persist_tr):
         oof_x[vai] = xgb_fit_predict(Xtr[tri], ytr[tri], Xtr[vai], seeds=4)
         oof_r[vai] = rf_fit_predict(Xtr[tri], ytr[tri], Xtr[vai])
     mask = ~np.isnan(oof_x) & ~np.isnan(sar_tr)
-    Z = np.c_[oof_x[mask], oof_r[mask], sar_tr[mask], persist_tr[mask]]
+    Z = np.c_[oof_x[mask], oof_r[mask], sar_tr[mask]]
     return Z, ytr[mask], mask
 
 
 def fit_meta(Z, y):
-    """비음수 Ridge 메타 학습 (base 보정 + persistence 비음수 배합)."""
+    """비음수 Ridge 메타 학습 (base 예측의 비음수 배합; persistence 미사용)."""
     return Ridge(alpha=1.0, positive=True).fit(Z, y)
 
 
@@ -161,7 +170,7 @@ def plot_pred(dates, y, stack, sar, persist, m, path):
 
 
 def plot_weights(coef, intercept, path):
-    colors = ["#C0504D", "#4F81BD", "#4C9A4C", "#999999"]
+    colors = ["#C0504D", "#4F81BD", "#4C9A4C"]
     fig, ax = plt.subplots(figsize=(6.4, 3.6))
     ax.bar(BASE_NAMES, coef, color=colors)
     for i, c in enumerate(coef):
@@ -191,7 +200,7 @@ def main():
     tr, te = split(d)
     Xtr, ytr = tr[feats].values, tr[TARGET].values
     Xte, yte = te[feats].values, te[TARGET].values
-    persist_te = te["persist"].values
+    persist_te = te["persist"].values           # 비교 baseline 전용(예측에 미사용)
     sar_tr = sar_all.reindex(tr["date"]).values
     sar_te = sar_all.reindex(te["date"]).values
 
@@ -200,10 +209,10 @@ def main():
     pred_rf = rf_fit_predict(Xtr, ytr, Xte)
     pred_sar = sar_te
 
-    # 2) 시계열 OOF → 비음수 Ridge 메타 (XGB, RF, SARIMAX, persistence)
-    Z, y_oof, _ = build_oof(Xtr, ytr, sar_tr, tr["persist"].values)
+    # 2) 시계열 OOF → 비음수 Ridge 메타 (XGB, RF, SARIMAX) — persistence 미사용
+    Z, y_oof, _ = build_oof(Xtr, ytr, sar_tr)
     meta = fit_meta(Z, y_oof)
-    Zte = np.c_[pred_xgb, pred_rf, pred_sar, persist_te]
+    Zte = np.c_[pred_xgb, pred_rf, pred_sar]
     pred_stack = meta.predict(Zte)
 
     # 3) 지표 (동일 2023 행에서 공정 비교)
@@ -247,7 +256,8 @@ def main():
 
     summary = {
         "target": TARGET,
-        "design": "RF·XGB·SARIMAX(시계열) base + (4입력) 비음수 Ridge 스태킹",
+        "design": "RF·XGB·SARIMAX(시계열) base + 비음수 Ridge 스태킹 (persistence 예측 미사용)",
+        "persistence_role": "비교 baseline 전용(예측 입력 아님)",
         "base_learners": BASE_NAMES,
         "sarimax_order": list(SARIMAX_ORDER), "sarimax_exog": SARIMAX_EXOG,
         "features": feats, "n_features": len(feats),
