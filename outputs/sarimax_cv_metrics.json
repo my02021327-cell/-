@@ -1,0 +1,86 @@
+{
+  "model": "SARIMAX(1, 0, 1) + exog['load5', 'load10']",
+  "cv_design": "rolling-origin expanding window: min_train=730d, step=180d, block=180d",
+  "adopted_order_cv": {
+    "folds": 8,
+    "R2_mean": 0.868,
+    "R2_std": 0.0402,
+    "RMSE_mean": 366.7,
+    "RMSE_std": 111.4,
+    "MAE_mean": 262.5,
+    "R2_pooled": 0.8995
+  },
+  "single_split_2023_R2": 0.8912,
+  "order_selection": [
+    {
+      "order": "(1, 0, 1)",
+      "cv_R2_mean": 0.868,
+      "cv_R2_std": 0.0402,
+      "cv_RMSE_mean": 366.7,
+      "cv_MAE_mean": 262.5,
+      "AIC": 17870.0,
+      "n_params": 5
+    },
+    {
+      "order": "(1, 1, 1)",
+      "cv_R2_mean": 0.8647,
+      "cv_R2_std": 0.0388,
+      "cv_RMSE_mean": 370.2,
+      "cv_MAE_mean": 259.6,
+      "AIC": 17870.0,
+      "n_params": 5
+    },
+    {
+      "order": "(2, 0, 2)",
+      "cv_R2_mean": 0.8673,
+      "cv_R2_std": 0.0397,
+      "cv_RMSE_mean": 367.6,
+      "cv_MAE_mean": 264.3,
+      "AIC": 17838.0,
+      "n_params": 7
+    },
+    {
+      "order": "(2, 1, 2)",
+      "cv_R2_mean": 0.8657,
+      "cv_R2_std": 0.0379,
+      "cv_RMSE_mean": 369.0,
+      "cv_MAE_mean": 258.8,
+      "AIC": 17840.0,
+      "n_params": 7
+    },
+    {
+      "order": "(1, 0, 2)",
+      "cv_R2_mean": 0.8684,
+      "cv_R2_std": 0.0375,
+      "cv_RMSE_mean": 366.3,
+      "cv_MAE_mean": 263.0,
+      "AIC": 17889.0,
+      "n_params": 6
+    }
+  ],
+  "residual_diagnostics": {
+    "order": "(1, 0, 1)",
+    "converged": true,
+    "aic": 17870.2,
+    "bic": 17897.7,
+    "params": {
+      "load5": 32.997,
+      "load10": 1.515,
+      "ar.L1": 0.935,
+      "ma.L1": -0.283,
+      "sigma2": 484007.067
+    },
+    "ljung_box": {
+      "lag10": {
+        "stat": 22.8,
+        "pvalue": 0.0115
+      },
+      "lag20": {
+        "stat": 77.48,
+        "pvalue": 0.0
+      }
+    },
+    "ljung_box_note": "결측(42%)로 잔차가 불규칙 → NaN 제거 후 검정한 근사치. p<0.05 는 약한 잔차 자기상관 잔존을 시사하나, CV 상 고차수가 성능을 개선하지 못해 (1,0,1) 을 파시모니로 유지."
+  },
+  "conclusion": "CV R2 평균이 단일분할과 폴드 분산 내에서 일치 → 요행 아님. 후보 차수 CV 동률 → (1,0,1) 파시모니 유지."
+}

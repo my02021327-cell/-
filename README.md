@@ -59,6 +59,7 @@ python -m src.train        # 앙상블 학습·평가·건강 신호등·시각�
 python -m src.eda          # 생물학적 지연·건강 분석
 python -m src.xgb_methane  # XGBoost 2상 집중·투입 lag 선택(persistence 예측 미사용)
 python -m src.stack_methane # RF + XGBoost + SARIMAX(시계열) 스태킹 앙상블
+python -m src.sarimax_cv    # SARIMAX 롤링-오리진 교차검증·차수선택·잔차진단
 ```
 
 ## XGBoost 2상(메탄생성균 조) 집중 모듈 (`src/xgb_methane.py`)
@@ -96,6 +97,13 @@ python -m src.stack_methane # RF + XGBoost + SARIMAX(시계열) 스태킹 앙상
 −5.8%). 과거 메탄을 안 쓰는 트리는 R²≈0.60 으로 baseline 미달이며, 메타는 이를 0 가중
 배제하고 SARIMAX 에 수렴한다. 산출물 : `outputs/stack_metrics.json`,
 `stack_meta_weights.png`, `stack_predictions_2023.(csv|png)`.
+
+**SARIMAX 교차검증 (`src/sarimax_cv.py`)** — 단일 2023 분할 R²=0.891 의 신뢰성을
+**롤링-오리진 8폴드 CV** 로 검증: **CV R²=0.868±0.040**(pooled 0.900), 단일분할이 폴드
+분포 내 → 요행 아님. 후보 차수 CV 동률로 **(1,0,1) 파시모니 채택**, 잔차 진단(수렴·AR
+0.935·Ljung-Box) 병행. 산출물 : `outputs/sarimax_cv_metrics.json`,
+`sarimax_cv_folds.csv`, `sarimax_order_selection.csv`, `sarimax_cv.(png)`,
+`sarimax_cv_fit.png`.
 
 ## 결과 (2023 홀드아웃, 목표 = 메탄생성량)
 
