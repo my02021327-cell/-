@@ -1,0 +1,58 @@
+{
+  "leakage_audit": {
+    "exog_filled_cells": 0,
+    "checked_points": 52,
+    "max_abs_diff": 0.0,
+    "mean_abs_diff": 0.0,
+    "causal": true
+  },
+  "overfit_audit": {
+    "full": {
+      "train_R2": 0.7645,
+      "test_R2": 0.9012,
+      "gap": -0.1367
+    },
+    "ar_only": {
+      "train_R2": 0.6869,
+      "test_R2": 0.8773
+    },
+    "placebo_exog_permuted": {
+      "train_R2": 0.6869,
+      "test_R2": 0.877
+    },
+    "placebo_target_shuffled": {
+      "train_R2": -0.0606,
+      "test_R2": -0.1299
+    },
+    "exog_contribution_R2": 0.0239,
+    "overfitting": false
+  },
+  "residual_audit": {
+    "ljung_box": {
+      "lag5": 0.6845,
+      "lag10": 0.8816,
+      "lag20": 0.6676
+    },
+    "white_residuals": true,
+    "resid_lag1_autocorr": 0.04,
+    "bias_mean": -17.4,
+    "resid_std": 342.3,
+    "rmse_by_pred_quartile": {
+      "Q1": 272.2,
+      "Q2": 379.5,
+      "Q3": 415.0,
+      "Q4": 280.4
+    }
+  },
+  "cv_reliability": {
+    "R2_mean": 0.8819,
+    "R2_std": 0.0267,
+    "baseline_R2_mean": 0.8523
+  },
+  "ensemble_scaling_verdict": {
+    "seasonal_SARIMAX / UnobservedComponents": "잔차상관 0.90~0.97 — 결합 시 악화",
+    "exog 추가(온도·VFA/ALK·VS)": "CV 동률 또는 악화(분산 증가)",
+    "화학 기반 잔차보정(RF/Ridge)": "RF 과적합(0.889→0.750), Ridge 기여 ~0",
+    "결론": "잔차가 이미 백색 → 확장 이득 없음. 현 구성 유지 권고"
+  }
+}
