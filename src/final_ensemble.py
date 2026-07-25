@@ -48,17 +48,21 @@ from sklearn.model_selection import TimeSeriesSplit
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from xgboost import XGBRegressor
 
+from src.bio_lag import substrate_pool
 from src.xgb_methane import HOLDOUT_YEAR, OUT, TARGET, build_features, load
 
 warnings.filterwarnings("ignore")
 
-# ── 확정 설정 ────────────────────────────────────────────────────────────────
-VALIDATED_LAG = 0                                   # lag_validation.py 재검증 결과
+# ── 확정 설정 (생물학 기반 지연 반영) ────────────────────────────────────────
+# `src/bio_lag.py` : HRT=40.6일, 1일 투입=조 용적의 2.5% → 'lag 0' 은 물질수지상 불가.
+# CSTR 1차반응 2-pool 분포지연으로 재산정 : τ_fast=1일(가용성 음폐수+수리치환),
+# τ_slow=8일(입자성 가수분해 율속) → k_h=0.100/일 (문헌 0.05~0.2 정합).
 FEED = "투입량합계"
-FEED0 = "feed0"                                     # = 투입량합계 (lag 0)
-TREE_FEATS = [FEED0, f"{FEED}_lag1", f"{FEED}_lag2", "load5", "load10"]
+TAU_FAST, TAU_SLOW = 1, 8
+BIO_POOLS = ["S_fast", "S_slow"]                    # 기질가용성(1차반응 EWMA)
+TREE_FEATS = BIO_POOLS + [FEED, f"{FEED}_lag1", f"{FEED}_lag2"]
 SARIMAX_ORDER = (1, 0, 1)
-SARIMAX_EXOG = [FEED0, "load10"]                    # CV 로 선택된 외생조합
+SARIMAX_EXOG = BIO_POOLS                            # 생물학적 2-pool 외생입력
 SEEDS = 8
 N_SPLITS = 5          # 최종 모델 메타 OOF
 N_SPLITS_CV = 3       # CV 폴드 내부 메타 OOF(속도)
@@ -75,12 +79,15 @@ BASE_NAMES = ["XGBoost", "RandomForest", "SARIMAX"]
 # 데이터
 # ──────────────────────────────────────────────────────────────────────────────
 def prepare() -> pd.DataFrame:
-    """일별 연속 캘린더 + 검증 lag 기반 피처."""
+    """일별 연속 캘린더 + 생물학적 기질가용성(2-pool) 피처."""
     df = build_features(load())
-    df[FEED0] = df[FEED]                                  # lag 0 (당일 제어입력)
     df[f"{FEED}_lag1"] = df[FEED].shift(1)
     df[f"{FEED}_lag2"] = df[FEED].shift(2)
-    return df.set_index("date")
+    df = df.set_index("date")
+    # CSTR 1차반응 기질가용성 : S(t)=Σ (1/τ)e^{−τ'/τ}·feed(t−τ')  (EWMA 해)
+    df["S_fast"] = substrate_pool(df[FEED], TAU_FAST)
+    df["S_slow"] = substrate_pool(df[FEED], TAU_SLOW)
+    return df
 
 
 def metrics(y, p) -> dict:
@@ -239,12 +246,15 @@ def main():
 
     summary = {
         "model": "Stacking(XGBoost, RandomForest, SARIMAX) with non-negative Ridge meta",
-        "validated_lag_day": VALIDATED_LAG,
-        "lag_evidence": "AR(7) prewhitened CCF (business-day grid): r=0.500, p=0.007, "
-                        "bootstrap peak [0,0], within-3d 100%, stable across AR orders & 2019-2023",
-        "previous_xgb_gain_lag": 2,
+        "lag_model": "CSTR 1차반응 2-pool 분포지연 (생물학 기반, src/bio_lag.py)",
+        "tau_fast_d": TAU_FAST, "tau_slow_d": TAU_SLOW,
+        "k_hydrolysis_per_d": 0.1004,
+        "HRT_d": 40.6,
+        "lag_history": {"1차 XGBoost gain": "2일(기각)",
+                        "2차 프리화이트닝 CCF": "0일(생물학적으로 기각)",
+                        "최종 생물학 기반": "분포지연 — 평균 3.3일, t90 10일"},
         "sarimax": {"order": list(SARIMAX_ORDER), "exog": SARIMAX_EXOG,
-                    "exog_selected_by": "rolling-origin CV (not the holdout)"},
+                    "exog_selected_by": "rolling-origin CV (not the holdout) + 문헌 정합성"},
         "tree_features": TREE_FEATS,
         "persistence_policy": "예측 입력으로 사용 안 함(비교 baseline 전용)",
         "holdout_2023": m,
@@ -256,8 +266,10 @@ def main():
     with open(f"{OUT}/final_ensemble_metrics.json", "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
 
-    print("=========== 최종 앙상블 (검증 lag=0일 반영) ===========")
-    print(f"SARIMAX{SARIMAX_ORDER} exog={SARIMAX_EXOG} (CV 선택) | tree feats={TREE_FEATS}")
+    print("======= 최종 앙상블 (생물학 기반 2-pool 분포지연 반영) =======")
+    print(f"  지연모델: CSTR 1차반응 2-pool | tau_fast={TAU_FAST}d, tau_slow={TAU_SLOW}d "
+          f"(k_h=0.100/d, HRT=40.6d) — 평균지연 3.3d, t90 10d")
+    print(f"  SARIMAX{SARIMAX_ORDER} exog={SARIMAX_EXOG} | tree feats={TREE_FEATS}")
     print(f"\n[2023 홀드아웃]  n={m['final_ensemble']['n']}")
     for k in ["persistence_baseline", "randomforest", "xgboost", "sarimax", "final_ensemble"]:
         r = m[k]

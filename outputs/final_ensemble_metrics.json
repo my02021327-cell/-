@@ -1,8 +1,15 @@
 {
   "model": "Stacking(XGBoost, RandomForest, SARIMAX) with non-negative Ridge meta",
-  "validated_lag_day": 0,
-  "lag_evidence": "AR(7) prewhitened CCF (business-day grid): r=0.500, p=0.007, bootstrap peak [0,0], within-3d 100%, stable across AR orders & 2019-2023",
-  "previous_xgb_gain_lag": 2,
+  "lag_model": "CSTR 1차반응 2-pool 분포지연 (생물학 기반, src/bio_lag.py)",
+  "tau_fast_d": 1,
+  "tau_slow_d": 8,
+  "k_hydrolysis_per_d": 0.1004,
+  "HRT_d": 40.6,
+  "lag_history": {
+    "1차 XGBoost gain": "2일(기각)",
+    "2차 프리화이트닝 CCF": "0일(생물학적으로 기각)",
+    "최종 생물학 기반": "분포지연 — 평균 3.3일, t90 10일"
+  },
   "sarimax": {
     "order": [
       1,
@@ -10,17 +17,17 @@
       1
     ],
     "exog": [
-      "feed0",
-      "load10"
+      "S_fast",
+      "S_slow"
     ],
-    "exog_selected_by": "rolling-origin CV (not the holdout)"
+    "exog_selected_by": "rolling-origin CV (not the holdout) + 문헌 정합성"
   },
   "tree_features": [
-    "feed0",
+    "S_fast",
+    "S_slow",
+    "투입량합계",
     "투입량합계_lag1",
-    "투입량합계_lag2",
-    "load5",
-    "load10"
+    "투입량합계_lag2"
   ],
   "persistence_policy": "예측 입력으로 사용 안 함(비교 baseline 전용)",
   "holdout_2023": {
@@ -31,64 +38,64 @@
       "n": 154
     },
     "xgboost": {
-      "R2": 0.6113,
-      "RMSE": 681.8,
-      "MAE": 536.1,
+      "R2": 0.6103,
+      "RMSE": 682.6,
+      "MAE": 515.9,
       "n": 154
     },
     "randomforest": {
-      "R2": 0.6067,
-      "RMSE": 685.8,
-      "MAE": 533.4,
+      "R2": 0.5952,
+      "RMSE": 695.7,
+      "MAE": 543.0,
       "n": 154
     },
     "sarimax": {
-      "R2": 0.9046,
-      "RMSE": 337.8,
-      "MAE": 243.1,
+      "R2": 0.9012,
+      "RMSE": 343.7,
+      "MAE": 246.1,
       "n": 154
     },
     "final_ensemble": {
-      "R2": 0.9054,
-      "RMSE": 336.3,
-      "MAE": 241.2,
+      "R2": 0.9024,
+      "RMSE": 341.7,
+      "MAE": 244.5,
       "n": 154
     }
   },
   "meta_weights": {
     "XGBoost": 0.0,
     "RandomForest": 0.0,
-    "SARIMAX": 1.0088,
-    "intercept": -65.5
+    "SARIMAX": 1.0121,
+    "intercept": -93.5
   },
   "reliability_rolling_cv": {
     "folds": 8,
-    "R2_mean": 0.8834,
-    "R2_std": 0.023,
-    "RMSE_mean": 343.6,
-    "RMSE_std": 70.0,
-    "MAE_mean": 248.1,
-    "R2_pooled": 0.9172,
-    "persist_R2_mean": 0.8525
+    "R2_mean": 0.8819,
+    "R2_std": 0.0267,
+    "RMSE_mean": 344.7,
+    "RMSE_std": 73.8,
+    "MAE_mean": 247.2,
+    "R2_pooled": 0.9158,
+    "persist_R2_mean": 0.8523
   },
   "cv_folds": [
     {
       "fold": 1,
       "test_start": "2020-01-01",
-      "test_end": "2020-06-15",
-      "R2": 0.8765,
-      "RMSE": 501.4,
-      "MAE": 339.6,
-      "n": 112,
-      "persist_R2": 0.8801
+      "test_end": "2020-06-26",
+      "R2": 0.8661,
+      "RMSE": 512.8,
+      "MAE": 331.8,
+      "n": 117,
+      "persist_R2": 0.878
     },
     {
       "fold": 2,
       "test_start": "2020-06-29",
       "test_end": "2020-12-23",
-      "R2": 0.8728,
-      "RMSE": 355.3,
-      "MAE": 245.1,
+      "R2": 0.8773,
+      "RMSE": 348.9,
+      "MAE": 246.2,
       "n": 116,
       "persist_R2": 0.841
     },
@@ -96,9 +103,9 @@
       "fold": 3,
       "test_start": "2020-12-30",
       "test_end": "2021-06-24",
-      "R2": 0.8807,
-      "RMSE": 268.0,
-      "MAE": 201.6,
+      "R2": 0.8805,
+      "RMSE": 268.3,
+      "MAE": 198.9,
       "n": 106,
       "persist_R2": 0.7969
     },
@@ -106,9 +113,9 @@
       "fold": 4,
       "test_start": "2021-06-25",
       "test_end": "2021-12-21",
-      "R2": 0.8857,
-      "RMSE": 353.1,
-      "MAE": 249.5,
+      "R2": 0.8853,
+      "RMSE": 353.8,
+      "MAE": 248.7,
       "n": 112,
       "persist_R2": 0.8663
     },
@@ -116,9 +123,9 @@
       "fold": 5,
       "test_start": "2021-12-22",
       "test_end": "2022-06-17",
-      "R2": 0.9217,
-      "RMSE": 309.7,
-      "MAE": 244.8,
+      "R2": 0.9236,
+      "RMSE": 306.0,
+      "MAE": 242.0,
       "n": 111,
       "persist_R2": 0.9021
     },
@@ -126,8 +133,8 @@
       "fold": 6,
       "test_start": "2022-06-20",
       "test_end": "2022-12-13",
-      "R2": 0.8978,
-      "RMSE": 301.7,
+      "R2": 0.9004,
+      "RMSE": 297.9,
       "MAE": 227.9,
       "n": 108,
       "persist_R2": 0.8898
@@ -136,9 +143,9 @@
       "fold": 7,
       "test_start": "2022-12-19",
       "test_end": "2023-06-14",
-      "R2": 0.8909,
-      "RMSE": 339.7,
-      "MAE": 238.3,
+      "R2": 0.8904,
+      "RMSE": 340.5,
+      "MAE": 238.7,
       "n": 104,
       "persist_R2": 0.8594
     },
@@ -146,9 +153,9 @@
       "fold": 8,
       "test_start": "2023-06-15",
       "test_end": "2023-09-15",
-      "R2": 0.8409,
-      "RMSE": 319.9,
-      "MAE": 238.2,
+      "R2": 0.8312,
+      "RMSE": 329.5,
+      "MAE": 243.7,
       "n": 59,
       "persist_R2": 0.7847
     }

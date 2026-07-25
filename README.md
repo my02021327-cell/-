@@ -60,22 +60,46 @@ python -m src.eda          # 생물학적 지연·건강 분석
 python -m src.xgb_methane  # XGBoost 2상 집중·투입 lag 선택(persistence 예측 미사용)
 python -m src.stack_methane # RF + XGBoost + SARIMAX(시계열) 스태킹 앙상블
 python -m src.sarimax_cv    # SARIMAX 롤링-오리진 교차검증·차수선택·잔차진단
-python -m src.lag_validation # 투입→메탄 Lag 재검증(프리화이트닝·순열검정·부트스트랩)
-python -m src.final_ensemble # ★ 최종 앙상블(검증 lag 반영) + CV 신뢰도 재산출
+python -m src.lag_validation # 투입→메탄 Lag 통계적 재검증(프리화이트닝·순열검정)
+python -m src.bio_lag        # ★ 생물학(반응공학) 기반 지연 재산정 — 'lag 0' 정정
+python -m src.final_ensemble # ★ 최종 앙상블 + CV 신뢰도 재산출
 ```
+
+## ★ 생물학 기반 지연 재산정 (`src/bio_lag.py`)
+
+통계적 교차상관은 `투입량합계 → 메탄` peak lag = **0일**을 주지만, 이는 **생물학적으로
+성립하지 않는다.** 반응공학으로 정정했다.
+
+- **물질수지 근거(결정적)** : 설계 유효용적 **V = 4,000(A)+4,000(B) = 8,000 ㎥**,
+  실제 투입 **Q ≈ 197 ㎥/일** → **HRT ≈ 40.6일**, 희석률 D ≈ 0.0246/일.
+  **1일 투입 = 조 용적의 2.5%** → 하루 투입이 당일 메탄을 지배하는 것은 불가능.
+- **추정기 오용** : 투입량 자기상관이 lag1 0.94·lag30 0.63 로 극단적이라 feed(t)와
+  feed(t−20)이 구분 불가 → 단일 peak 교차상관은 **공선성 평지에서 임의 선택**.
+  lag0 신호의 실체는 **급이 시 액상치환(수리·측정 효과) + 음폐수(59%) 가용성 COD
+  급속전환**이지 기질의 생물학적 전환지연이 아니다.
+- **올바른 모델 — CSTR 1차반응 2-pool 분포지연** : `dS/dt = D·S_in − (k_h+D)·S`
+  → 시간상수 τ = 1/(k_h+D). 기질 이질성(가용성 음폐수 59% / 입자성 41%)을 2-pool 로 표현.
+  `S_j(t) = Σ (1/τ_j)e^(−τ/τ_j)·feed(t−τ)` (EWMA = 1차반응의 정확한 이산해)
+- **결과** : CV 선택 **τ_fast=1일, τ_slow=8일** → **k_h = 1/8 − D = 0.100 /일**,
+  음식물류·가축분뇨 중온소화 **문헌값 0.05~0.2/일과 정확히 일치**(τ_slow 20·30일은
+  k_h가 문헌범위 미만이라 기각). 기여도 **fast 51% : slow 49%**.
+- **정답은 '0일'이 아니라 분포지연** — 평균지연 **3.3일**, t90 **10일**.
+- 산출물 : `outputs/bio_lag.json`, `bio_lag_tau_selection.csv`, `bio_lag_impulse.png`.
 
 ## ★ 최종 모델 (`src/final_ensemble.py`)
 
-**Stacking(SARIMAX + XGBoost + RandomForest), 비음수 Ridge 메타, 검증 lag=0일 반영.**
+**Stacking(SARIMAX + XGBoost + RandomForest), 비음수 Ridge 메타, 생물학 2-pool 반영.**
 
 | 2023 홀드아웃 (n=154) | R² | RMSE | MAE |
 |---|:---:|:---:|:---:|
 | persistence *(baseline)* | 0.877 | 383.5 | 261.2 |
-| **최종 앙상블** | **0.9054** | **336.3** | **241.2** |
+| **최종 앙상블** | **0.9024** | **341.7** | **244.5** |
 
-- baseline 대비 **RMSE −12.3%, MAE −7.7%**
-- **신뢰도(앙상블 전체 파이프라인 롤링-오리진 CV, 8폴드) : R² = 0.8834 ± 0.0230**
-  (pooled 0.9172) — 8폴드 중 **7폴드에서 baseline(0.8525) 상회**
+- baseline 대비 **RMSE −10.9%, MAE −6.4%**
+- **신뢰도(앙상블 전체 파이프라인 롤링-오리진 CV, 8폴드) : R² = 0.8819 ± 0.0267**
+  (pooled 0.9158) — 8폴드 중 **7폴드에서 baseline(0.8523) 상회**
+- **생물학 반영의 대가는 사실상 0** : 임시 피처 대비 CV 0.8834→0.8819(폴드 표준편차
+  ±0.027 내). 정확도를 잃지 않고 **역학적 타당성·해석가능성**을 얻었다.
 - persistence 는 예측 입력에 쓰지 않음(비교 baseline 전용)
 - 정직한 한계 : 메타 가중치가 SARIMAX≈1.0 / 트리=0 으로, 스태킹은 사실상 **SARIMAX 로
   수렴**한다. 추가 다양성 base 도 잔차 상관 0.90~0.97 로 결합 시 성능이 하락해 미채택.
@@ -117,11 +141,12 @@ python -m src.final_ensemble # ★ 최종 앙상블(검증 lag 반영) + CV 신�
 배제하고 SARIMAX 에 수렴한다. 산출물 : `outputs/stack_metrics.json`,
 `stack_meta_weights.png`, `stack_predictions_2023.(csv|png)`.
 
-**Lag 재검증 (`src/lag_validation.py`)** — 기존 XGBoost gain 기반 lag(2일)를 **기각**.
+**Lag 통계적 재검증 (`src/lag_validation.py`)** — 기존 XGBoost gain 기반 lag(2일)를 **기각**.
 메탄이 평일만 측정되어 달력일 연속런이 최대 6일뿐이라 AR(7) 프리화이트닝이 불가능한
-문제를 **영업일 격자**로 해결한 뒤, AR(7) 프리화이트닝 교차상관 + 순열검정 + 이동블록
-부트스트랩으로 재검증: **투입량합계 → 메탄 = lag 0일**(r=0.500, p=0.007, 부트스트랩
-[0,0], ±3일 100%, AR 차수·2019~2023 연도 안정). 다른 투입 스트림은 모두 비유의(p>0.2).
+문제를 **영업일 격자**로 해결한 뒤, 프리화이트닝 교차상관 + 순열검정 + 이동블록
+부트스트랩으로 재검증: 통계적 peak 는 **lag 0일**(r=0.500, p=0.007). 다른 투입 스트림은
+모두 비유의(p>0.2). ⚠️ **단, 이 'lag 0일'은 위 생물학 절에서 기각·정정되었다** — 교차상관은
+*통계적 동시성*을 잡을 뿐 기질의 *생물학적 전환지연*과 다른 개념이다.
 산출물 : `outputs/lag_validation.(json|csv|png)`.
 
 **SARIMAX 교차검증 (`src/sarimax_cv.py`)** — 단일 2023 분할 R²=0.891 의 신뢰성을

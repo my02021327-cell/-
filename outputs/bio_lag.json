@@ -1,0 +1,134 @@
+{
+  "correction": "이전 결론 'lag=0일' 을 생물학적 근거로 정정 — 실제는 2-pool 분포지연",
+  "why_lag0_wrong": [
+    "가수분해가 율속단계인 다단계 미생물반응 — 당일 전환 불가",
+    "HRT=40.6일, 1일 투입이 조 용적의 2.46% (물질수지상 불가)",
+    "투입 계열 자기상관 과다(lag1 0.94)로 단일 peak 교차상관은 공선성 평지에서 임의선택",
+    "lag0 신호의 실체 = 급이 시 액상치환(수리·측정 효과) + 음폐수(59%) 가용성 COD 급속전환"
+  ],
+  "hydraulics": {
+    "V_m3": 8000.0,
+    "Q_mean_m3_per_d": 197.1,
+    "HRT_d": 40.6,
+    "D_per_d": 0.0246,
+    "daily_feed_pct_of_volume": 2.46
+  },
+  "kinetics": {
+    "tau_fast_d": 1,
+    "tau_slow_d": 8,
+    "k_hydrolysis_per_d": 0.1004,
+    "literature_range_per_d": [
+      0.05,
+      0.2
+    ],
+    "selected_by": "rolling-origin CV (holdout 미사용) + 문헌 정합성"
+  },
+  "impulse_response": {
+    "b_fast": 17.67,
+    "b_slow": 17.06,
+    "fast_share_%": 50.9,
+    "slow_share_%": 49.1,
+    "peak_lag_d": 0,
+    "centroid_lag_d": 3.31,
+    "t50_d": 1,
+    "t90_d": 10
+  },
+  "tau_grid": [
+    {
+      "tau_fast": NaN,
+      "tau_slow": 8,
+      "cv_R2": 0.8677,
+      "cv_std": 0.0238,
+      "k_h": 0.1004,
+      "k_h_in_literature": true
+    },
+    {
+      "tau_fast": 1.0,
+      "tau_slow": 8,
+      "cv_R2": 0.8833,
+      "cv_std": 0.0244,
+      "k_h": 0.1004,
+      "k_h_in_literature": true
+    },
+    {
+      "tau_fast": 2.0,
+      "tau_slow": 8,
+      "cv_R2": 0.8811,
+      "cv_std": 0.0269,
+      "k_h": 0.1004,
+      "k_h_in_literature": true
+    },
+    {
+      "tau_fast": NaN,
+      "tau_slow": 12,
+      "cv_R2": 0.8635,
+      "cv_std": 0.0229,
+      "k_h": 0.0587,
+      "k_h_in_literature": true
+    },
+    {
+      "tau_fast": 1.0,
+      "tau_slow": 12,
+      "cv_R2": 0.8829,
+      "cv_std": 0.0244,
+      "k_h": 0.0587,
+      "k_h_in_literature": true
+    },
+    {
+      "tau_fast": 2.0,
+      "tau_slow": 12,
+      "cv_R2": 0.8811,
+      "cv_std": 0.0269,
+      "k_h": 0.0587,
+      "k_h_in_literature": true
+    },
+    {
+      "tau_fast": NaN,
+      "tau_slow": 20,
+      "cv_R2": 0.8558,
+      "cv_std": 0.0242,
+      "k_h": 0.0254,
+      "k_h_in_literature": false
+    },
+    {
+      "tau_fast": 1.0,
+      "tau_slow": 20,
+      "cv_R2": 0.8821,
+      "cv_std": 0.0246,
+      "k_h": 0.0254,
+      "k_h_in_literature": false
+    },
+    {
+      "tau_fast": 2.0,
+      "tau_slow": 20,
+      "cv_R2": 0.8807,
+      "cv_std": 0.027,
+      "k_h": 0.0254,
+      "k_h_in_literature": false
+    },
+    {
+      "tau_fast": NaN,
+      "tau_slow": 30,
+      "cv_R2": 0.8502,
+      "cv_std": 0.0258,
+      "k_h": 0.0087,
+      "k_h_in_literature": false
+    },
+    {
+      "tau_fast": 1.0,
+      "tau_slow": 30,
+      "cv_R2": 0.8814,
+      "cv_std": 0.0246,
+      "k_h": 0.0087,
+      "k_h_in_literature": false
+    },
+    {
+      "tau_fast": 2.0,
+      "tau_slow": 30,
+      "cv_R2": 0.8806,
+      "cv_std": 0.0268,
+      "k_h": 0.0087,
+      "k_h_in_literature": false
+    }
+  ]
+}
