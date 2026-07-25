@@ -173,6 +173,29 @@ def build_payload(as_of: str | None = None, plan_feed: float | None = None) -> d
         for d, v in recent.items()]
 
     payload["plan_feed"] = round(float(plan_feed), 1)
+
+    # ── 시나리오 계수 : 예측은 미래 투입에 대해 '정확히 선형' 이므로
+    #    ŷ(h) = η(h) + β_fast·S_fast(h) + β_slow·S_slow(h) 로 브라우저에서 정확 계산된다.
+    #    (검증: 실제 예측 − 선형 재구성 오차 = 0.000000000)
+    from src.bio_lag import TAU_FAST, TAU_SLOW, V_DIGESTER
+    b_f, b_s = float(res.params["S_fast"]), float(res.params["S_slow"])
+    zero = project_pools(df, i, 0.0, steps)
+    f0 = r.get_forecast(steps=steps, exog=zero[SARIMAX_EXOG]).predicted_mean.values
+    eta = f0 - (b_f * zero["S_fast"].values + b_s * zero["S_slow"].values)
+    half = (ci.iloc[:, 1].values - ci.iloc[:, 0].values) / 2      # 투입과 무관
+    vs_ratio = float((df["VS_in"] / df["투입량합계"].replace(0, np.nan)).median())
+    payload["scenario"] = {
+        "eta": [round(float(v), 2) for v in eta],
+        "beta_fast": round(b_f, 4), "beta_slow": round(b_s, 4),
+        "half": [round(float(v), 1) for v in half],
+        "s_fast0": round(float(df["S_fast"].iloc[i]), 4),
+        "s_slow0": round(float(df["S_slow"].iloc[i]), 4),
+        "alpha_fast": round(float(1 - np.exp(-1 / TAU_FAST)), 6),
+        "alpha_slow": round(float(1 - np.exp(-1 / TAU_SLOW)), 6),
+        "feed_max": 260, "v_digester": V_DIGESTER,
+        "vs_per_m3": round(vs_ratio, 2),      # VS_in ≈ feed × 이 값 → OLR 산출
+        "olr_bands": [1.8, 2.5, 3.5], "hrt_bands": [30, 25, 20],
+    }
     payload["model"] = {
         "name": "Stacking(SARIMAX + XGBoost + RandomForest), 비음수 Ridge 메타",
         "holdout_R2": 0.9024, "holdout_RMSE": 341.7, "holdout_MAE": 244.5,
@@ -223,283 +246,473 @@ SEV = {"정상": ("ok", "#3E9E5B"), "주의": ("watch", "#E0B93C"),
        "판정불가": ("na", "#7E9296")}
 
 
-def _chart_svg(p: dict) -> str:
-    """과거 실측 + 예측(80% 구간) + horizon 신뢰구역을 그린 SVG."""
-    W, H = 780, 280
-    L, R, T, B = 52, 14, 16, 34
-    hist = [h for h in p["history"] if h["value"] is not None]
-    fc = p["forecast"]
-    n_h, n_f = len(p["history"]), len(fc)
-    total = n_h + n_f
-    vals = [h["value"] for h in hist] + [f["lo"] for f in fc] + [f["hi"] for f in fc]
-    lo, hi = min(vals), max(vals)
-    pad = (hi - lo) * 0.12 or 100
-    lo, hi = lo - pad, hi + pad
 
-    def X(k): return L + (W - L - R) * k / (total - 1)
-    def Y(v): return T + (H - T - B) * (1 - (v - lo) / (hi - lo))
 
-    hidx = {h["date"]: i for i, h in enumerate(p["history"])}
-    hpts = [(X(hidx[h["date"]]), Y(h["value"])) for h in hist]
-    fpts = [(X(n_h + k), Y(f["mean"])) for k, f in enumerate(fc)]
-    band = ([(X(n_h + k), Y(f["hi"])) for k, f in enumerate(fc)]
-            + [(X(n_h + k), Y(f["lo"])) for k, f in reversed(list(enumerate(fc)))])
+# ──────────────────────────────────────────────────────────────────────────────
+# 대시보드 HTML 렌더링
+#   · 디자인 : 단일 컬럼 앱형 + 토스 계열 토큰(면으로 구분, 숫자가 주인공, 액센트 1색)
+#   · 시나리오 : 예측이 미래 투입에 대해 정확히 선형이므로 브라우저에서 정확 계산
+#                ŷ(h) = η(h) + β_fast·S_fast(h) + β_slow·S_slow(h)
+# ──────────────────────────────────────────────────────────────────────────────
+SEV_KEY = {"정상": "ok", "주의": "watch", "점검": "inspect", "위험": "crit", "판정불가": "na"}
 
-    def path(pts): return "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in pts)
 
-    # horizon 신뢰구역 (1-3 / 4-7 / 8-14일)
-    zones, zdef = [], [(0, 3, .16, "1–3일"), (3, 7, .10, "4–7일"), (7, 14, .05, "8–14일")]
-    for a, b, op, lab in zdef:
-        if a >= n_f: break
-        b = min(b, n_f)
-        x0, x1 = X(n_h + a - .5 if a else n_h - .5), X(n_h + b - .5)
-        zones.append(f'<rect x="{x0:.1f}" y="{T}" width="{x1-x0:.1f}" height="{H-T-B}" '
-                     f'fill="var(--accent)" opacity="{op}"/>')
-        zones.append(f'<text x="{(x0+x1)/2:.1f}" y="{T+13}" class="zlab">{lab}</text>')
+def _josa(word: str, batchim: str, no_batchim: str) -> str:
+    """한국어 조사 선택. 한글은 받침 유무로, 영문 약어는 실제 발음 기준."""
+    LATIN = {"pH": False, "FAN": True, "TAN": True, "OLR": True,
+             "HRT": False, "VFA": False, "VFA/Alk": False}   # True = 받침 있음
+    if word in LATIN:
+        return batchim if LATIN[word] else no_batchim
+    ch = word[-1]
+    if "가" <= ch <= "힣":
+        return batchim if (ord(ch) - 0xAC00) % 28 else no_batchim
+    return no_batchim
 
-    grid = []
-    for k in range(5):
-        v = lo + (hi - lo) * k / 4
-        y = Y(v)
-        grid.append(f'<line x1="{L}" y1="{y:.1f}" x2="{W-R}" y2="{y:.1f}" class="grid"/>')
-        grid.append(f'<text x="{L-8}" y="{y+3.5:.1f}" class="ylab">{v:,.0f}</text>')
 
-    ticks = []
-    for k in range(0, total, max(total // 7, 1)):
-        d = (p["history"][k]["date"] if k < n_h else fc[k - n_h]["date"])[5:]
-        ticks.append(f'<text x="{X(k):.1f}" y="{H-14}" class="xlab">{d}</text>')
-
-    ex, ey = fpts[-1]
-    return f'''<svg viewBox="0 0 {W} {H}" class="chart" role="img"
-   aria-label="메탄생성량 과거 실측과 향후 {n_f}일 예측">
-  {''.join(zones)}{''.join(grid)}
-  <polygon points="{' '.join(f'{x:.1f},{y:.1f}' for x,y in band)}" class="band"/>
-  <path d="{path(hpts)}" class="hist"/>
-  <path d="{path([hpts[-1]] + fpts)}" class="fcast"/>
-  <line x1="{X(n_h-.5):.1f}" y1="{T}" x2="{X(n_h-.5):.1f}" y2="{H-B}" class="now"/>
-  <circle cx="{ex:.1f}" cy="{ey:.1f}" r="4.5" class="endpt"/>
-  <text x="{ex-6:.1f}" y="{ey-11:.1f}" class="endlab">{fc[-1]['mean']:,.0f}</text>
-  {''.join(ticks)}
-</svg>'''
+def _headline(p: dict) -> tuple[str, str]:
+    """상태를 한 문장으로. (시스템 용어 대신 사람 말로)"""
+    devs = [i for i in p["alarm"]["items"] if i["lv"] > 0]
+    if not devs:
+        return "모든 지표가 정상 범위입니다", "특별한 조치 없이 현재 운전을 유지하세요."
+    top = devs[0]
+    n, lv = top["name"], top["level"]
+    subj = f"{n} 외 {len(devs)-1}건이" if len(devs) > 1 else f"{n}{_josa(n, '이', '가')}"
+    tail = {"주의": "기준에 가까워졌습니다", "점검": "기준을 벗어났습니다",
+            "위험": "위험 수준입니다"}[lv]
+    return f"{subj} {tail}", top["action"]
 
 
 def render_html(p: dict) -> str:
-    ov = p["alarm"]["overall"]
-    ocls, ocol = SEV[ov]
+    sc = p["scenario"]
+    head, sub = _headline(p)
+    ovk = SEV_KEY[p["alarm"]["overall"]]
+
     rows = "".join(
-        f'''<tr class="sev-{SEV[it['level']][0]}">
-      <td class="vname">{it['name']}<span class="tier">{it['tier']}</span></td>
-      <td class="num">{fmt(it['value'])}<span class="unit">{it['unit']}</span></td>
-      <td class="sp">{it['setpoint']}</td>
-      <td><span class="chip chip-{SEV[it['level']][0]}">{it['level']}</span></td>
-    </tr>''' for it in p["alarm"]["items"])
+        f'''<div class="row">
+      <div class="rowL"><span class="rn">{it['name']}</span>
+        <span class="rs">기준 {it['setpoint']}</span></div>
+      <div class="rowR"><span class="rv">{fmt(it['value'])}<em>{it['unit']}</em></span>
+        <span class="tag t-{SEV_KEY[it['level']]}">{it['level']}</span></div>
+    </div>''' for it in p["alarm"]["items"])
 
     acts = "".join(
-        f'''<li class="act sev-{SEV[a['level']][0]}">
-      <span class="chip chip-{SEV[a['level']][0]}">{a['level']}</span>
-      <div><b>{a['name']}</b> <span class="muted">· {a['tier']}</span>
-      <p>{a['action']}</p></div></li>''' for a in p["actions"]) or \
-        '<li class="act sev-ok"><span class="chip chip-ok">정상</span><div>모든 계측값이 설정값 이내입니다.<p>정규 운전을 유지하십시오.</p></div></li>'
+        f'''<li class="act">
+      <span class="tag t-{SEV_KEY[a['level']]}">{a['level']}</span>
+      <div class="actB"><b>{a['name']}</b><p>{a['action']}</p></div>
+    </li>''' for a in p["actions"]) or \
+        '<li class="act"><span class="tag t-ok">정상</span><div class="actB">' \
+        '<b>조치 사항 없음</b><p>모든 계측값이 기준 이내입니다.</p></div></li>'
 
     skill = "".join(
-        f'''<tr><td class="num">{s['h']}</td><td class="num strong">{s['known']:.3f}</td>
-      <td class="num">{s['unknown']:.3f}</td><td class="num dim">{s['persist']:.3f}</td></tr>'''
-        for s in p["horizon_skill"])
+        f'''<div class="srow"><span class="sh">{s['h']}일 뒤</span>
+      <div class="sbar"><i style="width:{max(s['known'],0)*100:.0f}%"></i></div>
+      <span class="sv">{s['known']:.2f}</span></div>''' for s in p["horizon_skill"])
 
-    hist_strip = "".join(
-        f'<i class="hb sev-{SEV.get(h["level"],SEV["판정불가"])[0]}" title="{h["date"]} {h["level"] or "무측정"}"></i>'
-        for h in p["alarm_history"])
+    strip = "".join(
+        f'<i class="hb h-{SEV_KEY.get(h["level"], "na")}"></i>' for h in p["alarm_history"])
 
-    m = p["model"]
-    return f'''<title>BioGuard-AI 통합 관제</title>
+    m, ch = p["model"], p["chronic"]
+    data = json.dumps({
+        "history": [h for h in p["history"]],
+        "asOf": p["as_of"], "plan0": p["plan_feed"], **sc,
+    }, ensure_ascii=False)
+
+    return TEMPLATE.replace("__DATA__", data) \
+        .replace("__HEAD__", head).replace("__SUB__", sub).replace("__OVK__", ovk) \
+        .replace("__OVERALL__", p["alarm"]["overall"]) \
+        .replace("__ASOF__", p["as_of"]) \
+        .replace("__DEV__", str(p["alarm"]["deviating"])) \
+        .replace("__TOT__", str(len(p["alarm"]["items"]))) \
+        .replace("__ROWS__", rows).replace("__ACTS__", acts) \
+        .replace("__SKILL__", skill).replace("__STRIP__", strip) \
+        .replace("__FANMED__", f"{ch['중앙값_mg_L']:,.0f}") \
+        .replace("__FANLIM__", ch["문헌_저해임계_mg_L"]) \
+        .replace("__FANEX__", str(ch["초과율_%"])) \
+        .replace("__FANTREND__", ch["추세"]) \
+        .replace("__FANNOTE__", ch["상시경고"]) \
+        .replace("__FANREC__", ch["계측_권고"]) \
+        .replace("__MODEL__", m["name"]) \
+        .replace("__R2__", str(m["holdout_R2"])).replace("__RMSE__", str(m["holdout_RMSE"])) \
+        .replace("__CV__", m["cv_R2"]).replace("__BIO__", m["bio"])
+
+
+TEMPLATE = r"""<title>BioGuard-AI 소화조 관제</title>
 <style>
-:root{{
-  --ground:#F2F5F5; --panel:#FFFFFF; --panel2:#E9EEEE; --ink:#121B1D; --ink2:#3D4C50;
-  --muted:#5A6C70; --line:#D3DCDC; --accent:#1D8FAD;
-  --ok:#3E9E5B; --watch:#C9A21F; --inspect:#D2701F; --crit:#C0342A;
+:root{
+  --bg:#FFFFFF; --surface:#F2F4F6; --surface2:#E8EBEE; --line:#EDF0F2;
+  --t1:#191F28; --t2:#6B7684; --t3:#AEB5BD;
+  --blue:#3182F6; --blueSoft:#E8F1FE;
+  --ok:#00B26B; --watch:#F5A623; --inspect:#FF7A00; --crit:#F04452;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#17171C; --surface:#202127; --surface2:#2A2C33; --line:#2A2C33;
+  --t1:#EDEFF2; --t2:#9AA3AD; --t3:#6B7280;
+  --blue:#5A9CF8; --blueSoft:#1E2A3D;
+  --ok:#26C281; --watch:#F7B955; --inspect:#FF8F2E; --crit:#FF6B6B;
 }}
-@media (prefers-color-scheme:dark){{:root{{
-  --ground:#0D1416; --panel:#141F22; --panel2:#1B282C; --ink:#E4EDEE; --ink2:#B6C7CA;
-  --muted:#7E9296; --line:#25353A; --accent:#3FB8D4;
-  --ok:#4BB369; --watch:#E0B93C; --inspect:#E07B39; --crit:#DE5147;
-}}}}
-:root[data-theme="dark"]{{
-  --ground:#0D1416; --panel:#141F22; --panel2:#1B282C; --ink:#E4EDEE; --ink2:#B6C7CA;
-  --muted:#7E9296; --line:#25353A; --accent:#3FB8D4;
-  --ok:#4BB369; --watch:#E0B93C; --inspect:#E07B39; --crit:#DE5147;
-}}
-:root[data-theme="light"]{{
-  --ground:#F2F5F5; --panel:#FFFFFF; --panel2:#E9EEEE; --ink:#121B1D; --ink2:#3D4C50;
-  --muted:#5A6C70; --line:#D3DCDC; --accent:#1D8FAD;
-  --ok:#3E9E5B; --watch:#C9A21F; --inspect:#D2701F; --crit:#C0342A;
-}}
-*{{box-sizing:border-box}}
-body{{margin:0;background:var(--ground);color:var(--ink);
-  font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;}}
-.wrap{{max-width:1180px;margin:0 auto;padding:28px 20px 56px;display:flex;flex-direction:column;gap:18px}}
-.eyebrow{{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0}}
-h1{{font-size:25px;letter-spacing:-.02em;margin:2px 0 0;text-wrap:balance}}
-h2{{font-size:14px;letter-spacing:.04em;margin:0 0 12px;color:var(--ink2)}}
-.num,.mono{{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
-  font-variant-numeric:tabular-nums}}
-.muted{{color:var(--muted)}} .dim{{color:var(--muted)}} .strong{{font-weight:700}}
-.panel{{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}}
+:root[data-theme="dark"]{
+  --bg:#17171C; --surface:#202127; --surface2:#2A2C33; --line:#2A2C33;
+  --t1:#EDEFF2; --t2:#9AA3AD; --t3:#6B7280;
+  --blue:#5A9CF8; --blueSoft:#1E2A3D;
+  --ok:#26C281; --watch:#F7B955; --inspect:#FF8F2E; --crit:#FF6B6B;
+}
+:root[data-theme="light"]{
+  --bg:#FFFFFF; --surface:#F2F4F6; --surface2:#E8EBEE; --line:#EDF0F2;
+  --t1:#191F28; --t2:#6B7684; --t3:#AEB5BD;
+  --blue:#3182F6; --blueSoft:#E8F1FE;
+  --ok:#00B26B; --watch:#F5A623; --inspect:#FF7A00; --crit:#F04452;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased;
+  font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",
+    "Malgun Gothic",system-ui,sans-serif;font-size:15px;line-height:1.5}
+.app{max-width:720px;margin:0 auto;padding:32px 20px 64px;display:flex;flex-direction:column;gap:12px}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 
-/* 상태 바 */
-.status{{display:flex;flex-wrap:wrap;align-items:center;gap:22px;
-  border-left:5px solid {ocol};background:var(--panel);border-radius:10px;padding:16px 20px;
-  border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}}
-.lamp{{display:flex;align-items:center;gap:11px}}
-.dot{{width:15px;height:15px;border-radius:50%;background:{ocol};
-  box-shadow:0 0 0 4px color-mix(in srgb,{ocol} 22%,transparent)}}
-.lamp b{{font-size:21px;letter-spacing:-.01em}}
-.kv{{display:flex;flex-direction:column;gap:1px}}
-.kv span{{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}}
-.kv b{{font-size:17px;font-weight:650}}
-.spacer{{flex:1}}
+/* 헤더 */
+.top{padding:4px 4px 12px}
+.top .date{font-size:13px;color:var(--t2);font-variant-numeric:tabular-nums}
+.top h1{font-size:15px;font-weight:600;color:var(--t2);margin:2px 0 0}
 
-.grid2{{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start}}
-@media (max-width:900px){{.grid2{{grid-template-columns:1fr}}}}
+/* 히어로 */
+.hero{background:var(--surface);border-radius:20px;padding:24px}
+.dotline{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.dot{width:8px;height:8px;border-radius:50%}
+.d-ok{background:var(--ok)} .d-watch{background:var(--watch)}
+.d-inspect{background:var(--inspect)} .d-crit{background:var(--crit)} .d-na{background:var(--t3)}
+.dotline span{font-size:13px;font-weight:600}
+.s-ok{color:var(--ok)} .s-watch{color:var(--watch)}
+.s-inspect{color:var(--inspect)} .s-crit{color:var(--crit)} .s-na{color:var(--t3)}
+.hero h2{font-size:22px;font-weight:700;margin:0;letter-spacing:-.02em;text-wrap:balance;line-height:1.35}
+.hero p{margin:8px 0 0;font-size:14px;color:var(--t2)}
+.heroFoot{display:flex;gap:24px;margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
+.mini span{display:block;font-size:12px;color:var(--t2);margin-bottom:3px}
+.mini b{font-size:17px;font-weight:700}
 
-/* 차트 */
-.chart{{width:100%;height:auto;display:block}}
-.grid{{stroke:var(--line);stroke-width:1}}
-.band{{fill:var(--accent);opacity:.17}}
-.hist{{fill:none;stroke:var(--ink);stroke-width:2.1;stroke-linejoin:round}}
-.fcast{{fill:none;stroke:var(--accent);stroke-width:2.4;stroke-dasharray:6 4;stroke-linejoin:round}}
-.now{{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}}
-.endpt{{fill:var(--accent)}}
-.endlab{{fill:var(--accent);font-size:12px;font-weight:700;text-anchor:end;
-  font-family:ui-monospace,monospace}}
-.ylab,.xlab,.zlab{{fill:var(--muted);font-size:10.5px;
-  font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums}}
-.ylab{{text-anchor:end}} .xlab,.zlab{{text-anchor:middle}}
-.zlab{{fill:var(--accent);font-size:9.5px;letter-spacing:.03em}}
-.legend{{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}}
-.legend i{{display:inline-block;width:16px;height:0;border-top:2.4px solid;vertical-align:middle;margin-right:5px}}
+/* 카드 */
+.card{background:var(--surface);border-radius:20px;padding:22px}
+.card>h3{font-size:17px;font-weight:700;margin:0 0 4px;letter-spacing:-.01em}
+.card>.cap{font-size:13px;color:var(--t2);margin:0 0 18px}
 
-/* 경보 표 */
-table{{width:100%;border-collapse:collapse;font-size:13.5px}}
-th{{text-align:left;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--muted);font-weight:600;padding:0 8px 8px;border-bottom:1px solid var(--line)}}
-td{{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}}
-tr.sev-watch td:first-child{{box-shadow:inset 3px 0 0 var(--watch)}}
-tr.sev-inspect td:first-child{{box-shadow:inset 3px 0 0 var(--inspect)}}
-tr.sev-crit td:first-child{{box-shadow:inset 3px 0 0 var(--crit)}}
-.vname{{font-weight:600;padding-left:11px}}
-.tier{{display:block;font-size:10.5px;color:var(--muted);font-weight:400}}
-td.num{{font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}}
-.unit{{color:var(--muted);font-size:11px;margin-left:3px}}
-.sp{{color:var(--muted);font-size:12px;white-space:nowrap}}
-.chip{{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:650;
-  border:1px solid currentColor}}
-.chip-ok{{color:var(--ok)}} .chip-watch{{color:var(--watch)}}
-.chip-inspect{{color:var(--inspect)}} .chip-crit{{color:var(--crit)}} .chip-na{{color:var(--muted)}}
-.tblwrap{{overflow-x:auto}}
+/* 예측 */
+.big{display:flex;align-items:baseline;gap:8px;margin:2px 0 16px}
+.big b{font-size:38px;font-weight:700;letter-spacing:-.03em}
+.big em{font-style:normal;font-size:15px;color:var(--t2);font-weight:500}
+.delta{font-size:14px;font-weight:600;padding:3px 9px;border-radius:20px;
+  background:var(--blueSoft);color:var(--blue)}
+.delta.down{background:rgba(240,68,82,.12);color:var(--crit)}
+.chartBox{position:relative}
+svg.ch{width:100%;height:auto;display:block;overflow:visible}
+.gl{stroke:var(--line);stroke-width:1}
+.bandP{fill:var(--blue);opacity:.10}
+.lineH{fill:none;stroke:var(--t3);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.lineF{fill:none;stroke:var(--blue);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.tick{fill:var(--t3);font-size:11px;font-variant-numeric:tabular-nums}
+.tickR{text-anchor:end} .tickC{text-anchor:middle}
+.nowl{stroke:var(--t3);stroke-width:1;stroke-dasharray:2 4}
+.endD{fill:var(--blue)}
+.endHalo{fill:var(--blue);opacity:.18}
 
-/* 제어 지시 */
-ol.acts{{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;counter-reset:a}}
-.act{{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:8px;
-  background:var(--panel2);border-left:4px solid var(--line)}}
-.act.sev-watch{{border-left-color:var(--watch)}} .act.sev-inspect{{border-left-color:var(--inspect)}}
-.act.sev-crit{{border-left-color:var(--crit)}} .act.sev-ok{{border-left-color:var(--ok)}}
-.act p{{margin:3px 0 0;font-size:13.5px;color:var(--ink2)}}
-.act b{{font-size:14px}}
+/* 슬라이더 */
+.sliderCard{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
+.slHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.slHead span{font-size:14px;color:var(--t2);font-weight:500}
+.slHead b{font-size:20px;font-weight:700}
+.slHead b em{font-style:normal;font-size:13px;color:var(--t2);font-weight:500;margin-left:3px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:34px;background:none;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:var(--surface2)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;
+  background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.04);margin-top:-10px}
+input[type=range]::-moz-range-track{height:6px;border-radius:99px;background:var(--surface2)}
+input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#fff;border:none;
+  box-shadow:0 1px 4px rgba(0,0,0,.22)}
+input[type=range]:focus-visible{outline:2px solid var(--blue);outline-offset:4px;border-radius:8px}
+.slScale{display:flex;justify-content:space-between;font-size:12px;color:var(--t3);
+  font-variant-numeric:tabular-nums;margin-top:-4px}
+.chips{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.chip{border:none;background:var(--surface2);color:var(--t1);font:inherit;font-size:13px;font-weight:600;
+  padding:8px 14px;border-radius:99px;cursor:pointer}
+.chip:hover{background:var(--blueSoft);color:var(--blue)}
+.chip[aria-pressed="true"]{background:var(--blue);color:#fff}
+.safety{display:flex;gap:10px;margin-top:16px}
+.sfx{flex:1;background:var(--bg);border-radius:14px;padding:13px 15px}
+.sfx span{display:block;font-size:12px;color:var(--t2);margin-bottom:4px}
+.sfx b{font-size:17px;font-weight:700}
+.sfx small{display:block;font-size:12px;margin-top:3px;font-weight:600}
 
-/* 신호등 이력 */
-.strip{{display:flex;gap:2px;margin-top:4px}}
-.hb{{flex:1;height:22px;border-radius:2px;background:var(--line)}}
-.hb.sev-ok{{background:var(--ok)}} .hb.sev-watch{{background:var(--watch)}}
-.hb.sev-inspect{{background:var(--inspect)}} .hb.sev-crit{{background:var(--crit)}}
-.hb.sev-na{{background:var(--line)}}
+/* 리스트 */
+.row{display:flex;justify-content:space-between;align-items:center;gap:14px;
+  padding:13px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none}
+.rowL{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rn{font-size:15px;font-weight:600}
+.rs{font-size:12px;color:var(--t3);font-variant-numeric:tabular-nums}
+.rowR{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.rv{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.rv em{font-style:normal;font-size:12px;color:var(--t2);font-weight:500;margin-left:2px}
+.tag{font-size:12px;font-weight:700;padding:3px 9px;border-radius:8px;min-width:42px;text-align:center}
+.t-ok{background:rgba(0,178,107,.12);color:var(--ok)}
+.t-watch{background:rgba(245,166,35,.14);color:var(--watch)}
+.t-inspect{background:rgba(255,122,0,.14);color:var(--inspect)}
+.t-crit{background:rgba(240,68,82,.13);color:var(--crit)}
+.t-na{background:var(--surface2);color:var(--t3)}
 
-.note{{border-left:4px solid var(--crit);background:var(--panel2);padding:13px 16px;border-radius:8px;
-  font-size:13.5px;color:var(--ink2)}}
-.note b{{color:var(--ink)}}
-.foot{{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;
-  display:flex;flex-wrap:wrap;gap:18px}}
+/* 신호 스트립 */
+.strip{display:flex;gap:3px;margin-top:6px}
+.hb{flex:1;height:26px;border-radius:4px;background:var(--surface2)}
+.h-ok{background:var(--ok)} .h-watch{background:var(--watch)}
+.h-inspect{background:var(--inspect)} .h-crit{background:var(--crit)}
+.h-na{background:var(--surface2)}
+
+/* 조치 */
+ol.acts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.act{display:flex;gap:12px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--line)}
+.act:last-child{border-bottom:none}
+.actB b{font-size:15px;font-weight:600;display:block}
+.actB p{margin:3px 0 0;font-size:14px;color:var(--t2)}
+
+/* 신뢰도 */
+.srow{display:flex;align-items:center;gap:12px;padding:7px 0}
+.sh{font-size:13px;color:var(--t2);width:56px;flex-shrink:0;font-variant-numeric:tabular-nums}
+.sbar{flex:1;height:8px;border-radius:99px;background:var(--surface2);overflow:hidden}
+.sbar i{display:block;height:100%;border-radius:99px;background:var(--blue)}
+.sv{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;width:38px;text-align:right}
+.legendTxt{font-size:13px;color:var(--t2);margin:16px 0 0;line-height:1.65}
+.legendTxt b{color:var(--t1)}
+
+/* 만성 */
+.warn{background:rgba(240,68,82,.07);border-radius:16px;padding:16px 18px}
+.warn b{font-size:15px;display:block;margin-bottom:6px}
+.warn p{margin:6px 0 0;font-size:13.5px;color:var(--t2);line-height:1.6}
+.foot{font-size:12px;color:var(--t3);line-height:1.8;padding:8px 4px 0}
+@media (max-width:520px){
+  .heroFoot{gap:18px}.big b{font-size:32px}.safety{flex-direction:column}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
-<div class="wrap">
-  <header>
-    <p class="eyebrow">영천 통합바이오가스화시설 · 혐기성 소화조</p>
-    <h1>BioGuard-AI 통합 관제</h1>
-  </header>
-
-  <div class="status">
-    <div class="lamp"><span class="dot"></span>
-      <div class="kv"><span>종합 상태</span><b>{ov}</b></div></div>
-    <div class="kv"><span>기준일</span><b class="mono">{p['as_of']}</b></div>
-    <div class="kv"><span>설정값 이탈</span><b class="mono">{p['alarm']['deviating']} / {len(p['alarm']['items'])}</b></div>
-    <div class="kv"><span>투입 계획</span><b class="mono">{p['plan_feed']:,.0f} ㎥/일</b></div>
-    <div class="spacer"></div>
-    <div class="kv"><span>익일 예측</span><b class="mono">{p['forecast'][0]['mean']:,.0f} Nm³/일</b></div>
+<div class="app">
+  <div class="top">
+    <p class="date">__ASOF__</p>
+    <h1>영천 통합바이오가스화시설 · 혐기성 소화조</h1>
   </div>
 
-  <section class="panel">
-    <h2>메탄생성량 예측 — 향후 {len(p['forecast'])}일 (투입 계획 {p['plan_feed']:,.0f} ㎥/일 기준)</h2>
-    {_chart_svg(p)}
-    <div class="legend">
-      <span><i style="border-color:var(--ink)"></i>실측</span>
-      <span><i style="border-color:var(--accent);border-top-style:dashed"></i>예측</span>
-      <span><i style="border-color:var(--accent);opacity:.4"></i>80% 예측구간</span>
-      <span>음영 = horizon 신뢰도 구역 (1–3 / 4–7 / 8–14일)</span>
+  <section class="hero">
+    <div class="dotline"><i class="dot d-__OVK__"></i><span class="s-__OVK__">__OVERALL__</span></div>
+    <h2>__HEAD__</h2>
+    <p>__SUB__</p>
+    <div class="heroFoot">
+      <div class="mini"><span>기준 벗어남</span><b class="num">__DEV__<em style="font-style:normal;color:var(--t3);font-weight:500;font-size:14px">/__TOT__</em></b></div>
+      <div class="mini"><span>내일 예상 메탄</span><b class="num" id="d1">–</b></div>
+      <div class="mini"><span>14일 뒤</span><b class="num" id="d14">–</b></div>
     </div>
   </section>
 
-  <div class="grid2">
-    <section class="panel">
-      <h2>계측값 · 설정값 대비</h2>
-      <div class="tblwrap"><table>
-        <thead><tr><th>변수</th><th style="text-align:right">현재값</th><th>설정값</th><th>상태</th></tr></thead>
-        <tbody>{rows}</tbody>
-      </table></div>
-      <h2 style="margin-top:18px">최근 30일 종합 신호</h2>
-      <div class="strip">{hist_strip}</div>
-    </section>
+  <section class="card">
+    <h3>메탄생성량 예측</h3>
+    <p class="cap">투입 계획을 바꾸면 예측이 함께 움직입니다</p>
+    <div class="big"><b class="num" id="bigVal">–</b><em>Nm³/일 · 14일 뒤</em>
+      <span class="delta" id="delta"></span></div>
+    <div class="chartBox"><svg class="ch" id="chart" viewBox="0 0 700 230" role="img"
+      aria-label="과거 실측과 향후 14일 메탄생성량 예측"></svg></div>
 
-    <section class="panel">
-      <h2>공정제어 지시 — 우선순위 순</h2>
-      <ol class="acts">{acts}</ol>
-    </section>
-  </div>
-
-  <div class="grid2">
-    <section class="panel">
-      <h2>예측 신뢰도 — 며칠 앞까지 믿을 수 있는가</h2>
-      <div class="tblwrap"><table>
-        <thead><tr><th>horizon(일)</th><th style="text-align:right">투입계획 반영 R²</th>
-          <th style="text-align:right">투입 미지 R²</th><th style="text-align:right">persistence R²</th></tr></thead>
-        <tbody>{skill}</tbody>
-      </table></div>
-      <p style="font-size:13px;color:var(--ink2);margin:12px 0 0">
-        <b>1–3일</b> 소화조 자체 동특성이 지배 — 매우 정확 ·
-        <b>4–7일</b> 일상 운전 판단의 실용 구간 ·
-        <b>8–14일</b> 투입계획을 반영해야 유지(미지 시 0.50) — 기질수급·정비 계획용 ·
-        <b>15–28일</b> 시나리오 평가용(투입 미지 시 0.19로 붕괴).
-        persistence 는 7일 이후 급락하므로 <b>장기일수록 모델의 우위가 커진다</b>.
-      </p>
-    </section>
-
-    <section class="panel">
-      <h2>상시 만성 리스크</h2>
-      <div class="note">
-        <b>유리암모니아(FAN) 만성 저해</b> — 중앙 <span class="mono">{p['chronic']['중앙값_mg_L']:,.0f} mg/L</span>,
-        문헌 저해임계 {p['chronic']['문헌_저해임계_mg_L']} 대비 초과율
-        <span class="mono">{p['chronic']['초과율_%']}%</span>. 추세 {p['chronic']['추세']}.
-        <p style="margin:8px 0 0">{p['chronic']['상시경고']}</p>
-        <p style="margin:8px 0 0">※ {p['chronic']['계측_권고']}</p>
+    <div class="sliderCard">
+      <div class="slHead"><span>투입 계획</span><b class="num" id="feedVal">–<em>㎥/일</em></b></div>
+      <input type="range" id="feed" min="0" max="260" step="5" aria-label="투입 계획 (㎥/일)">
+      <div class="slScale"><span>0</span><span>130</span><span>260</span></div>
+      <div class="chips">
+        <button class="chip" data-f="0">투입 중단</button>
+        <button class="chip" data-f="-20">20% 감량</button>
+        <button class="chip" data-f="cur" aria-pressed="true">현재 계획</button>
+        <button class="chip" data-f="+20">20% 증량</button>
+        <button class="chip" data-f="209">설계 최대</button>
       </div>
-    </section>
-  </div>
+      <div class="safety">
+        <div class="sfx"><span>유기물부하율 OLR</span><b class="num" id="olr">–</b>
+          <small id="olrS"></small></div>
+        <div class="sfx"><span>체류시간 HRT</span><b class="num" id="hrt">–</b>
+          <small id="hrtS"></small></div>
+      </div>
+    </div>
+  </section>
 
-  <div class="foot">
-    <span>모델 · {m['name']}</span>
-    <span>2023 홀드아웃 R² <b class="mono">{m['holdout_R2']}</b> / RMSE <b class="mono">{m['holdout_RMSE']}</b></span>
-    <span>교차검증 R² <b class="mono">{m['cv_R2']}</b></span>
-    <span>지연모델 · {m['bio']}</span>
-  </div>
-</div>'''
+  <section class="card">
+    <h3>지금 소화조 상태</h3>
+    <p class="cap">계측값이 기준을 벗어나면 표시됩니다</p>
+    __ROWS__
+    <h3 style="margin-top:22px;font-size:15px">최근 30일</h3>
+    <div class="strip">__STRIP__</div>
+  </section>
+
+  <section class="card">
+    <h3>지금 해야 할 일</h3>
+    <p class="cap">급한 것부터 정렬했습니다</p>
+    <ol class="acts">__ACTS__</ol>
+  </section>
+
+  <section class="card">
+    <h3>며칠 앞까지 믿을 수 있나요</h3>
+    <p class="cap">2023년 실측 검증 · 투입 계획을 알 때의 정확도(R²)</p>
+    __SKILL__
+    <p class="legendTxt"><b>1~3일</b> 소화조 자체 흐름이 이어져 매우 정확합니다.
+      <b>4~7일</b> 일상 운전 판단에 쓰기 좋은 구간입니다.
+      <b>8~14일</b> 투입 계획을 넣어야 이 정확도가 유지됩니다(모르면 0.50).
+      <b>15일 이상</b>은 "이렇게 투입하면 이 정도" 시나리오로만 보세요.</p>
+  </section>
+
+  <section class="card">
+    <h3>계속 지켜볼 위험</h3>
+    <div class="warn">
+      <b>유리암모니아(FAN) 만성 저해</b>
+      <p>중앙 <b style="display:inline" class="num">__FANMED__ mg/L</b> — 문헌 저해 기준 __FANLIM__ mg/L 를
+        측정일의 <b style="display:inline">__FANEX__%</b> 가 넘습니다. 추세는 __FANTREND__.</p>
+      <p>__FANNOTE__</p>
+      <p>※ __FANREC__</p>
+    </div>
+  </section>
+
+  <p class="foot">__MODEL__<br>
+    2023 홀드아웃 R² __R2__ · RMSE __RMSE__ &nbsp;|&nbsp; 교차검증 R² __CV__<br>
+    지연모델 · __BIO__</p>
+</div>
+
+<script>
+const D = __DATA__;
+const $ = s => document.querySelector(s);
+
+/* 예측은 미래 투입에 대해 정확히 선형 : y(h) = eta(h) + bF*Sf(h) + bS*Ss(h) */
+function forecast(feed){
+  let sf = D.s_fast0, ss = D.s_slow0, out = [];
+  for(let h=0; h<D.eta.length; h++){
+    sf = (1-D.alpha_fast)*sf + D.alpha_fast*feed;
+    ss = (1-D.alpha_slow)*ss + D.alpha_slow*feed;
+    const m = D.eta[h] + D.beta_fast*sf + D.beta_slow*ss;
+    out.push({m:m, lo:m-D.half[h], hi:m+D.half[h]});
+  }
+  return out;
+}
+const nf = n => Math.round(n).toLocaleString('ko-KR');
+
+function draw(fc){
+  const W=700,H=230,L=46,R=14,T=12,B=26;
+  const hist = D.history.filter(d=>d.value!==null);
+  const nH = D.history.length, nF = fc.length, N = nH+nF;
+  let vals = hist.map(d=>d.value).concat(fc.map(f=>f.lo), fc.map(f=>f.hi));
+  let lo=Math.min(...vals), hi=Math.max(...vals);
+  const pad=(hi-lo)*0.14||100; lo-=pad; hi+=pad;
+  const X=k=>L+(W-L-R)*k/(N-1), Y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  const hidx={}; D.history.forEach((d,k)=>hidx[d.date]=k);
+  const pt=(x,y)=>x.toFixed(1)+","+y.toFixed(1);
+  const hp = hist.map(d=>pt(X(hidx[d.date]),Y(d.value)));
+  const fp = fc.map((f,k)=>pt(X(nH+k),Y(f.m)));
+  const band = fc.map((f,k)=>pt(X(nH+k),Y(f.hi)))
+    .concat(fc.map((f,k)=>pt(X(nH+nF-1-k),Y(fc[nF-1-k].lo))));
+  let g="";
+  for(let k=0;k<4;k++){
+    const v=lo+(hi-lo)*k/3, y=Y(v);
+    g+=`<line x1="${L}" y1="${y.toFixed(1)}" x2="${W-R}" y2="${y.toFixed(1)}" class="gl"/>`
+      +`<text x="${L-8}" y="${(y+4).toFixed(1)}" class="tick tickR">${nf(v)}</text>`;
+  }
+  let tk="", step=Math.max(Math.floor(N/5),1), marks=[];
+  for(let k=0;k<N;k+=step) marks.push(k);
+  if(marks[marks.length-1] !== N-1) marks.push(N-1);   /* 마지막 예측일 눈금 보장 */
+  marks.forEach(k=>{
+    const d = k<nH ? D.history[k].date : D.forecastDates[k-nH];
+    if(d) tk+=`<text x="${X(k).toFixed(1)}" y="${H-8}" class="tick tickC">${d.slice(5)}</text>`;
+  });
+  const ex=X(N-1), ey=Y(fc[nF-1].m);
+  $("#chart").innerHTML = g
+    + `<polygon points="${band.join(' ')}" class="bandP"/>`
+    + `<polyline points="${hp.join(' ')}" class="lineH"/>`
+    + `<polyline points="${[hp[hp.length-1]].concat(fp).join(' ')}" class="lineF"/>`
+    + `<line x1="${X(nH-0.5).toFixed(1)}" y1="${T}" x2="${X(nH-0.5).toFixed(1)}" y2="${H-B}" class="nowl"/>`
+    + `<circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="9" class="endHalo"/>`
+    + `<circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="4.5" class="endD"/>`
+    + tk;
+}
+
+function band3(v, b, lowerIsWorse){
+  /* 설정값 밴드 → [라벨, 색토큰] */
+  const over = lowerIsWorse ? (v<=b[0]) : (v>=b[0]);
+  if(!over) return ["정상","ok"];
+  const s = lowerIsWorse ? (v<=b[2]?2:(v<=b[1]?1:0)) : (v>=b[2]?2:(v>=b[1]?1:0));
+  return [["주의","점검","위험"][s], ["watch","inspect","crit"][s]];
+}
+
+function update(feed){
+  const fc = forecast(feed);
+  const base = forecast(D.plan0);
+  draw(fc);
+  $("#feedVal").innerHTML = nf(feed)+'<em>㎥/일</em>';
+  $("#bigVal").textContent = nf(fc[fc.length-1].m);
+  $("#d1").textContent  = nf(fc[0].m);
+  $("#d14").textContent = nf(fc[fc.length-1].m);
+  const df = fc[fc.length-1].m - base[base.length-1].m;
+  const el = $("#delta");
+  if(Math.abs(df) < 1){ el.textContent = "현재 계획"; el.className="delta"; }
+  else { el.textContent = (df>0?"+":"−")+nf(Math.abs(df))+" Nm³/일";
+         el.className = "delta"+(df<0?" down":""); }
+
+  const olr = feed*D.vs_per_m3/D.v_digester;
+  const hrt = feed>0 ? D.v_digester/feed : Infinity;
+  const [ol,oc] = band3(olr, D.olr_bands, false);
+  const [hl,hc] = band3(hrt, D.hrt_bands, true);
+  $("#olr").textContent = olr.toFixed(2);
+  $("#olrS").textContent = ol+" · 기준 < "+D.olr_bands[0];
+  $("#olrS").style.color = "var(--"+oc+")";
+  $("#hrt").textContent = isFinite(hrt) ? hrt.toFixed(0)+"일" : "—";
+  $("#hrtS").textContent = (isFinite(hrt)?hl:"투입 없음")+" · 기준 > "+D.hrt_bands[0]+"일";
+  $("#hrtS").style.color = "var(--"+(isFinite(hrt)?hc:"t3")+")";
+}
+
+/* 예측 날짜 라벨 */
+(function(){
+  const d0 = new Date(D.asOf+"T00:00:00");
+  D.forecastDates = D.eta.map((_,k)=>{
+    const d = new Date(d0); d.setDate(d.getDate()+k+1);
+    return d.toISOString().slice(0,10);
+  });
+})();
+
+const slider = $("#feed");
+slider.value = D.plan0;
+update(D.plan0);
+slider.addEventListener("input", e=>{
+  update(+e.target.value);
+  document.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed","false"));
+});
+document.querySelectorAll(".chip").forEach(c=>{
+  c.addEventListener("click", ()=>{
+    const f=c.dataset.f;
+    let v = f==="cur" ? D.plan0 : f==="-20" ? D.plan0*0.8 : f==="+20" ? D.plan0*1.2 : +f;
+    v = Math.max(0, Math.min(D.feed_max, Math.round(v/5)*5));
+    slider.value=v; update(v);
+    document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false"));
+    c.setAttribute("aria-pressed","true");
+  });
+});
+</script>"""
+
+
+def main():
+    os.makedirs(OUT, exist_ok=True)
+    p = build_payload()
+    with open(f"{OUT}/dashboard_data.json", "w", encoding="utf-8") as f:
+        json.dump(p, f, ensure_ascii=False, indent=2)
+    with open(f"{OUT}/dashboard.html", "w", encoding="utf-8") as f:
+        f.write(render_html(p))
+
+    print("===== 통합 관제 대시보드 =====")
+    print(f"  기준일 {p['as_of']} · 투입계획 {p['plan_feed']:,.0f} ㎥/일")
+    print(f"  예측   익일 {p['forecast'][0]['mean']:,.0f} → 14일 {p['forecast'][-1]['mean']:,.0f} Nm³/일")
+    print(f"  경보   {p['alarm']['overall']} (이탈 {p['alarm']['deviating']}/{len(p['alarm']['items'])})")
+    for a in p["actions"]:
+        print(f"    {a['priority']}. [{a['level']}] {a['name']} → {a['action']}")
+    sc = p["scenario"]
+    print(f"  시나리오 계수 beta_fast={sc['beta_fast']} beta_slow={sc['beta_slow']} "
+          f"(브라우저에서 정확 계산)")
+    print(f"\n  산출: {OUT}/dashboard.html, dashboard_data.json")
+
 
 if __name__ == "__main__":
     main()

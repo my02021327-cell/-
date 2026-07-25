@@ -1,274 +1,439 @@
-<title>BioGuard-AI 통합 관제</title>
+<title>BioGuard-AI 소화조 관제</title>
 <style>
 :root{
-  --ground:#F2F5F5; --panel:#FFFFFF; --panel2:#E9EEEE; --ink:#121B1D; --ink2:#3D4C50;
-  --muted:#5A6C70; --line:#D3DCDC; --accent:#1D8FAD;
-  --ok:#3E9E5B; --watch:#C9A21F; --inspect:#D2701F; --crit:#C0342A;
+  --bg:#FFFFFF; --surface:#F2F4F6; --surface2:#E8EBEE; --line:#EDF0F2;
+  --t1:#191F28; --t2:#6B7684; --t3:#AEB5BD;
+  --blue:#3182F6; --blueSoft:#E8F1FE;
+  --ok:#00B26B; --watch:#F5A623; --inspect:#FF7A00; --crit:#F04452;
 }
 @media (prefers-color-scheme:dark){:root{
-  --ground:#0D1416; --panel:#141F22; --panel2:#1B282C; --ink:#E4EDEE; --ink2:#B6C7CA;
-  --muted:#7E9296; --line:#25353A; --accent:#3FB8D4;
-  --ok:#4BB369; --watch:#E0B93C; --inspect:#E07B39; --crit:#DE5147;
+  --bg:#17171C; --surface:#202127; --surface2:#2A2C33; --line:#2A2C33;
+  --t1:#EDEFF2; --t2:#9AA3AD; --t3:#6B7280;
+  --blue:#5A9CF8; --blueSoft:#1E2A3D;
+  --ok:#26C281; --watch:#F7B955; --inspect:#FF8F2E; --crit:#FF6B6B;
 }}
 :root[data-theme="dark"]{
-  --ground:#0D1416; --panel:#141F22; --panel2:#1B282C; --ink:#E4EDEE; --ink2:#B6C7CA;
-  --muted:#7E9296; --line:#25353A; --accent:#3FB8D4;
-  --ok:#4BB369; --watch:#E0B93C; --inspect:#E07B39; --crit:#DE5147;
+  --bg:#17171C; --surface:#202127; --surface2:#2A2C33; --line:#2A2C33;
+  --t1:#EDEFF2; --t2:#9AA3AD; --t3:#6B7280;
+  --blue:#5A9CF8; --blueSoft:#1E2A3D;
+  --ok:#26C281; --watch:#F7B955; --inspect:#FF8F2E; --crit:#FF6B6B;
 }
 :root[data-theme="light"]{
-  --ground:#F2F5F5; --panel:#FFFFFF; --panel2:#E9EEEE; --ink:#121B1D; --ink2:#3D4C50;
-  --muted:#5A6C70; --line:#D3DCDC; --accent:#1D8FAD;
-  --ok:#3E9E5B; --watch:#C9A21F; --inspect:#D2701F; --crit:#C0342A;
+  --bg:#FFFFFF; --surface:#F2F4F6; --surface2:#E8EBEE; --line:#EDF0F2;
+  --t1:#191F28; --t2:#6B7684; --t3:#AEB5BD;
+  --blue:#3182F6; --blueSoft:#E8F1FE;
+  --ok:#00B26B; --watch:#F5A623; --inspect:#FF7A00; --crit:#F04452;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--ground);color:var(--ink);
-  font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;}
-.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 56px;display:flex;flex-direction:column;gap:18px}
-.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0}
-h1{font-size:25px;letter-spacing:-.02em;margin:2px 0 0;text-wrap:balance}
-h2{font-size:14px;letter-spacing:.04em;margin:0 0 12px;color:var(--ink2)}
-.num,.mono{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
-  font-variant-numeric:tabular-nums}
-.muted{color:var(--muted)} .dim{color:var(--muted)} .strong{font-weight:700}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+body{margin:0;background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased;
+  font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",
+    "Malgun Gothic",system-ui,sans-serif;font-size:15px;line-height:1.5}
+.app{max-width:720px;margin:0 auto;padding:32px 20px 64px;display:flex;flex-direction:column;gap:12px}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 
-/* 상태 바 */
-.status{display:flex;flex-wrap:wrap;align-items:center;gap:22px;
-  border-left:5px solid #E07B39;background:var(--panel);border-radius:10px;padding:16px 20px;
-  border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
-.lamp{display:flex;align-items:center;gap:11px}
-.dot{width:15px;height:15px;border-radius:50%;background:#E07B39;
-  box-shadow:0 0 0 4px color-mix(in srgb,#E07B39 22%,transparent)}
-.lamp b{font-size:21px;letter-spacing:-.01em}
-.kv{display:flex;flex-direction:column;gap:1px}
-.kv span{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
-.kv b{font-size:17px;font-weight:650}
-.spacer{flex:1}
+/* 헤더 */
+.top{padding:4px 4px 12px}
+.top .date{font-size:13px;color:var(--t2);font-variant-numeric:tabular-nums}
+.top h1{font-size:15px;font-weight:600;color:var(--t2);margin:2px 0 0}
 
-.grid2{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start}
-@media (max-width:900px){.grid2{grid-template-columns:1fr}}
+/* 히어로 */
+.hero{background:var(--surface);border-radius:20px;padding:24px}
+.dotline{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.dot{width:8px;height:8px;border-radius:50%}
+.d-ok{background:var(--ok)} .d-watch{background:var(--watch)}
+.d-inspect{background:var(--inspect)} .d-crit{background:var(--crit)} .d-na{background:var(--t3)}
+.dotline span{font-size:13px;font-weight:600}
+.s-ok{color:var(--ok)} .s-watch{color:var(--watch)}
+.s-inspect{color:var(--inspect)} .s-crit{color:var(--crit)} .s-na{color:var(--t3)}
+.hero h2{font-size:22px;font-weight:700;margin:0;letter-spacing:-.02em;text-wrap:balance;line-height:1.35}
+.hero p{margin:8px 0 0;font-size:14px;color:var(--t2)}
+.heroFoot{display:flex;gap:24px;margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
+.mini span{display:block;font-size:12px;color:var(--t2);margin-bottom:3px}
+.mini b{font-size:17px;font-weight:700}
 
-/* 차트 */
-.chart{width:100%;height:auto;display:block}
-.grid{stroke:var(--line);stroke-width:1}
-.band{fill:var(--accent);opacity:.17}
-.hist{fill:none;stroke:var(--ink);stroke-width:2.1;stroke-linejoin:round}
-.fcast{fill:none;stroke:var(--accent);stroke-width:2.4;stroke-dasharray:6 4;stroke-linejoin:round}
-.now{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
-.endpt{fill:var(--accent)}
-.endlab{fill:var(--accent);font-size:12px;font-weight:700;text-anchor:end;
-  font-family:ui-monospace,monospace}
-.ylab,.xlab,.zlab{fill:var(--muted);font-size:10.5px;
-  font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums}
-.ylab{text-anchor:end} .xlab,.zlab{text-anchor:middle}
-.zlab{fill:var(--accent);font-size:9.5px;letter-spacing:.03em}
-.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
-.legend i{display:inline-block;width:16px;height:0;border-top:2.4px solid;vertical-align:middle;margin-right:5px}
+/* 카드 */
+.card{background:var(--surface);border-radius:20px;padding:22px}
+.card>h3{font-size:17px;font-weight:700;margin:0 0 4px;letter-spacing:-.01em}
+.card>.cap{font-size:13px;color:var(--t2);margin:0 0 18px}
 
-/* 경보 표 */
-table{width:100%;border-collapse:collapse;font-size:13.5px}
-th{text-align:left;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--muted);font-weight:600;padding:0 8px 8px;border-bottom:1px solid var(--line)}
-td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
-tr.sev-watch td:first-child{box-shadow:inset 3px 0 0 var(--watch)}
-tr.sev-inspect td:first-child{box-shadow:inset 3px 0 0 var(--inspect)}
-tr.sev-crit td:first-child{box-shadow:inset 3px 0 0 var(--crit)}
-.vname{font-weight:600;padding-left:11px}
-.tier{display:block;font-size:10.5px;color:var(--muted);font-weight:400}
-td.num{font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
-.unit{color:var(--muted);font-size:11px;margin-left:3px}
-.sp{color:var(--muted);font-size:12px;white-space:nowrap}
-.chip{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:650;
-  border:1px solid currentColor}
-.chip-ok{color:var(--ok)} .chip-watch{color:var(--watch)}
-.chip-inspect{color:var(--inspect)} .chip-crit{color:var(--crit)} .chip-na{color:var(--muted)}
-.tblwrap{overflow-x:auto}
+/* 예측 */
+.big{display:flex;align-items:baseline;gap:8px;margin:2px 0 16px}
+.big b{font-size:38px;font-weight:700;letter-spacing:-.03em}
+.big em{font-style:normal;font-size:15px;color:var(--t2);font-weight:500}
+.delta{font-size:14px;font-weight:600;padding:3px 9px;border-radius:20px;
+  background:var(--blueSoft);color:var(--blue)}
+.delta.down{background:rgba(240,68,82,.12);color:var(--crit)}
+.chartBox{position:relative}
+svg.ch{width:100%;height:auto;display:block;overflow:visible}
+.gl{stroke:var(--line);stroke-width:1}
+.bandP{fill:var(--blue);opacity:.10}
+.lineH{fill:none;stroke:var(--t3);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.lineF{fill:none;stroke:var(--blue);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.tick{fill:var(--t3);font-size:11px;font-variant-numeric:tabular-nums}
+.tickR{text-anchor:end} .tickC{text-anchor:middle}
+.nowl{stroke:var(--t3);stroke-width:1;stroke-dasharray:2 4}
+.endD{fill:var(--blue)}
+.endHalo{fill:var(--blue);opacity:.18}
 
-/* 제어 지시 */
-ol.acts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;counter-reset:a}
-.act{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:8px;
-  background:var(--panel2);border-left:4px solid var(--line)}
-.act.sev-watch{border-left-color:var(--watch)} .act.sev-inspect{border-left-color:var(--inspect)}
-.act.sev-crit{border-left-color:var(--crit)} .act.sev-ok{border-left-color:var(--ok)}
-.act p{margin:3px 0 0;font-size:13.5px;color:var(--ink2)}
-.act b{font-size:14px}
+/* 슬라이더 */
+.sliderCard{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
+.slHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.slHead span{font-size:14px;color:var(--t2);font-weight:500}
+.slHead b{font-size:20px;font-weight:700}
+.slHead b em{font-style:normal;font-size:13px;color:var(--t2);font-weight:500;margin-left:3px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:34px;background:none;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:var(--surface2)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;
+  background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.04);margin-top:-10px}
+input[type=range]::-moz-range-track{height:6px;border-radius:99px;background:var(--surface2)}
+input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#fff;border:none;
+  box-shadow:0 1px 4px rgba(0,0,0,.22)}
+input[type=range]:focus-visible{outline:2px solid var(--blue);outline-offset:4px;border-radius:8px}
+.slScale{display:flex;justify-content:space-between;font-size:12px;color:var(--t3);
+  font-variant-numeric:tabular-nums;margin-top:-4px}
+.chips{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.chip{border:none;background:var(--surface2);color:var(--t1);font:inherit;font-size:13px;font-weight:600;
+  padding:8px 14px;border-radius:99px;cursor:pointer}
+.chip:hover{background:var(--blueSoft);color:var(--blue)}
+.chip[aria-pressed="true"]{background:var(--blue);color:#fff}
+.safety{display:flex;gap:10px;margin-top:16px}
+.sfx{flex:1;background:var(--bg);border-radius:14px;padding:13px 15px}
+.sfx span{display:block;font-size:12px;color:var(--t2);margin-bottom:4px}
+.sfx b{font-size:17px;font-weight:700}
+.sfx small{display:block;font-size:12px;margin-top:3px;font-weight:600}
 
-/* 신호등 이력 */
-.strip{display:flex;gap:2px;margin-top:4px}
-.hb{flex:1;height:22px;border-radius:2px;background:var(--line)}
-.hb.sev-ok{background:var(--ok)} .hb.sev-watch{background:var(--watch)}
-.hb.sev-inspect{background:var(--inspect)} .hb.sev-crit{background:var(--crit)}
-.hb.sev-na{background:var(--line)}
+/* 리스트 */
+.row{display:flex;justify-content:space-between;align-items:center;gap:14px;
+  padding:13px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none}
+.rowL{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rn{font-size:15px;font-weight:600}
+.rs{font-size:12px;color:var(--t3);font-variant-numeric:tabular-nums}
+.rowR{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.rv{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.rv em{font-style:normal;font-size:12px;color:var(--t2);font-weight:500;margin-left:2px}
+.tag{font-size:12px;font-weight:700;padding:3px 9px;border-radius:8px;min-width:42px;text-align:center}
+.t-ok{background:rgba(0,178,107,.12);color:var(--ok)}
+.t-watch{background:rgba(245,166,35,.14);color:var(--watch)}
+.t-inspect{background:rgba(255,122,0,.14);color:var(--inspect)}
+.t-crit{background:rgba(240,68,82,.13);color:var(--crit)}
+.t-na{background:var(--surface2);color:var(--t3)}
 
-.note{border-left:4px solid var(--crit);background:var(--panel2);padding:13px 16px;border-radius:8px;
-  font-size:13.5px;color:var(--ink2)}
-.note b{color:var(--ink)}
-.foot{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;
-  display:flex;flex-wrap:wrap;gap:18px}
+/* 신호 스트립 */
+.strip{display:flex;gap:3px;margin-top:6px}
+.hb{flex:1;height:26px;border-radius:4px;background:var(--surface2)}
+.h-ok{background:var(--ok)} .h-watch{background:var(--watch)}
+.h-inspect{background:var(--inspect)} .h-crit{background:var(--crit)}
+.h-na{background:var(--surface2)}
+
+/* 조치 */
+ol.acts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.act{display:flex;gap:12px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--line)}
+.act:last-child{border-bottom:none}
+.actB b{font-size:15px;font-weight:600;display:block}
+.actB p{margin:3px 0 0;font-size:14px;color:var(--t2)}
+
+/* 신뢰도 */
+.srow{display:flex;align-items:center;gap:12px;padding:7px 0}
+.sh{font-size:13px;color:var(--t2);width:56px;flex-shrink:0;font-variant-numeric:tabular-nums}
+.sbar{flex:1;height:8px;border-radius:99px;background:var(--surface2);overflow:hidden}
+.sbar i{display:block;height:100%;border-radius:99px;background:var(--blue)}
+.sv{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;width:38px;text-align:right}
+.legendTxt{font-size:13px;color:var(--t2);margin:16px 0 0;line-height:1.65}
+.legendTxt b{color:var(--t1)}
+
+/* 만성 */
+.warn{background:rgba(240,68,82,.07);border-radius:16px;padding:16px 18px}
+.warn b{font-size:15px;display:block;margin-bottom:6px}
+.warn p{margin:6px 0 0;font-size:13.5px;color:var(--t2);line-height:1.6}
+.foot{font-size:12px;color:var(--t3);line-height:1.8;padding:8px 4px 0}
+@media (max-width:520px){
+  .heroFoot{gap:18px}.big b{font-size:32px}.safety{flex-direction:column}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
-<div class="wrap">
-  <header>
-    <p class="eyebrow">영천 통합바이오가스화시설 · 혐기성 소화조</p>
-    <h1>BioGuard-AI 통합 관제</h1>
-  </header>
-
-  <div class="status">
-    <div class="lamp"><span class="dot"></span>
-      <div class="kv"><span>종합 상태</span><b>점검</b></div></div>
-    <div class="kv"><span>기준일</span><b class="mono">2023-09-15</b></div>
-    <div class="kv"><span>설정값 이탈</span><b class="mono">4 / 11</b></div>
-    <div class="kv"><span>투입 계획</span><b class="mono">180 ㎥/일</b></div>
-    <div class="spacer"></div>
-    <div class="kv"><span>익일 예측</span><b class="mono">5,792 Nm³/일</b></div>
+<div class="app">
+  <div class="top">
+    <p class="date">2023-09-15</p>
+    <h1>영천 통합바이오가스화시설 · 혐기성 소화조</h1>
   </div>
 
-  <section class="panel">
-    <h2>메탄생성량 예측 — 향후 14일 (투입 계획 180 ㎥/일 기준)</h2>
-    <svg viewBox="0 0 780 280" class="chart" role="img"
-   aria-label="메탄생성량 과거 실측과 향후 14일 예측">
-  <rect x="602.6" y="16" width="36.3" height="230" fill="var(--accent)" opacity="0.16"/><text x="620.8" y="29" class="zlab">1–3일</text><rect x="638.9" y="16" width="48.4" height="230" fill="var(--accent)" opacity="0.1"/><text x="663.1" y="29" class="zlab">4–7일</text><rect x="687.3" y="16" width="84.7" height="230" fill="var(--accent)" opacity="0.05"/><text x="729.7" y="29" class="zlab">8–14일</text><line x1="52" y1="246.0" x2="766" y2="246.0" class="grid"/><text x="44" y="249.5" class="ylab">3,818</text><line x1="52" y1="188.5" x2="766" y2="188.5" class="grid"/><text x="44" y="192.0" class="ylab">5,118</text><line x1="52" y1="131.0" x2="766" y2="131.0" class="grid"/><text x="44" y="134.5" class="ylab">6,418</text><line x1="52" y1="73.5" x2="766" y2="73.5" class="grid"/><text x="44" y="77.0" class="ylab">7,719</text><line x1="52" y1="16.0" x2="766" y2="16.0" class="grid"/><text x="44" y="19.5" class="ylab">9,019</text>
-  <polygon points="608.7,119.7 620.8,109.7 632.9,102.1 645.0,96.0 657.1,91.0 669.2,86.8 681.3,83.3 693.4,80.2 705.5,77.6 717.6,75.3 729.7,73.3 741.8,71.6 753.9,70.1 766.0,68.7 766.0,223.7 753.9,223.6 741.8,223.4 729.7,223.0 717.6,222.6 705.5,221.9 693.4,221.0 681.3,219.8 669.2,218.3 657.1,216.2 645.0,213.5 632.9,209.9 620.8,204.9 608.7,197.7" class="band"/>
-  <path d="M52.0,38.3 L64.1,38.8 L76.2,43.4 L88.3,51.8 L124.6,85.8 L136.7,99.8 L148.8,88.0 L173.0,55.0 L209.3,89.8 L233.5,92.2 L245.6,82.1 L257.7,84.0 L294.0,101.0 L306.1,88.3 L318.2,96.6 L330.3,85.8 L342.4,85.4 L390.8,133.9 L402.9,121.6 L415.1,115.6 L427.2,119.4 L463.5,156.0 L475.6,115.2 L487.7,131.4 L511.9,131.5 L560.3,175.6 L572.4,166.9 L584.5,158.7 L596.6,160.6" class="hist"/>
-  <path d="M596.6,160.6 L608.7,158.7 L620.8,157.3 L632.9,156.0 L645.0,154.8 L657.1,153.6 L669.2,152.5 L681.3,151.5 L693.4,150.6 L705.5,149.7 L717.6,148.9 L729.7,148.2 L741.8,147.5 L753.9,146.8 L766.0,146.2" class="fcast"/>
-  <line x1="602.6" y1="16" x2="602.6" y2="246" class="now"/>
-  <circle cx="766.0" cy="146.2" r="4.5" class="endpt"/>
-  <text x="760.0" y="135.2" class="endlab">6,074</text>
-  <text x="52.0" y="266" class="xlab">08-01</text><text x="148.8" y="266" class="xlab">08-09</text><text x="245.6" y="266" class="xlab">08-17</text><text x="342.4" y="266" class="xlab">08-25</text><text x="439.3" y="266" class="xlab">09-02</text><text x="536.1" y="266" class="xlab">09-10</text><text x="632.9" y="266" class="xlab">09-18</text><text x="729.7" y="266" class="xlab">09-26</text>
-</svg>
-    <div class="legend">
-      <span><i style="border-color:var(--ink)"></i>실측</span>
-      <span><i style="border-color:var(--accent);border-top-style:dashed"></i>예측</span>
-      <span><i style="border-color:var(--accent);opacity:.4"></i>80% 예측구간</span>
-      <span>음영 = horizon 신뢰도 구역 (1–3 / 4–7 / 8–14일)</span>
+  <section class="hero">
+    <div class="dotline"><i class="dot d-inspect"></i><span class="s-inspect">점검</span></div>
+    <h2>온도 외 3건이 기준을 벗어났습니다</h2>
+    <p>가온 설비 정비, 투입 온도 조정</p>
+    <div class="heroFoot">
+      <div class="mini"><span>기준 벗어남</span><b class="num">4<em style="font-style:normal;color:var(--t3);font-weight:500;font-size:14px">/11</em></b></div>
+      <div class="mini"><span>내일 예상 메탄</span><b class="num" id="d1">–</b></div>
+      <div class="mini"><span>14일 뒤</span><b class="num" id="d14">–</b></div>
     </div>
   </section>
 
-  <div class="grid2">
-    <section class="panel">
-      <h2>계측값 · 설정값 대비</h2>
-      <div class="tblwrap"><table>
-        <thead><tr><th>변수</th><th style="text-align:right">현재값</th><th>설정값</th><th>상태</th></tr></thead>
-        <tbody><tr class="sev-inspect">
-      <td class="vname">온도<span class="tier">공정안정성</span></td>
-      <td class="num">33.1<span class="unit">℃</span></td>
-      <td class="sp">36.0 ~ 40.0</td>
-      <td><span class="chip chip-inspect">점검</span></td>
-    </tr><tr class="sev-watch">
-      <td class="vname">TAN<span class="tier">보조</span></td>
-      <td class="num">4,510<span class="unit">mg/L</span></td>
-      <td class="sp">< 4,500</td>
-      <td><span class="chip chip-watch">주의</span></td>
-    </tr><tr class="sev-watch">
-      <td class="vname">알칼리도<span class="tier">보조</span></td>
-      <td class="num">10,480<span class="unit">mg/L</span></td>
-      <td class="sp">> 10,800</td>
-      <td><span class="chip chip-watch">주의</span></td>
-    </tr><tr class="sev-watch">
-      <td class="vname">CH4함량<span class="tier">보조</span></td>
-      <td class="num">60.7<span class="unit">%</span></td>
-      <td class="sp">> 61</td>
-      <td><span class="chip chip-watch">주의</span></td>
-    </tr><tr class="sev-ok">
-      <td class="vname">pH<span class="tier">공정안정성</span></td>
-      <td class="num">8.09<span class="unit"></span></td>
-      <td class="sp">7.7 ~ 8.1</td>
-      <td><span class="chip chip-ok">정상</span></td>
-    </tr><tr class="sev-ok">
-      <td class="vname">VFA/Alk<span class="tier">공정안정성</span></td>
-      <td class="num">0.231<span class="unit"></span></td>
-      <td class="sp">< 0.30</td>
-      <td><span class="chip chip-ok">정상</span></td>
-    </tr><tr class="sev-ok">
-      <td class="vname">FAN<span class="tier">공정안정성</span></td>
-      <td class="num">437.6<span class="unit">mg/L</span></td>
-      <td class="sp">< 530</td>
-      <td><span class="chip chip-ok">정상</span></td>
-    </tr><tr class="sev-ok">
-      <td class="vname">OLR<span class="tier">부하</span></td>
-      <td class="num">1.02<span class="unit">kgVS/㎥·d</span></td>
-      <td class="sp">< 1.8</td>
-      <td><span class="chip chip-ok">정상</span></td>
-    </tr><tr class="sev-ok">
-      <td class="vname">HRT<span class="tier">부하</span></td>
-      <td class="num">44.4<span class="unit">d</span></td>
-      <td class="sp">> 30</td>
-      <td><span class="chip chip-ok">정상</span></td>
-    </tr><tr class="sev-ok">
-      <td class="vname">온도변화<span class="tier">부하</span></td>
-      <td class="num">0.000<span class="unit">℃/d</span></td>
-      <td class="sp">< 0.5</td>
-      <td><span class="chip chip-ok">정상</span></td>
-    </tr><tr class="sev-ok">
-      <td class="vname">VFA<span class="tier">보조</span></td>
-      <td class="num">2,425<span class="unit">mg/L</span></td>
-      <td class="sp">< 3,100</td>
-      <td><span class="chip chip-ok">정상</span></td>
-    </tr></tbody>
-      </table></div>
-      <h2 style="margin-top:18px">최근 30일 종합 신호</h2>
-      <div class="strip"><i class="hb sev-inspect" title="2023-08-17 점검"></i><i class="hb sev-inspect" title="2023-08-18 점검"></i><i class="hb sev-ok" title="2023-08-19 정상"></i><i class="hb sev-ok" title="2023-08-20 정상"></i><i class="hb sev-inspect" title="2023-08-21 점검"></i><i class="hb sev-inspect" title="2023-08-22 점검"></i><i class="hb sev-inspect" title="2023-08-23 점검"></i><i class="hb sev-inspect" title="2023-08-24 점검"></i><i class="hb sev-inspect" title="2023-08-25 점검"></i><i class="hb sev-ok" title="2023-08-26 정상"></i><i class="hb sev-ok" title="2023-08-27 정상"></i><i class="hb sev-ok" title="2023-08-28 정상"></i><i class="hb sev-inspect" title="2023-08-29 점검"></i><i class="hb sev-inspect" title="2023-08-30 점검"></i><i class="hb sev-inspect" title="2023-08-31 점검"></i><i class="hb sev-inspect" title="2023-09-01 점검"></i><i class="hb sev-ok" title="2023-09-02 정상"></i><i class="hb sev-ok" title="2023-09-03 정상"></i><i class="hb sev-inspect" title="2023-09-04 점검"></i><i class="hb sev-inspect" title="2023-09-05 점검"></i><i class="hb sev-inspect" title="2023-09-06 점검"></i><i class="hb sev-ok" title="2023-09-07 정상"></i><i class="hb sev-inspect" title="2023-09-08 점검"></i><i class="hb sev-ok" title="2023-09-09 정상"></i><i class="hb sev-ok" title="2023-09-10 정상"></i><i class="hb sev-ok" title="2023-09-11 정상"></i><i class="hb sev-inspect" title="2023-09-12 점검"></i><i class="hb sev-inspect" title="2023-09-13 점검"></i><i class="hb sev-inspect" title="2023-09-14 점검"></i><i class="hb sev-inspect" title="2023-09-15 점검"></i></div>
-    </section>
+  <section class="card">
+    <h3>메탄생성량 예측</h3>
+    <p class="cap">투입 계획을 바꾸면 예측이 함께 움직입니다</p>
+    <div class="big"><b class="num" id="bigVal">–</b><em>Nm³/일 · 14일 뒤</em>
+      <span class="delta" id="delta"></span></div>
+    <div class="chartBox"><svg class="ch" id="chart" viewBox="0 0 700 230" role="img"
+      aria-label="과거 실측과 향후 14일 메탄생성량 예측"></svg></div>
 
-    <section class="panel">
-      <h2>공정제어 지시 — 우선순위 순</h2>
-      <ol class="acts"><li class="act sev-inspect">
-      <span class="chip chip-inspect">점검</span>
-      <div><b>온도</b> <span class="muted">· 공정안정성</span>
-      <p>가온 설비 정비, 투입 온도 조정</p></div></li><li class="act sev-watch">
-      <span class="chip chip-watch">주의</span>
-      <div><b>TAN</b> <span class="muted">· 보조</span>
-      <p>유입 질소 모니터링 강화</p></div></li><li class="act sev-watch">
-      <span class="chip chip-watch">주의</span>
-      <div><b>알칼리도</b> <span class="muted">· 보조</span>
-      <p>알칼리도 추이 관찰</p></div></li><li class="act sev-watch">
-      <span class="chip chip-watch">주의</span>
-      <div><b>CH4함량</b> <span class="muted">· 보조</span>
-      <p>가스 조성 추이 관찰</p></div></li></ol>
-    </section>
-  </div>
-
-  <div class="grid2">
-    <section class="panel">
-      <h2>예측 신뢰도 — 며칠 앞까지 믿을 수 있는가</h2>
-      <div class="tblwrap"><table>
-        <thead><tr><th>horizon(일)</th><th style="text-align:right">투입계획 반영 R²</th>
-          <th style="text-align:right">투입 미지 R²</th><th style="text-align:right">persistence R²</th></tr></thead>
-        <tbody><tr><td class="num">1</td><td class="num strong">0.951</td>
-      <td class="num">0.946</td><td class="num dim">0.940</td></tr><tr><td class="num">3</td><td class="num strong">0.863</td>
-      <td class="num">0.827</td><td class="num dim">0.820</td></tr><tr><td class="num">5</td><td class="num strong">0.769</td>
-      <td class="num">0.732</td><td class="num dim">0.660</td></tr><tr><td class="num">7</td><td class="num strong">0.753</td>
-      <td class="num">0.654</td><td class="num dim">0.570</td></tr><tr><td class="num">10</td><td class="num strong">0.719</td>
-      <td class="num">0.543</td><td class="num dim">0.463</td></tr><tr><td class="num">14</td><td class="num strong">0.690</td>
-      <td class="num">0.501</td><td class="num dim">0.378</td></tr><tr><td class="num">21</td><td class="num strong">0.674</td>
-      <td class="num">0.382</td><td class="num dim">0.111</td></tr><tr><td class="num">28</td><td class="num strong">0.647</td>
-      <td class="num">0.186</td><td class="num dim">-0.311</td></tr></tbody>
-      </table></div>
-      <p style="font-size:13px;color:var(--ink2);margin:12px 0 0">
-        <b>1–3일</b> 소화조 자체 동특성이 지배 — 매우 정확 ·
-        <b>4–7일</b> 일상 운전 판단의 실용 구간 ·
-        <b>8–14일</b> 투입계획을 반영해야 유지(미지 시 0.50) — 기질수급·정비 계획용 ·
-        <b>15–28일</b> 시나리오 평가용(투입 미지 시 0.19로 붕괴).
-        persistence 는 7일 이후 급락하므로 <b>장기일수록 모델의 우위가 커진다</b>.
-      </p>
-    </section>
-
-    <section class="panel">
-      <h2>상시 만성 리스크</h2>
-      <div class="note">
-        <b>유리암모니아(FAN) 만성 저해</b> — 중앙 <span class="mono">389 mg/L</span>,
-        문헌 저해임계 100 ~ 150 대비 초과율
-        <span class="mono">98.7%</span>. 추세 2018 ~250 → 2021 ~700 mg/L 상승.
-        <p style="margin:8px 0 0">본 시설은 만성 암모니아 저해 상태. 설정값은 '평소 대비 이탈' 기준이며, 절대수준 자체가 높으므로 C/N 개선·희석·순응 미생물 관리가 상시 필요</p>
-        <p style="margin:8px 0 0">※ NH4-N 가용률 10.5% — FAN 감시를 위해 정기 계측 확대 필요</p>
+    <div class="sliderCard">
+      <div class="slHead"><span>투입 계획</span><b class="num" id="feedVal">–<em>㎥/일</em></b></div>
+      <input type="range" id="feed" min="0" max="260" step="5" aria-label="투입 계획 (㎥/일)">
+      <div class="slScale"><span>0</span><span>130</span><span>260</span></div>
+      <div class="chips">
+        <button class="chip" data-f="0">투입 중단</button>
+        <button class="chip" data-f="-20">20% 감량</button>
+        <button class="chip" data-f="cur" aria-pressed="true">현재 계획</button>
+        <button class="chip" data-f="+20">20% 증량</button>
+        <button class="chip" data-f="209">설계 최대</button>
       </div>
-    </section>
-  </div>
+      <div class="safety">
+        <div class="sfx"><span>유기물부하율 OLR</span><b class="num" id="olr">–</b>
+          <small id="olrS"></small></div>
+        <div class="sfx"><span>체류시간 HRT</span><b class="num" id="hrt">–</b>
+          <small id="hrtS"></small></div>
+      </div>
+    </div>
+  </section>
 
-  <div class="foot">
-    <span>모델 · Stacking(SARIMAX + XGBoost + RandomForest), 비음수 Ridge 메타</span>
-    <span>2023 홀드아웃 R² <b class="mono">0.9024</b> / RMSE <b class="mono">341.7</b></span>
-    <span>교차검증 R² <b class="mono">0.882 ± 0.027 (롤링-오리진 8폴드)</b></span>
-    <span>지연모델 · CSTR 1차반응 2-pool 분포지연 (τ_fast=1d, τ_slow=8d, k_h=0.100/d, HRT=40.6d)</span>
-  </div>
+  <section class="card">
+    <h3>지금 소화조 상태</h3>
+    <p class="cap">계측값이 기준을 벗어나면 표시됩니다</p>
+    <div class="row">
+      <div class="rowL"><span class="rn">온도</span>
+        <span class="rs">기준 36.0 ~ 40.0</span></div>
+      <div class="rowR"><span class="rv">33.1<em>℃</em></span>
+        <span class="tag t-inspect">점검</span></div>
+    </div><div class="row">
+      <div class="rowL"><span class="rn">TAN</span>
+        <span class="rs">기준 < 4,500</span></div>
+      <div class="rowR"><span class="rv">4,510<em>mg/L</em></span>
+        <span class="tag t-watch">주의</span></div>
+    </div><div class="row">
+      <div class="rowL"><span class="rn">알칼리도</span>
+        <span class="rs">기준 > 10,800</span></div>
+      <div class="rowR"><span class="rv">10,480<em>mg/L</em></span>
+        <span class="tag t-watch">주의</span></div>
+    </div><div class="row">
+      <div class="rowL"><span class="rn">CH4함량</span>
+        <span class="rs">기준 > 61</span></div>
+      <div class="rowR"><span class="rv">60.7<em>%</em></span>
+        <span class="tag t-watch">주의</span></div>
+    </div><div class="row">
+      <div class="rowL"><span class="rn">pH</span>
+        <span class="rs">기준 7.7 ~ 8.1</span></div>
+      <div class="rowR"><span class="rv">8.09<em></em></span>
+        <span class="tag t-ok">정상</span></div>
+    </div><div class="row">
+      <div class="rowL"><span class="rn">VFA/Alk</span>
+        <span class="rs">기준 < 0.30</span></div>
+      <div class="rowR"><span class="rv">0.231<em></em></span>
+        <span class="tag t-ok">정상</span></div>
+    </div><div class="row">
+      <div class="rowL"><span class="rn">FAN</span>
+        <span class="rs">기준 < 530</span></div>
+      <div class="rowR"><span class="rv">437.6<em>mg/L</em></span>
+        <span class="tag t-ok">정상</span></div>
+    </div><div class="row">
+      <div class="rowL"><span class="rn">OLR</span>
+        <span class="rs">기준 < 1.8</span></div>
+      <div class="rowR"><span class="rv">1.02<em>kgVS/㎥·d</em></span>
+        <span class="tag t-ok">정상</span></div>
+    </div><div class="row">
+      <div class="rowL"><span class="rn">HRT</span>
+        <span class="rs">기준 > 30</span></div>
+      <div class="rowR"><span class="rv">44.4<em>d</em></span>
+        <span class="tag t-ok">정상</span></div>
+    </div><div class="row">
+      <div class="rowL"><span class="rn">온도변화</span>
+        <span class="rs">기준 < 0.5</span></div>
+      <div class="rowR"><span class="rv">0.000<em>℃/d</em></span>
+        <span class="tag t-ok">정상</span></div>
+    </div><div class="row">
+      <div class="rowL"><span class="rn">VFA</span>
+        <span class="rs">기준 < 3,100</span></div>
+      <div class="rowR"><span class="rv">2,425<em>mg/L</em></span>
+        <span class="tag t-ok">정상</span></div>
+    </div>
+    <h3 style="margin-top:22px;font-size:15px">최근 30일</h3>
+    <div class="strip"><i class="hb h-inspect"></i><i class="hb h-inspect"></i><i class="hb h-ok"></i><i class="hb h-ok"></i><i class="hb h-inspect"></i><i class="hb h-inspect"></i><i class="hb h-inspect"></i><i class="hb h-inspect"></i><i class="hb h-inspect"></i><i class="hb h-ok"></i><i class="hb h-ok"></i><i class="hb h-ok"></i><i class="hb h-inspect"></i><i class="hb h-inspect"></i><i class="hb h-inspect"></i><i class="hb h-inspect"></i><i class="hb h-ok"></i><i class="hb h-ok"></i><i class="hb h-inspect"></i><i class="hb h-inspect"></i><i class="hb h-inspect"></i><i class="hb h-ok"></i><i class="hb h-inspect"></i><i class="hb h-ok"></i><i class="hb h-ok"></i><i class="hb h-ok"></i><i class="hb h-inspect"></i><i class="hb h-inspect"></i><i class="hb h-inspect"></i><i class="hb h-inspect"></i></div>
+  </section>
+
+  <section class="card">
+    <h3>지금 해야 할 일</h3>
+    <p class="cap">급한 것부터 정렬했습니다</p>
+    <ol class="acts"><li class="act">
+      <span class="tag t-inspect">점검</span>
+      <div class="actB"><b>온도</b><p>가온 설비 정비, 투입 온도 조정</p></div>
+    </li><li class="act">
+      <span class="tag t-watch">주의</span>
+      <div class="actB"><b>TAN</b><p>유입 질소 모니터링 강화</p></div>
+    </li><li class="act">
+      <span class="tag t-watch">주의</span>
+      <div class="actB"><b>알칼리도</b><p>알칼리도 추이 관찰</p></div>
+    </li><li class="act">
+      <span class="tag t-watch">주의</span>
+      <div class="actB"><b>CH4함량</b><p>가스 조성 추이 관찰</p></div>
+    </li></ol>
+  </section>
+
+  <section class="card">
+    <h3>며칠 앞까지 믿을 수 있나요</h3>
+    <p class="cap">2023년 실측 검증 · 투입 계획을 알 때의 정확도(R²)</p>
+    <div class="srow"><span class="sh">1일 뒤</span>
+      <div class="sbar"><i style="width:95%"></i></div>
+      <span class="sv">0.95</span></div><div class="srow"><span class="sh">3일 뒤</span>
+      <div class="sbar"><i style="width:86%"></i></div>
+      <span class="sv">0.86</span></div><div class="srow"><span class="sh">5일 뒤</span>
+      <div class="sbar"><i style="width:77%"></i></div>
+      <span class="sv">0.77</span></div><div class="srow"><span class="sh">7일 뒤</span>
+      <div class="sbar"><i style="width:75%"></i></div>
+      <span class="sv">0.75</span></div><div class="srow"><span class="sh">10일 뒤</span>
+      <div class="sbar"><i style="width:72%"></i></div>
+      <span class="sv">0.72</span></div><div class="srow"><span class="sh">14일 뒤</span>
+      <div class="sbar"><i style="width:69%"></i></div>
+      <span class="sv">0.69</span></div><div class="srow"><span class="sh">21일 뒤</span>
+      <div class="sbar"><i style="width:67%"></i></div>
+      <span class="sv">0.67</span></div><div class="srow"><span class="sh">28일 뒤</span>
+      <div class="sbar"><i style="width:65%"></i></div>
+      <span class="sv">0.65</span></div>
+    <p class="legendTxt"><b>1~3일</b> 소화조 자체 흐름이 이어져 매우 정확합니다.
+      <b>4~7일</b> 일상 운전 판단에 쓰기 좋은 구간입니다.
+      <b>8~14일</b> 투입 계획을 넣어야 이 정확도가 유지됩니다(모르면 0.50).
+      <b>15일 이상</b>은 "이렇게 투입하면 이 정도" 시나리오로만 보세요.</p>
+  </section>
+
+  <section class="card">
+    <h3>계속 지켜볼 위험</h3>
+    <div class="warn">
+      <b>유리암모니아(FAN) 만성 저해</b>
+      <p>중앙 <b style="display:inline" class="num">389 mg/L</b> — 문헌 저해 기준 100 ~ 150 mg/L 를
+        측정일의 <b style="display:inline">98.7%</b> 가 넘습니다. 추세는 2018 ~250 → 2021 ~700 mg/L 상승.</p>
+      <p>본 시설은 만성 암모니아 저해 상태. 설정값은 '평소 대비 이탈' 기준이며, 절대수준 자체가 높으므로 C/N 개선·희석·순응 미생물 관리가 상시 필요</p>
+      <p>※ NH4-N 가용률 10.5% — FAN 감시를 위해 정기 계측 확대 필요</p>
+    </div>
+  </section>
+
+  <p class="foot">Stacking(SARIMAX + XGBoost + RandomForest), 비음수 Ridge 메타<br>
+    2023 홀드아웃 R² 0.9024 · RMSE 341.7 &nbsp;|&nbsp; 교차검증 R² 0.882 ± 0.027 (롤링-오리진 8폴드)<br>
+    지연모델 · CSTR 1차반응 2-pool 분포지연 (τ_fast=1d, τ_slow=8d, k_h=0.100/d, HRT=40.6d)</p>
 </div>
+
+<script>
+const D = {"history": [{"date": "2023-08-01", "value": 8515.5}, {"date": "2023-08-02", "value": 8503.1}, {"date": "2023-08-03", "value": 8398.1}, {"date": "2023-08-04", "value": 8209.1}, {"date": "2023-08-05", "value": null}, {"date": "2023-08-06", "value": null}, {"date": "2023-08-07", "value": 7441.1}, {"date": "2023-08-08", "value": 7123.4}, {"date": "2023-08-09", "value": 7391.5}, {"date": "2023-08-10", "value": null}, {"date": "2023-08-11", "value": 8137.4}, {"date": "2023-08-12", "value": null}, {"date": "2023-08-13", "value": null}, {"date": "2023-08-14", "value": 7350.9}, {"date": "2023-08-15", "value": null}, {"date": "2023-08-16", "value": 7295.5}, {"date": "2023-08-17", "value": 7523.2}, {"date": "2023-08-18", "value": 7481.6}, {"date": "2023-08-19", "value": null}, {"date": "2023-08-20", "value": null}, {"date": "2023-08-21", "value": 7095.9}, {"date": "2023-08-22", "value": 7383.7}, {"date": "2023-08-23", "value": 7196.9}, {"date": "2023-08-24", "value": 7439.4}, {"date": "2023-08-25", "value": 7449.5}, {"date": "2023-08-26", "value": null}, {"date": "2023-08-27", "value": null}, {"date": "2023-08-28", "value": null}, {"date": "2023-08-29", "value": 6353.2}, {"date": "2023-08-30", "value": 6631.1}, {"date": "2023-08-31", "value": 6766.8}, {"date": "2023-09-01", "value": 6679.9}, {"date": "2023-09-02", "value": null}, {"date": "2023-09-03", "value": null}, {"date": "2023-09-04", "value": 5853.1}, {"date": "2023-09-05", "value": 6775.2}, {"date": "2023-09-06", "value": 6409.6}, {"date": "2023-09-07", "value": null}, {"date": "2023-09-08", "value": 6406.4}, {"date": "2023-09-09", "value": null}, {"date": "2023-09-10", "value": null}, {"date": "2023-09-11", "value": null}, {"date": "2023-09-12", "value": 5409.5}, {"date": "2023-09-13", "value": 5606.0}, {"date": "2023-09-14", "value": 5791.3}, {"date": "2023-09-15", "value": 5748.9}], "asOf": "2023-09-15", "plan0": 180.0, "eta": [-527.63, -488.01, -451.36, -417.46, -386.11, -357.11, -330.29, -305.49, -282.55, -261.33, -241.7, -223.55, -206.76, -191.23], "beta_fast": 17.6738, "beta_slow": 17.0584, "half": [881.9, 1076.9, 1219.2, 1328.9, 1416.0, 1486.5, 1544.3, 1592.0, 1631.7, 1664.9, 1692.8, 1716.3, 1736.2, 1753.0], "s_fast0": 180.0002, "s_slow0": 184.5209, "alpha_fast": 0.632121, "alpha_slow": 0.117503, "feed_max": 260, "v_digester": 8000.0, "vs_per_m3": 46.8, "olr_bands": [1.8, 2.5, 3.5], "hrt_bands": [30, 25, 20]};
+const $ = s => document.querySelector(s);
+
+/* 예측은 미래 투입에 대해 정확히 선형 : y(h) = eta(h) + bF*Sf(h) + bS*Ss(h) */
+function forecast(feed){
+  let sf = D.s_fast0, ss = D.s_slow0, out = [];
+  for(let h=0; h<D.eta.length; h++){
+    sf = (1-D.alpha_fast)*sf + D.alpha_fast*feed;
+    ss = (1-D.alpha_slow)*ss + D.alpha_slow*feed;
+    const m = D.eta[h] + D.beta_fast*sf + D.beta_slow*ss;
+    out.push({m:m, lo:m-D.half[h], hi:m+D.half[h]});
+  }
+  return out;
+}
+const nf = n => Math.round(n).toLocaleString('ko-KR');
+
+function draw(fc){
+  const W=700,H=230,L=46,R=14,T=12,B=26;
+  const hist = D.history.filter(d=>d.value!==null);
+  const nH = D.history.length, nF = fc.length, N = nH+nF;
+  let vals = hist.map(d=>d.value).concat(fc.map(f=>f.lo), fc.map(f=>f.hi));
+  let lo=Math.min(...vals), hi=Math.max(...vals);
+  const pad=(hi-lo)*0.14||100; lo-=pad; hi+=pad;
+  const X=k=>L+(W-L-R)*k/(N-1), Y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  const hidx={}; D.history.forEach((d,k)=>hidx[d.date]=k);
+  const pt=(x,y)=>x.toFixed(1)+","+y.toFixed(1);
+  const hp = hist.map(d=>pt(X(hidx[d.date]),Y(d.value)));
+  const fp = fc.map((f,k)=>pt(X(nH+k),Y(f.m)));
+  const band = fc.map((f,k)=>pt(X(nH+k),Y(f.hi)))
+    .concat(fc.map((f,k)=>pt(X(nH+nF-1-k),Y(fc[nF-1-k].lo))));
+  let g="";
+  for(let k=0;k<4;k++){
+    const v=lo+(hi-lo)*k/3, y=Y(v);
+    g+=`<line x1="${L}" y1="${y.toFixed(1)}" x2="${W-R}" y2="${y.toFixed(1)}" class="gl"/>`
+      +`<text x="${L-8}" y="${(y+4).toFixed(1)}" class="tick tickR">${nf(v)}</text>`;
+  }
+  let tk="", step=Math.max(Math.floor(N/5),1), marks=[];
+  for(let k=0;k<N;k+=step) marks.push(k);
+  if(marks[marks.length-1] !== N-1) marks.push(N-1);   /* 마지막 예측일 눈금 보장 */
+  marks.forEach(k=>{
+    const d = k<nH ? D.history[k].date : D.forecastDates[k-nH];
+    if(d) tk+=`<text x="${X(k).toFixed(1)}" y="${H-8}" class="tick tickC">${d.slice(5)}</text>`;
+  });
+  const ex=X(N-1), ey=Y(fc[nF-1].m);
+  $("#chart").innerHTML = g
+    + `<polygon points="${band.join(' ')}" class="bandP"/>`
+    + `<polyline points="${hp.join(' ')}" class="lineH"/>`
+    + `<polyline points="${[hp[hp.length-1]].concat(fp).join(' ')}" class="lineF"/>`
+    + `<line x1="${X(nH-0.5).toFixed(1)}" y1="${T}" x2="${X(nH-0.5).toFixed(1)}" y2="${H-B}" class="nowl"/>`
+    + `<circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="9" class="endHalo"/>`
+    + `<circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="4.5" class="endD"/>`
+    + tk;
+}
+
+function band3(v, b, lowerIsWorse){
+  /* 설정값 밴드 → [라벨, 색토큰] */
+  const over = lowerIsWorse ? (v<=b[0]) : (v>=b[0]);
+  if(!over) return ["정상","ok"];
+  const s = lowerIsWorse ? (v<=b[2]?2:(v<=b[1]?1:0)) : (v>=b[2]?2:(v>=b[1]?1:0));
+  return [["주의","점검","위험"][s], ["watch","inspect","crit"][s]];
+}
+
+function update(feed){
+  const fc = forecast(feed);
+  const base = forecast(D.plan0);
+  draw(fc);
+  $("#feedVal").innerHTML = nf(feed)+'<em>㎥/일</em>';
+  $("#bigVal").textContent = nf(fc[fc.length-1].m);
+  $("#d1").textContent  = nf(fc[0].m);
+  $("#d14").textContent = nf(fc[fc.length-1].m);
+  const df = fc[fc.length-1].m - base[base.length-1].m;
+  const el = $("#delta");
+  if(Math.abs(df) < 1){ el.textContent = "현재 계획"; el.className="delta"; }
+  else { el.textContent = (df>0?"+":"−")+nf(Math.abs(df))+" Nm³/일";
+         el.className = "delta"+(df<0?" down":""); }
+
+  const olr = feed*D.vs_per_m3/D.v_digester;
+  const hrt = feed>0 ? D.v_digester/feed : Infinity;
+  const [ol,oc] = band3(olr, D.olr_bands, false);
+  const [hl,hc] = band3(hrt, D.hrt_bands, true);
+  $("#olr").textContent = olr.toFixed(2);
+  $("#olrS").textContent = ol+" · 기준 < "+D.olr_bands[0];
+  $("#olrS").style.color = "var(--"+oc+")";
+  $("#hrt").textContent = isFinite(hrt) ? hrt.toFixed(0)+"일" : "—";
+  $("#hrtS").textContent = (isFinite(hrt)?hl:"투입 없음")+" · 기준 > "+D.hrt_bands[0]+"일";
+  $("#hrtS").style.color = "var(--"+(isFinite(hrt)?hc:"t3")+")";
+}
+
+/* 예측 날짜 라벨 */
+(function(){
+  const d0 = new Date(D.asOf+"T00:00:00");
+  D.forecastDates = D.eta.map((_,k)=>{
+    const d = new Date(d0); d.setDate(d.getDate()+k+1);
+    return d.toISOString().slice(0,10);
+  });
+})();
+
+const slider = $("#feed");
+slider.value = D.plan0;
+update(D.plan0);
+slider.addEventListener("input", e=>{
+  update(+e.target.value);
+  document.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed","false"));
+});
+document.querySelectorAll(".chip").forEach(c=>{
+  c.addEventListener("click", ()=>{
+    const f=c.dataset.f;
+    let v = f==="cur" ? D.plan0 : f==="-20" ? D.plan0*0.8 : f==="+20" ? D.plan0*1.2 : +f;
+    v = Math.max(0, Math.min(D.feed_max, Math.round(v/5)*5));
+    slider.value=v; update(v);
+    document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false"));
+    c.setAttribute("aria-pressed","true");
+  });
+});
+</script>
