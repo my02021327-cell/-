@@ -1,0 +1,180 @@
+{
+  "grid": "business-day (Mon-Fri)",
+  "grid_reason": "메탄이 평일만 측정되어 달력일 연속런 최대 6일 → AR(7) 프리화이트닝 불가",
+  "method": "AR(7) prewhitening + permutation(max|r|, n=400) + moving-block bootstrap(n=300, block=20)",
+  "results": [
+    {
+      "driver": "투입량합계",
+      "peak_lag": 0,
+      "r_peak": 0.5,
+      "p_value": 0.0075,
+      "null95": 0.187,
+      "significant": true,
+      "n_pairs": 474,
+      "boot_10_90": [
+        0,
+        0
+      ],
+      "within_3d_%": 100.0,
+      "ar_order_sensitivity": {
+        "AR1": 0,
+        "AR3": 4,
+        "AR5": 0,
+        "AR7": 0
+      },
+      "yearwise_peak": {
+        "2018": 25,
+        "2019": 0,
+        "2020": 0,
+        "2021": 0,
+        "2022": 0,
+        "2023": 0
+      },
+      "reference_log": {
+        "peak": 0,
+        "r": 0.469,
+        "p": 0.001,
+        "within5": 100
+      },
+      "agrees_with_reference": true
+    },
+    {
+      "driver": "feed_음폐수",
+      "peak_lag": 2,
+      "r_peak": 0.132,
+      "p_value": 0.21,
+      "null95": 0.147,
+      "significant": false,
+      "n_pairs": 474,
+      "boot_10_90": [
+        2,
+        21
+      ],
+      "within_3d_%": 60.0,
+      "ar_order_sensitivity": {
+        "AR1": 7,
+        "AR3": 2,
+        "AR5": 2,
+        "AR7": 2
+      },
+      "yearwise_peak": {
+        "2018": 0,
+        "2019": 1,
+        "2020": 6,
+        "2021": 2,
+        "2022": 5,
+        "2023": 14
+      },
+      "reference_log": {
+        "peak": 6,
+        "r": 0.33,
+        "p": 0.001,
+        "within5": 53
+      },
+      "agrees_with_reference": false
+    },
+    {
+      "driver": "feed_음식물",
+      "peak_lag": 22,
+      "r_peak": 0.138,
+      "p_value": 0.3375,
+      "null95": 0.183,
+      "significant": false,
+      "n_pairs": 466,
+      "boot_10_90": [
+        1,
+        20
+      ],
+      "within_3d_%": 5.3,
+      "ar_order_sensitivity": {
+        "AR1": 5,
+        "AR3": 16,
+        "AR5": 4,
+        "AR7": 22
+      },
+      "yearwise_peak": {
+        "2018": 17,
+        "2019": 10,
+        "2020": 22,
+        "2021": 16,
+        "2022": 0,
+        "2023": 3
+      },
+      "reference_log": {
+        "peak": 20,
+        "r": 0.12,
+        "p": 0.25,
+        "within5": 18
+      },
+      "agrees_with_reference": true
+    },
+    {
+      "driver": "유입_VS",
+      "peak_lag": 0,
+      "r_peak": 0.205,
+      "p_value": 0.5825,
+      "null95": 0.347,
+      "significant": false,
+      "n_pairs": 395,
+      "boot_10_90": [
+        0,
+        24
+      ],
+      "within_3d_%": 39.7,
+      "ar_order_sensitivity": {
+        "AR1": 0,
+        "AR3": 0,
+        "AR5": 6,
+        "AR7": 0
+      },
+      "yearwise_peak": {
+        "2018": 9,
+        "2019": 24,
+        "2020": 0,
+        "2021": 0,
+        "2022": 0,
+        "2023": 0
+      },
+      "reference_log": {
+        "peak": 0,
+        "r": 0.206,
+        "p": 0.001,
+        "within5": 86
+      },
+      "agrees_with_reference": true
+    },
+    {
+      "driver": "반입량",
+      "peak_lag": 6,
+      "r_peak": 0.101,
+      "p_value": 0.8425,
+      "null95": 0.221,
+      "significant": false,
+      "n_pairs": 336,
+      "boot_10_90": [
+        2,
+        25
+      ],
+      "within_3d_%": 30.7,
+      "ar_order_sensitivity": {
+        "AR1": 15,
+        "AR3": 8,
+        "AR5": 22,
+        "AR7": 6
+      },
+      "yearwise_peak": {
+        "2018": 21,
+        "2019": 7,
+        "2020": 7,
+        "2021": 10,
+        "2022": 5,
+        "2023": 25
+      },
+      "reference_log": null,
+      "agrees_with_reference": false
+    }
+  ],
+  "previous_xgb_gain_lag": 2,
+  "adopted_lag": 0,
+  "conclusion": "투입량합계→메탄 peak lag=0일. AR 차수·연도에 걸쳐 안정하며 참고 로그(0일, r=0.469)와 일치. XGBoost gain 의 2일은 통계적 근거 없음. 투입량은 당일 결정되는 제어입력이므로 lag0 사용은 누수가 아님."
+}

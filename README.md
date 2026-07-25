@@ -60,7 +60,26 @@ python -m src.eda          # 생물학적 지연·건강 분석
 python -m src.xgb_methane  # XGBoost 2상 집중·투입 lag 선택(persistence 예측 미사용)
 python -m src.stack_methane # RF + XGBoost + SARIMAX(시계열) 스태킹 앙상블
 python -m src.sarimax_cv    # SARIMAX 롤링-오리진 교차검증·차수선택·잔차진단
+python -m src.lag_validation # 투입→메탄 Lag 재검증(프리화이트닝·순열검정·부트스트랩)
+python -m src.final_ensemble # ★ 최종 앙상블(검증 lag 반영) + CV 신뢰도 재산출
 ```
+
+## ★ 최종 모델 (`src/final_ensemble.py`)
+
+**Stacking(SARIMAX + XGBoost + RandomForest), 비음수 Ridge 메타, 검증 lag=0일 반영.**
+
+| 2023 홀드아웃 (n=154) | R² | RMSE | MAE |
+|---|:---:|:---:|:---:|
+| persistence *(baseline)* | 0.877 | 383.5 | 261.2 |
+| **최종 앙상블** | **0.9054** | **336.3** | **241.2** |
+
+- baseline 대비 **RMSE −12.3%, MAE −7.7%**
+- **신뢰도(앙상블 전체 파이프라인 롤링-오리진 CV, 8폴드) : R² = 0.8834 ± 0.0230**
+  (pooled 0.9172) — 8폴드 중 **7폴드에서 baseline(0.8525) 상회**
+- persistence 는 예측 입력에 쓰지 않음(비교 baseline 전용)
+- 정직한 한계 : 메타 가중치가 SARIMAX≈1.0 / 트리=0 으로, 스태킹은 사실상 **SARIMAX 로
+  수렴**한다. 추가 다양성 base 도 잔차 상관 0.90~0.97 로 결합 시 성능이 하락해 미채택.
+  스태킹의 실질 역할은 **누수 없는 자동 모델선택 + 국면변화 대비 안전장치**.
 
 ## XGBoost 2상(메탄생성균 조) 집중 모듈 (`src/xgb_methane.py`)
 
@@ -97,6 +116,13 @@ python -m src.sarimax_cv    # SARIMAX 롤링-오리진 교차검증·차수선�
 −5.8%). 과거 메탄을 안 쓰는 트리는 R²≈0.60 으로 baseline 미달이며, 메타는 이를 0 가중
 배제하고 SARIMAX 에 수렴한다. 산출물 : `outputs/stack_metrics.json`,
 `stack_meta_weights.png`, `stack_predictions_2023.(csv|png)`.
+
+**Lag 재검증 (`src/lag_validation.py`)** — 기존 XGBoost gain 기반 lag(2일)를 **기각**.
+메탄이 평일만 측정되어 달력일 연속런이 최대 6일뿐이라 AR(7) 프리화이트닝이 불가능한
+문제를 **영업일 격자**로 해결한 뒤, AR(7) 프리화이트닝 교차상관 + 순열검정 + 이동블록
+부트스트랩으로 재검증: **투입량합계 → 메탄 = lag 0일**(r=0.500, p=0.007, 부트스트랩
+[0,0], ±3일 100%, AR 차수·2019~2023 연도 안정). 다른 투입 스트림은 모두 비유의(p>0.2).
+산출물 : `outputs/lag_validation.(json|csv|png)`.
 
 **SARIMAX 교차검증 (`src/sarimax_cv.py`)** — 단일 2023 분할 R²=0.891 의 신뢰성을
 **롤링-오리진 8폴드 CV** 로 검증: **CV R²=0.868±0.040**(pooled 0.900), 단일분할이 폴드

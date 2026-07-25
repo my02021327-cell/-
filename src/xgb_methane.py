@@ -22,6 +22,11 @@ BioGuard-AI 의 독립 모듈. 앙상블(src/train.py)과 별개로, **XGBoost �
 • 투입 vs 메탄 Lag 임의 선정 후
   '가장 가중치 높은 날' 선택 ... 투입부하 lag0..LAG_MAX 후보를 모두 넣어 학습 →
                                XGBoost gain 중요도 최댓값 lag(day) 자동 선택
+                               ※ 본 gain 기반 선택(2일)은 이후 `src/lag_validation.py`
+                                 의 프리화이트닝 교차상관 재검증으로 **기각** 되었다
+                                 (검증 결과 lag=0일). 최종 모델은
+                                 `src/final_ensemble.py` 가 lag0 을 사용한다.
+                                 본 모듈의 스캔은 '과제 원문 절차'의 재현으로 남긴다.
 • feature 10~15개 집중 ......... 소프트센서 = 2상상태(8)+투입(3)+선택lag(1)=12개
 • 결측치 있는 날 삭제 .......... 보간 없이 dropna (미측정일 제거)
 • persistent 대비 신뢰도 ....... persistence 는 **비교 baseline 으로만** 사용하고,

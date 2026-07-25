@@ -1,0 +1,156 @@
+{
+  "model": "Stacking(XGBoost, RandomForest, SARIMAX) with non-negative Ridge meta",
+  "validated_lag_day": 0,
+  "lag_evidence": "AR(7) prewhitened CCF (business-day grid): r=0.500, p=0.007, bootstrap peak [0,0], within-3d 100%, stable across AR orders & 2019-2023",
+  "previous_xgb_gain_lag": 2,
+  "sarimax": {
+    "order": [
+      1,
+      0,
+      1
+    ],
+    "exog": [
+      "feed0",
+      "load10"
+    ],
+    "exog_selected_by": "rolling-origin CV (not the holdout)"
+  },
+  "tree_features": [
+    "feed0",
+    "투입량합계_lag1",
+    "투입량합계_lag2",
+    "load5",
+    "load10"
+  ],
+  "persistence_policy": "예측 입력으로 사용 안 함(비교 baseline 전용)",
+  "holdout_2023": {
+    "persistence_baseline": {
+      "R2": 0.877,
+      "RMSE": 383.5,
+      "MAE": 261.2,
+      "n": 154
+    },
+    "xgboost": {
+      "R2": 0.6113,
+      "RMSE": 681.8,
+      "MAE": 536.1,
+      "n": 154
+    },
+    "randomforest": {
+      "R2": 0.6067,
+      "RMSE": 685.8,
+      "MAE": 533.4,
+      "n": 154
+    },
+    "sarimax": {
+      "R2": 0.9046,
+      "RMSE": 337.8,
+      "MAE": 243.1,
+      "n": 154
+    },
+    "final_ensemble": {
+      "R2": 0.9054,
+      "RMSE": 336.3,
+      "MAE": 241.2,
+      "n": 154
+    }
+  },
+  "meta_weights": {
+    "XGBoost": 0.0,
+    "RandomForest": 0.0,
+    "SARIMAX": 1.0088,
+    "intercept": -65.5
+  },
+  "reliability_rolling_cv": {
+    "folds": 8,
+    "R2_mean": 0.8834,
+    "R2_std": 0.023,
+    "RMSE_mean": 343.6,
+    "RMSE_std": 70.0,
+    "MAE_mean": 248.1,
+    "R2_pooled": 0.9172,
+    "persist_R2_mean": 0.8525
+  },
+  "cv_folds": [
+    {
+      "fold": 1,
+      "test_start": "2020-01-01",
+      "test_end": "2020-06-15",
+      "R2": 0.8765,
+      "RMSE": 501.4,
+      "MAE": 339.6,
+      "n": 112,
+      "persist_R2": 0.8801
+    },
+    {
+      "fold": 2,
+      "test_start": "2020-06-29",
+      "test_end": "2020-12-23",
+      "R2": 0.8728,
+      "RMSE": 355.3,
+      "MAE": 245.1,
+      "n": 116,
+      "persist_R2": 0.841
+    },
+    {
+      "fold": 3,
+      "test_start": "2020-12-30",
+      "test_end": "2021-06-24",
+      "R2": 0.8807,
+      "RMSE": 268.0,
+      "MAE": 201.6,
+      "n": 106,
+      "persist_R2": 0.7969
+    },
+    {
+      "fold": 4,
+      "test_start": "2021-06-25",
+      "test_end": "2021-12-21",
+      "R2": 0.8857,
+      "RMSE": 353.1,
+      "MAE": 249.5,
+      "n": 112,
+      "persist_R2": 0.8663
+    },
+    {
+      "fold": 5,
+      "test_start": "2021-12-22",
+      "test_end": "2022-06-17",
+      "R2": 0.9217,
+      "RMSE": 309.7,
+      "MAE": 244.8,
+      "n": 111,
+      "persist_R2": 0.9021
+    },
+    {
+      "fold": 6,
+      "test_start": "2022-06-20",
+      "test_end": "2022-12-13",
+      "R2": 0.8978,
+      "RMSE": 301.7,
+      "MAE": 227.9,
+      "n": 108,
+      "persist_R2": 0.8898
+    },
+    {
+      "fold": 7,
+      "test_start": "2022-12-19",
+      "test_end": "2023-06-14",
+      "R2": 0.8909,
+      "RMSE": 339.7,
+      "MAE": 238.3,
+      "n": 104,
+      "persist_R2": 0.8594
+    },
+    {
+      "fold": 8,
+      "test_start": "2023-06-15",
+      "test_end": "2023-09-15",
+      "R2": 0.8409,
+      "RMSE": 319.9,
+      "MAE": 238.2,
+      "n": 59,
+      "persist_R2": 0.7847
+    }
+  ]
+}
