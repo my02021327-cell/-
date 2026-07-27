@@ -1,0 +1,282 @@
+{
+  "benchmark": [
+    {
+      "model": "ARIMAX(2,0,2)",
+      "track": "B 시계열",
+      "R2": 0.9021,
+      "RMSE": 342.2,
+      "MAE": 247.6
+    },
+    {
+      "model": "SARIMAX(1,0,1)x(1,0,1,5)",
+      "track": "B 시계열",
+      "R2": 0.9016,
+      "RMSE": 343.0,
+      "MAE": 247.0
+    },
+    {
+      "model": "ARIMAX(1,0,1)",
+      "track": "B 시계열",
+      "R2": 0.9012,
+      "RMSE": 343.7,
+      "MAE": 246.1
+    },
+    {
+      "model": "SARIMAX(1,0,1)x(1,0,1,7)",
+      "track": "B 시계열",
+      "R2": 0.884,
+      "RMSE": 372.4,
+      "MAE": 260.0
+    },
+    {
+      "model": "persistence (기준)",
+      "track": "—",
+      "R2": 0.877,
+      "RMSE": 383.5,
+      "MAE": 261.2
+    },
+    {
+      "model": "RANSAC",
+      "track": "A 운전변수",
+      "R2": 0.6222,
+      "RMSE": 672.1,
+      "MAE": 544.2
+    },
+    {
+      "model": "SVR(RBF)",
+      "track": "A 운전변수",
+      "R2": 0.6219,
+      "RMSE": 672.4,
+      "MAE": 527.6
+    },
+    {
+      "model": "XGBoost",
+      "track": "A 운전변수",
+      "R2": 0.6104,
+      "RMSE": 682.6,
+      "MAE": 520.6
+    },
+    {
+      "model": "ExtraTrees",
+      "track": "A 운전변수",
+      "R2": 0.6096,
+      "RMSE": 683.3,
+      "MAE": 518.2
+    },
+    {
+      "model": "Huber",
+      "track": "A 운전변수",
+      "R2": 0.6077,
+      "RMSE": 684.9,
+      "MAE": 552.9
+    },
+    {
+      "model": "RandomForest",
+      "track": "A 운전변수",
+      "R2": 0.5927,
+      "RMSE": 697.9,
+      "MAE": 544.0
+    },
+    {
+      "model": "CatBoost",
+      "track": "A 운전변수",
+      "R2": 0.5812,
+      "RMSE": 707.7,
+      "MAE": 540.1
+    },
+    {
+      "model": "MLP",
+      "track": "A 운전변수",
+      "R2": 0.5365,
+      "RMSE": 744.4,
+      "MAE": 599.3
+    },
+    {
+      "model": "Ridge",
+      "track": "A 운전변수",
+      "R2": 0.5276,
+      "RMSE": 751.5,
+      "MAE": 605.1
+    },
+    {
+      "model": "Lasso",
+      "track": "A 운전변수",
+      "R2": 0.5232,
+      "RMSE": 755.1,
+      "MAE": 608.4
+    },
+    {
+      "model": "ElasticNet",
+      "track": "A 운전변수",
+      "R2": 0.5201,
+      "RMSE": 757.5,
+      "MAE": 610.8
+    },
+    {
+      "model": "GPR",
+      "track": "A 운전변수",
+      "R2": 0.4862,
+      "RMSE": 783.8,
+      "MAE": 556.9
+    },
+    {
+      "model": "LightGBM",
+      "track": "A 운전변수",
+      "R2": 0.4281,
+      "RMSE": 827.0,
+      "MAE": 624.6
+    }
+  ],
+  "ensemble_search": [
+    {
+      "k": 1,
+      "added": "ARIMAX(1,0,1)",
+      "members": [
+        "ARIMAX(1,0,1)"
+      ],
+      "oof_R2": 0.9248,
+      "weights": {
+        "ARIMAX(1,0,1)": 1.012
+      },
+      "R2": 0.9024,
+      "RMSE": 341.7,
+      "MAE": 244.5
+    },
+    {
+      "k": 2,
+      "added": "ARIMAX(2,0,2)",
+      "members": [
+        "ARIMAX(1,0,1)",
+        "ARIMAX(2,0,2)"
+      ],
+      "oof_R2": 0.9253,
+      "weights": {
+        "ARIMAX(1,0,1)": 0.6361,
+        "ARIMAX(2,0,2)": 0.3789
+      },
+      "R2": 0.9035,
+      "RMSE": 339.8,
+      "MAE": 243.8
+    },
+    {
+      "k": 3,
+      "added": "SARIMAX(1,0,1)x(1,0,1,7)",
+      "members": [
+        "ARIMAX(1,0,1)",
+        "ARIMAX(2,0,2)",
+        "SARIMAX(1,0,1)x(1,0,1,7)"
+      ],
+      "oof_R2": 0.9254,
+      "weights": {
+        "ARIMAX(1,0,1)": 0.5841,
+        "ARIMAX(2,0,2)": 0.3443,
+        "SARIMAX(1,0,1)x(1,0,1,7)": 0.0866
+      },
+      "R2": 0.9034,
+      "RMSE": 339.9,
+      "MAE": 243.9
+    }
+  ],
+  "selected": {
+    "k": 3,
+    "added": "SARIMAX(1,0,1)x(1,0,1,7)",
+    "members": [
+      "ARIMAX(1,0,1)",
+      "ARIMAX(2,0,2)",
+      "SARIMAX(1,0,1)x(1,0,1,7)"
+    ],
+    "oof_R2": 0.9254,
+    "weights": {
+      "ARIMAX(1,0,1)": 0.5841,
+      "ARIMAX(2,0,2)": 0.3443,
+      "SARIMAX(1,0,1)x(1,0,1,7)": 0.0866
+    },
+    "R2": 0.9034,
+    "RMSE": 339.9,
+    "MAE": 243.9
+  },
+  "ts_ensemble_cv": {
+    "단일 ARIMAX(1,0,1) [기존 프로덕션]": {
+      "cv_R2": 0.8796,
+      "cv_std": 0.0246,
+      "holdout_R2": 0.9012
+    },
+    "단일 ARIMAX(2,0,2)": {
+      "cv_R2": 0.8812,
+      "cv_std": 0.0223,
+      "holdout_R2": 0.9021
+    },
+    "2종 (1,0,1)+(2,0,2)": {
+      "cv_R2": 0.8827,
+      "cv_std": 0.0221,
+      "holdout_R2": 0.9035
+    },
+    "★ 시계열 4종 앙상블": {
+      "cv_R2": 0.8834,
+      "cv_std": 0.0199,
+      "holdout_R2": 0.9002
+    }
+  },
+  "track_a_mixing_cv": {
+    "시계열 4종 (단독)": {
+      "cv_R2": 0.8834,
+      "cv_std": 0.0199
+    },
+    "+ SVR(RBF)": {
+      "cv_R2": 0.883,
+      "cv_std": 0.0244
+    },
+    "+ XGBoost": {
+      "cv_R2": 0.8827,
+      "cv_std": 0.0248
+    },
+    "+ ExtraTrees": {
+      "cv_R2": 0.8831,
+      "cv_std": 0.0245
+    },
+    "+ SVR + XGBoost": {
+      "cv_R2": 0.8834,
+      "cv_std": 0.0245
+    }
+  },
+  "final_recommendation": {
+    "members": [
+      "ARIMAX(1,0,1)",
+      "ARIMAX(2,0,2)",
+      "SARIMAX(1,0,1)x(1,0,1,5)",
+      "SARIMAX(1,0,1)x(1,0,1,7)"
+    ],
+    "meta": "비음수 Ridge (alpha=1.0)",
+    "weights_full_train": {
+      "ARIMAX(1,0,1)": 0.0,
+      "ARIMAX(2,0,2)": 0.57,
+      "SARIMAX(1,0,1)x(1,0,1,5)": 0.1258,
+      "SARIMAX(1,0,1)x(1,0,1,7)": 0.2988,
+      "intercept": 41.7
+    },
+    "cv_R2": "0.8834 ± 0.0199 (8폴드)",
+    "holdout_R2": 0.9002,
+    "정직한 평가": "정확도는 단일 ARIMAX 들과 통계적으로 동률이다(홀드아웃에서는 오히려 0.9002 로 단일 (2,0,2) 0.9021 보다 낮다). 앙상블의 실질 이득은 정확도가 아니라 **분산 감소**(CV std 0.0246 → 0.0199, −19 %)이며, 이는 국면이 바뀌어도 성능이 덜 흔들린다는 뜻이라 운영 관점에서 가치가 있다.",
+    "대시보드 호환": "각 SARIMAX 예측이 미래 외생변수에 선형이고 메타가 선형결합이므로 앙상블도 정확히 선형이다(검증 잔차 0.000000000). 결합 η·β 만 갱신하면 기존 시나리오 슬라이더가 그대로 동작한다."
+  },
+  "protocol": {
+    "features": [
+      "S_fast",
+      "S_slow",
+      "투입량합계",
+      "투입량합계_lag1",
+      "투입량합계_lag2",
+      "load5",
+      "load10"
+    ],
+    "holdout": 2023,
+    "train_n": 1098,
+    "test_n": 154,
+    "persistence_as_feature": false,
+    "selection": "OOF 기준 탐욕적 전진선택 + 비음수 Ridge"
+  },
+  "unavailable": {
+    "torch(LSTM/GRU/TCN)": "설치 불가 — 이전 프로젝트 측정치 LSTM 0.170 / Transformer 0.400",
+    "prophet": "설치 타임아웃"
+  }
+}
