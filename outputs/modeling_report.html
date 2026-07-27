@@ -134,6 +134,7 @@ tbody tr:hover{background:var(--surface)}
     <li><a href="#p6">앙상블 확장 — RF, 그리고 시계열</a></li>
     <li><a href="#p7">SARIMAX 교차검증·차수선택</a></li>
     <li><a href="#p8">지연(lag) 3라운드 — 두 번의 정정</a></li>
+    <li><a href="#p8b">「30일」 통설 재검토 — 2상 공정</a></li>
     <li><a href="#p9">최종 앙상블과 신뢰도</a></li>
     <li><a href="#p10">감사 — 누수·과적합·표현력</a></li>
     <li><a href="#p11">예측 가능 기간</a></li>
@@ -412,6 +413,118 @@ tbody tr:hover{background:var(--surface)}
     홀드아웃 0.9054→0.9024 로 차이가 폴드 표준편차(±0.027) 내다. 정확도를 잃지 않고
     역학적 타당성·해석가능성을 얻었다. 성능이 동률일 때는 기계적 산출물보다 메커니즘에
     부합하는 표현을 택하는 것이 옳다.</p>
+</section>
+
+<section id="p8b">
+  <span class="pn">Part 8-B · 문헌 대조</span>
+  <h2>"30일 뒤에 메탄이 나온다"는 통설의 재검토 — 2상 공정 반영</h2>
+  <p>교과서적으로 배우는 <b>"기질 투입 후 30일 뒤 메탄 생성"</b>은 본 시설의 실측
+    시간상수(τ_slow 8일)와 충돌하는 것처럼 보인다. 문헌 대조와 공정 구조 재확인으로
+    이 긴장을 해소한다.</p>
+
+  <h3>8B.1 문헌조사 — 30일은 무엇을 가리키는 수치인가</h3>
+  <div class="tw"><table>
+    <thead><tr><th>항목</th><th class="n">문헌값</th><th>출처 맥락</th></tr></thead>
+    <tbody>
+      <tr><td>중온 단상 소화조 설계 HRT</td><td class="n">20–30 일</td><td>느리게 자라는 미생물에게 유기물 분해 시간을 주기 위한 설계 기준</td></tr>
+      <tr><td>표준 중온 소화조 운전</td><td class="n">25 일 HRT</td><td>고형물 부하 1.6 kg VS/㎥·일, 농축슬러지 &lt;5 % DS</td></tr>
+      <tr><td>2단 소화 시스템</td><td class="n">1단 8일 + 2단 12일</td><td>전체 20일</td></tr>
+      <tr><td><b>산생성조(acidogenic) HRT</b></td><td class="n"><b>0.75–3 일</b></td><td>통상 3일, 2일 최적 보고. 수소생산 최대는 0.75일</td></tr>
+      <tr><td><b>메탄생성조(methanogenic) HRT</b></td><td class="n"><b>12–25 일</b></td><td>12일에서 391 mLCH₄/gVS, 25일에서 수율 최대</td></tr>
+      <tr><td>1차 가수분해 상수 k<sub>h</sub></td><td class="n">0.19–0.65 /일</td><td>음식물류+유우분뇨 병합소화 BMP</td></tr>
+      <tr><td>BMP 집중 생성 구간</td><td class="n">초기 3–5 일</td><td>이 구간은 매일 채취 권장</td></tr>
+      <tr><td>BMP 시험 기간</td><td class="n">약 30 일</td><td>3일 연속 일일생성량이 누적의 1 % 미만이면 종료</td></tr>
+      <tr><td>기질 분해속도 분류</td><td class="n">k≥0.2 → 7일 미만<br>0.2 미만 → 8–15일<br>느림 → 15일 이상</td><td>시험 소요기간 기준</td></tr>
+    </tbody>
+  </table></div>
+  <div class="box adopt"><span class="bt">해소 — 두 수치는 다른 것을 가리킨다</span>
+    <p><b>30일 = 체류시간(HRT)</b> — 난분해성 획분까지 <b>완전 분해를 보장</b>하기 위해
+      물질을 조 안에 머물게 하는 설계 시간.</p>
+    <p><b>≠ 오늘 투입이 메탄으로 나타나기까지의 시간</b> — BMP 곡선은 <b>앞쪽에 몰려</b> 있다
+      (집중 생성 3–5일). 즉 투입은 당일부터 기여를 시작해 수 주에 걸쳐 꼬리를 남긴다.
+      "30일 뒤에 비로소 나온다"가 아니라 <b>"30일이면 거의 다 나온다"</b>가 정확한 독해다.</p></div>
+
+  <h3>8B.2 본 시설은 단상이 아니라 2상이다</h3>
+  <p>원자료 계통을 다시 확인했다. <code>반입 → 여액저장조 → 유기산화조 → 혐기성소화조 A/B →
+    탈리액 → SBR</code>. 헤더가 <b>"유기산화조(소화조 투입)"</b> 로 되어 있어 산생성조 유출수가
+    곧 소화조 유입수다.</p>
+  <div class="tw"><table>
+    <caption>각 조의 pH — 상(phase) 분리의 실측 증거</caption>
+    <thead><tr><th>반응조</th><th class="n">pH 중앙</th><th class="n">p5</th><th class="n">p95</th><th>해석</th></tr></thead>
+    <tbody>
+      <tr><td>여액저장조</td><td class="n">7.75</td><td class="n">7.39</td><td class="n">7.99</td><td>중성 저류</td></tr>
+      <tr class="hl"><td><b>유기산화조</b></td><td class="n"><b>5.51</b></td><td class="n">4.12</td><td class="n">5.92</td>
+        <td><b>산생성상</b> — 메탄생성균이 세척되는 pH</td></tr>
+      <tr class="hl"><td><b>혐기성소화조 A/B</b></td><td class="n"><b>8.02</b></td><td class="n">7.89</td><td class="n">8.15</td>
+        <td><b>메탄생성상</b></td></tr>
+    </tbody>
+  </table></div>
+  <p>유기산화조 CODcr 중앙 <b>131,528</b> mg/L → 소화조 <b>27,669</b> mg/L (79 % 제거),
+    TS 5.8 %→2.7 %, VS 4.0 %→1.2 %. <b>전형적인 2상 분리</b>가 실측으로 확인된다.</p>
+
+  <h3>8B.3 각 조의 유량과 HRT</h3>
+  <div class="tw"><table>
+    <thead><tr><th>구분</th><th class="n">유량 (㎥·일⁻¹)</th><th class="n">유효용적 (㎥)</th><th class="n">HRT (일)</th><th>근거</th></tr></thead>
+    <tbody>
+      <tr><td>반입 합계 (음폐수 137.6 + 가축분뇨 86.3 + 음식물 17.5)</td><td class="n">237.2</td><td class="n">—</td><td class="n">—</td><td>실측 중앙</td></tr>
+      <tr><td>산생성조(유기산화조) 통과</td><td class="n">≈ 198</td><td class="n bad">자료 미기재</td><td class="n bad">추정 1–3</td><td>정상상태에서 소화조 투입과 동일</td></tr>
+      <tr class="hl"><td><b>메탄생성조 (A+B) — 실측</b></td><td class="n"><b>198.0</b></td><td class="n"><b>8,000</b></td>
+        <td class="n"><b>40.4</b></td><td>설계표 A 4,000 + B 4,000</td></tr>
+      <tr><td>메탄생성조 — 설계</td><td class="n">209.1</td><td class="n">8,000</td><td class="n">38.3</td><td>A·B 각 104.5</td></tr>
+    </tbody>
+  </table></div>
+  <div class="box note"><span class="bt">산생성조 용량은 자료에 없다</span>
+    <p>운영일지에 조 명칭만 있고 용적이 기재되어 있지 않다. 다만 <b>pH 5.51(p5 4.12)</b> 은
+      메탄생성균이 세척되는 조건이므로 <b>짧은 HRT(문헌 1–3일)</b> 로 설계되었다고 판단된다.
+      HRT 1·2·3일 가정 시 필요 용적은 각각 198·396·594 ㎥ 다.
+      <b>정확한 값은 설계도서 확인이 필요하며, 추정임을 명시한다.</b></p></div>
+
+  <h3>8B.4 메탄생성에 실제로 걸리는 시간</h3>
+  <p>HRT 40.4일과 응답 시간상수 τ 는 서로 <b>다른 물리량</b>이다. CSTR 물질수지에서</p>
+  <div class="formula">dS/dt = D·S_in − (k + D)·S       D = 1/HRT = 0.0248 /일
+
+응답 시간상수  τ = 1/(k + D)        ← 투입 변화가 메탄에 반영되는 시간
+체류시간       HRT = V/Q = 40.4 일  ← 물질이 조 안에 머무는 시간</div>
+  <div class="tw"><table>
+    <thead><tr><th>k (/일)</th><th>출처</th><th class="n">τ (일)</th><th class="n">t90 ≈ 2.3τ (일)</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td class="n">0.100</td><td><b>본 모델 CV 추정</b></td><td class="n"><b>8.0</b></td><td class="n"><b>18.5</b></td></tr>
+      <tr><td class="n">0.19</td><td>문헌 하한 (음식물+분뇨 BMP)</td><td class="n">4.7</td><td class="n">10.7</td></tr>
+      <tr><td class="n">0.65</td><td>문헌 상한</td><td class="n">1.5</td><td class="n">3.4</td></tr>
+    </tbody>
+  </table></div>
+  <p>즉 HRT 가 40일이어도 <b>투입 변화가 메탄에 반영되는 시간은 8일 수준</b>이다.
+    본 모델이 추정한 결합 임펄스응답(평균지연 3.3일, t90 10일)은 이 범위와 정합한다.</p>
+
+  <div class="box adopt"><span class="bt">2상 구조가 τ 를 짧게 만드는 이유 — 모델 결과의 역학적 근거</span>
+    <p>메탄생성조는 <b>이미 산발효를 마친 기질</b>을 받는다(유기산화조 pH 5.5, COD 131,528 mg/L).
+      단상 소화조에서 율속단계인 <b>가수분해가 앞단에서 이미 수행</b>되었으므로, 메탄생성조가
+      담당하는 아세트산생성·메탄생성은 상대적으로 <b>빠른 반응</b>이다.</p>
+    <p>이것이 본 모델의 2-pool 에서 <b>fast pool(τ=1일)이 50.9 %</b> 를 차지하는 이유다.
+      단상 소화조라면 fast 비중이 이렇게 클 수 없다. <b>2상 공정 구조가 모델 결과를
+      독립적으로 설명한다.</b></p></div>
+
+  <div class="box correct"><span class="bt">용어 정정 — k 를 '가수분해 상수'로 부른 것은 부정확</span>
+    <p>Part 8 에서 τ_slow 로부터 역산한 <code>k = 1/τ_slow − D = 0.100 /일</code> 을
+      <b>'가수분해 상수 k<sub>h</sub>'</b> 라고 표기했다. 2상 공정에서는 가수분해가 앞단에서
+      끝나므로, 이 값은 순수 가수분해 상수가 아니라 <b>메탄생성조 내 유효 전환속도 상수</b> 로
+      부르는 것이 정확하다.</p>
+    <p>따라서 문헌 BMP 가수분해 상수(0.19–0.65/일, 단상 회분식 최적조건)와 직접 비교하는 것도
+      엄밀하지 않다. 본 시설 값이 더 낮은 것은 ① 회분식이 아닌 연속 완전혼합조이고
+      ② <b>만성 암모니아 저해</b>(FAN 중앙 389 mg/L)로 실제 전환속도가 억제되기 때문으로 본다.
+      Part 8 의 '문헌값과 정확히 일치' 라는 서술은 <b>이 범위 안에 든다</b> 정도로 완화한다.</p></div>
+
+  <h3>8B.5 결론</h3>
+  <ul>
+    <li><b>"30일 뒤 메탄"은 오독</b> — 30일은 완전 분해를 보장하는 <b>설계 체류시간</b>이지
+      투입–메탄 지연시간이 아니다. BMP 곡선은 초기 3–5일에 집중된다.</li>
+    <li><b>본 시설 메탄생성조 HRT = 40.4일</b>(설계 38.3일) — 문헌 메탄생성조 권장(12–25일)보다
+      길다. 저부하 여유 운전 중이라는 앞선 관찰과 일치한다.</li>
+    <li><b>산생성조 HRT ≈ 1–3일 추정</b> — pH 5.51 이 근거이나 <b>용적 자료가 없어 확정 불가</b>.</li>
+    <li><b>투입→메탄 응답 시간상수 τ ≈ 8일</b>(t90 18.5일). 2상 구조로 가수분해가 선행되어
+      단상 대비 빠른 것이 타당하다.</li>
+    <li>모델의 2-pool(fast 1일 51 % + slow 8일 49 %)은 <b>2상 공정 구조와 정합</b>한다.</li>
+  </ul>
 </section>
 
 <section id="p9">
