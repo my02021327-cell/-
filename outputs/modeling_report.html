@@ -1,0 +1,685 @@
+<title>혐기성 소화조 메탄 예측 — 모델링 전 과정 기록</title>
+<style>
+:root{
+  --bg:#FFFFFF; --surface:#F7F8F9; --rule:#E5E8EB;
+  --ink:#16181D; --ink2:#4E5661; --ink3:#8B95A1;
+  --accent:#2F6FD0; --accentSoft:#EDF3FD;
+  --reject:#C63B3B; --rejectSoft:#FBEFEF;
+  --adopt:#17803D; --adoptSoft:#EDF7F0;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#16171A; --surface:#1D1F24; --rule:#2A2D33;
+  --ink:#E8EAED; --ink2:#A8B0BA; --ink3:#737C87;
+  --accent:#6BA3F5; --accentSoft:#1B2740;
+  --reject:#F07070; --rejectSoft:#2C1D1F;
+  --adopt:#4CC77C; --adoptSoft:#16261C;
+}}
+:root[data-theme="dark"]{
+  --bg:#16171A; --surface:#1D1F24; --rule:#2A2D33;
+  --ink:#E8EAED; --ink2:#A8B0BA; --ink3:#737C87;
+  --accent:#6BA3F5; --accentSoft:#1B2740;
+  --reject:#F07070; --rejectSoft:#2C1D1F;
+  --adopt:#4CC77C; --adoptSoft:#16261C;
+}
+:root[data-theme="light"]{
+  --bg:#FFFFFF; --surface:#F7F8F9; --rule:#E5E8EB;
+  --ink:#16181D; --ink2:#4E5661; --ink3:#8B95A1;
+  --accent:#2F6FD0; --accentSoft:#EDF3FD;
+  --reject:#C63B3B; --rejectSoft:#FBEFEF;
+  --adopt:#17803D; --adoptSoft:#EDF7F0;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;
+  font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",
+    system-ui,sans-serif;font-size:16.5px;line-height:1.78}
+.doc{max-width:880px;margin:0 auto;padding:56px 24px 96px}
+p,li{max-width:68ch}
+.num,td.n,th.n{font-variant-numeric:tabular-nums}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;
+  background:var(--surface);padding:1px 5px;border-radius:4px}
+
+/* 표지 */
+.cover{border-bottom:2px solid var(--ink);padding-bottom:28px;margin-bottom:8px}
+.kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);
+  font-weight:700;margin:0}
+h1{font-size:38px;line-height:1.22;letter-spacing:-.028em;margin:10px 0 14px;text-wrap:balance}
+.lede{font-size:17.5px;color:var(--ink2);margin:0;max-width:64ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px 26px;margin-top:22px;font-size:13.5px;color:var(--ink3)}
+.meta b{color:var(--ink2);font-weight:600}
+
+/* 목차 */
+nav.toc{background:var(--surface);border-radius:12px;padding:20px 24px;margin:32px 0 8px}
+nav.toc h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);
+  margin:0 0 12px;font-weight:700}
+nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:32px;font-size:14.5px;line-height:1.95}
+nav.toc a{color:var(--ink2);text-decoration:none}
+nav.toc a:hover{color:var(--accent);text-decoration:underline}
+@media (max-width:640px){nav.toc ol{columns:1}}
+
+/* 파트 */
+section{margin-top:56px;scroll-margin-top:20px}
+.pn{font-size:12px;letter-spacing:.16em;color:var(--accent);font-weight:700;
+  display:block;margin-bottom:6px}
+h2{font-size:26px;letter-spacing:-.022em;margin:0 0 6px;line-height:1.3;text-wrap:balance;
+  padding-bottom:12px;border-bottom:1px solid var(--rule)}
+h3{font-size:18px;letter-spacing:-.012em;margin:34px 0 8px}
+h4{font-size:15.5px;margin:24px 0 6px;color:var(--ink2)}
+p{margin:12px 0}
+ul,ol.body{margin:12px 0;padding-left:22px}
+li{margin:5px 0}
+
+/* 표 */
+.tw{overflow-x:auto;margin:20px 0}
+table{width:100%;border-collapse:collapse;font-size:14.5px;line-height:1.6}
+caption{text-align:left;font-size:13px;color:var(--ink3);padding-bottom:8px}
+th{text-align:left;font-weight:700;font-size:12.5px;letter-spacing:.03em;color:var(--ink2);
+  border-bottom:1.5px solid var(--ink);padding:8px 10px;white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th.n,td.n{text-align:right}
+tbody tr:hover{background:var(--surface)}
+.hl{background:var(--accentSoft)!important}
+.mark{font-weight:700;color:var(--accent)}
+.bad{color:var(--reject);font-weight:600}
+.good{color:var(--adopt);font-weight:600}
+
+/* 콜아웃 */
+.box{border-radius:12px;padding:18px 22px;margin:22px 0}
+.box p:first-child{margin-top:0} .box p:last-child{margin-bottom:0}
+.box .bt{font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  display:block;margin-bottom:8px}
+.correct{background:var(--rejectSoft);border-left:3px solid var(--reject)}
+.correct .bt{color:var(--reject)}
+.adopt{background:var(--adoptSoft);border-left:3px solid var(--adopt)}
+.adopt .bt{color:var(--adopt)}
+.note{background:var(--surface);border-left:3px solid var(--ink3)}
+.note .bt{color:var(--ink3)}
+.formula{background:var(--surface);border-radius:10px;padding:16px 20px;margin:18px 0;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;
+  line-height:1.9;overflow-x:auto;white-space:pre}
+
+/* 결정 로그 */
+.log td:nth-child(1){font-weight:600;white-space:nowrap}
+.verdict{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.v-adopt{background:var(--adoptSoft);color:var(--adopt)}
+.v-reject{background:var(--rejectSoft);color:var(--reject)}
+
+.foot{margin-top:64px;padding-top:20px;border-top:1px solid var(--rule);
+  font-size:13px;color:var(--ink3);line-height:1.8}
+</style>
+
+<div class="doc">
+
+<header class="cover">
+  <p class="kicker">Technical Record</p>
+  <h1>혐기성 소화조 메탄생성량 예측<br>모델링 전 과정 기록</h1>
+  <p class="lede">영천 통합바이오가스화시설 6년(2018.01–2023.12) 일별 운전데이터.
+    최초 XGBoost 설계부터 세 차례의 지연(lag) 정정, 앙상블 확정, 감사, 경보 시스템,
+    통합 대시보드까지 — 채택한 것과 <b>기각한 것</b>을 모두 기록한다.</p>
+  <div class="meta">
+    <span><b>대상</b> 혐기성소화조 2상(메탄생성균 조)</span>
+    <span><b>타깃</b> 일별 메탄생성량 (Nm³/d)</span>
+    <span><b>분할</b> 학습 2018–2022 / 홀드아웃 2023</span>
+    <span><b>최종</b> R² 0.9024 · CV 0.882±0.027</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li><a href="#p1">원자료와 구조 파악</a></li>
+    <li><a href="#p2">타깃 정의와 누수 차단</a></li>
+    <li><a href="#p3">전처리 원칙</a></li>
+    <li><a href="#p4">1차 모델링 — XGBoost 2상 집중</a></li>
+    <li><a href="#p5">persistence 라는 벽</a></li>
+    <li><a href="#p6">앙상블 확장 — RF, 그리고 시계열</a></li>
+    <li><a href="#p7">SARIMAX 교차검증·차수선택</a></li>
+    <li><a href="#p8">지연(lag) 3라운드 — 두 번의 정정</a></li>
+    <li><a href="#p9">최종 앙상블과 신뢰도</a></li>
+    <li><a href="#p10">감사 — 누수·과적합·표현력</a></li>
+    <li><a href="#p11">예측 가능 기간</a></li>
+    <li><a href="#p12">운전이상 경보 시스템</a></li>
+    <li><a href="#p13">통합 대시보드</a></li>
+    <li><a href="#p14">한계와 다음 단계</a></li>
+    <li><a href="#p15">부록 — 결정 로그·파일</a></li>
+  </ol>
+</nav>
+
+<section id="p0">
+  <span class="pn">요약</span>
+  <h2>최종 결과 한눈에</h2>
+  <div class="tw"><table>
+    <caption>2023 홀드아웃 (동일 154일, persistence 는 예측 입력이 아닌 비교 기준)</caption>
+    <thead><tr><th>모델</th><th class="n">R²</th><th class="n">RMSE</th><th class="n">MAE</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>persistence <span style="color:var(--ink3)">(기준)</span></td><td class="n">0.877</td><td class="n">383.5</td><td class="n">261.2</td><td>어제 관측값</td></tr>
+      <tr><td>RandomForest</td><td class="n">0.595</td><td class="n">695.7</td><td class="n">543.0</td><td>운전변수 전용</td></tr>
+      <tr><td>XGBoost</td><td class="n">0.610</td><td class="n">682.6</td><td class="n">515.9</td><td>운전변수 전용</td></tr>
+      <tr><td>SARIMAX(1,0,1)+외생</td><td class="n">0.901</td><td class="n">343.7</td><td class="n">246.1</td><td>시계열 base</td></tr>
+      <tr class="hl"><td><b>최종 앙상블</b></td><td class="n"><b>0.9024</b></td><td class="n"><b>341.7</b></td><td class="n"><b>244.5</b></td><td>비음수 Ridge 스태킹</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>신뢰도</b> — 앙상블 전 파이프라인을 폴드마다 처음부터 재학습한 롤링-오리진 CV 8폴드에서
+    <span class="mark">R² = 0.8819 ± 0.0267</span>(pooled 0.9158). 8폴드 중 7폴드에서 기준선(0.8523) 상회.
+    단일 홀드아웃 0.9024 는 CV 분포와 정합 → 요행이 아니다.</p>
+</section>
+
+<section id="p1">
+  <span class="pn">Part 1</span>
+  <h2>원자료와 구조 파악</h2>
+  <p>연도별 엑셀 6개(2018–2023), 각 파일에 <code>Data</code> 시트가 있고 3단 병합 헤더 구조.
+    소화조 A/B 2계열이 각각 투입량·온도(상/중/하)·pH·CODcr·TS·VS·VFA·알칼리도·개별VFA·메탄함량·
+    바이오가스발생량을 가진다.</p>
+
+  <h3>1.1 첫 번째 함정 — 연도별 컬럼 레이아웃 불일치</h3>
+  <p>고정 컬럼 인덱스로 읽으면 2018–2020 과 2021–2023 이 <b>서로 다른 항목</b>을 가리킨다.
+    예: 컬럼 23이 2018–2020 에서는 <code>NH3-N</code>, 2021–2023 에서는 <code>투입량</code>.
+    → 전 구간을 <b>헤더 이름 기반</b>으로 파싱하도록 전환.</p>
+
+  <h3>1.2 설계 제원 확보</h3>
+  <p><code>Data 계산</code> 시트에서 소화조 용량을 찾았다. 이 값이 뒤(Part 8)에서 지연 모델의
+    결정적 근거가 된다.</p>
+  <div class="formula">유효용적  V = 4,000 (A조) + 4,000 (B조) = 8,000 ㎥
+평균투입  Q = 197.1 ㎥/일   (설계 209.05 ㎥/일)
+      → HRT = V/Q = 40.6 일,  희석률 D = 1/HRT = 0.0246 /일
+      → 1일 투입 = 조 용적의 2.46 %</div>
+
+  <h3>1.3 결측 구조 — 무작위가 아니다</h3>
+  <div class="tw"><table>
+    <thead><tr><th>항목</th><th class="n">가용률</th><th>메모</th></tr></thead>
+    <tbody>
+      <tr><td>투입량합계 / 반입량</td><td class="n">~100 %</td><td>수리부하 — 거의 완전</td></tr>
+      <tr><td>소화조 pH·온도·VS·TS·VFA·알칼리도</td><td class="n">57–58 %</td><td>평일 위주 분석</td></tr>
+      <tr><td>메탄생성량 (타깃)</td><td class="n">57.7 %</td><td>1,264일</td></tr>
+      <tr><td>VS_in (투입 VS부하)</td><td class="n">56 %</td><td></td></tr>
+      <tr><td>CH4 함량</td><td class="n">57.4 %</td><td>원본에서 신규 추출</td></tr>
+      <tr><td>CO2 / H2S</td><td class="n">29.5 %</td><td>H2S 는 σ≈0 로 판별력 없음</td></tr>
+      <tr><td>소화조 NH4-N</td><td class="n bad">10.5 %</td><td>FAN 계산의 병목</td></tr>
+      <tr><td>개별 VFA (아세트산·프로피온산 등)</td><td class="n bad">0 %</td><td>컬럼만 존재, 값 전무</td></tr>
+    </tbody>
+  </table></div>
+  <div class="box note"><span class="bt">구조적 발견</span>
+    <p>메탄은 <b>평일에만 측정</b>된다(월–목 84–86 %, 금 64 %, 토·일 1 %).
+      그 결과 <b>달력일 기준 연속 관측 최대 길이가 6일</b>이다. 이 사실은 Part 8 에서
+      프리화이트닝을 불가능하게 만들어 방법론 전환을 강제한다.</p></div>
+</section>
+
+<section id="p2">
+  <span class="pn">Part 2</span>
+  <h2>타깃 정의와 누수 차단</h2>
+  <p>타깃은 <b>일별 메탄생성량</b>(Nm³/d). 여기서 두 종류의 누수를 사전 차단했다.</p>
+  <ol class="body">
+    <li><b>결정론적 누수</b> — <code>메탄생성량 = 바이오가스 × 메탄함량 ÷ 100</code> 이 오차 0으로
+      성립한다. 따라서 바이오가스·메탄함량을 독립변수에서 완전 제외.</li>
+    <li><b>미래 정보 누수</b> — 학습 2018–2022 / 홀드아웃 2023 시간분할. lag·이동평균 등 파생은
+      <b>연속 일별 캘린더에서 먼저 계산</b>한 뒤 결측일을 삭제한다(순서를 바꾸면 shift 가
+      달력상 지연을 왜곡).</li>
+  </ol>
+  <div class="box note"><span class="bt">수율(비메탄수율)을 예측 대상에서 제외한 이유</span>
+    <p>수율 = 메탄 ÷ 금일 투입 VS. 분모가 <b>금일</b> 값이라 어제까지의 데이터로 오늘 수율을
+      예측하는 것은 순환적이다. 뒤(Part 12)에서 이 분모 효과가 경보 검증까지 오염시키는 것을
+      실제로 확인하게 된다.</p></div>
+</section>
+
+<section id="p3">
+  <span class="pn">Part 3</span>
+  <h2>전처리 원칙</h2>
+  <ul>
+    <li><b>결측일 삭제</b> — 타깃·사용 피처에 결측이 있는 날은 보간 없이 제거(<code>dropna</code>).</li>
+    <li><b>예외적 보간</b> — 농도처럼 완만히 변하는 값을 <i>입력 이력</i> 구성에 쓸 때만 시간보간을
+      허용하고 문서에 명시(예: 유입 VS%). 모델 학습행에는 적용하지 않는다.</li>
+    <li><b>물리적 불가능값 제거</b> — CH4 함량 40 % 미만/75 % 초과는 계측 오류로 간주해 제거
+      (원자료에 350.3 % 같은 값 존재).</li>
+    <li><b>표준화 불필요</b> — 최종 모델이 트리·상태공간 기반이라 스케일링 없이 학습.</li>
+  </ul>
+</section>
+
+<section id="p4">
+  <span class="pn">Part 4</span>
+  <h2>1차 모델링 — XGBoost, 2상 집중</h2>
+  <p>과제 요구(2상 집중 / lag 임의선정 후 가중치 최대일 선택 / 피처 10–15개 / 결측일 삭제)를
+    그대로 구현했다.</p>
+
+  <h3>4.1 lag 선택 — XGBoost gain 방식</h3>
+  <p>투입량합계의 <code>lag0 … lag15</code> 를 모두 넣어 학습한 뒤 gain 중요도 최댓값 날을 선택
+    → <b>2일</b>(gain 점유율 23 %). 이 선택은 Part 8 에서 <span class="bad">기각</span>된다.</p>
+
+  <h3>4.2 Model-1 : 2상 소프트센서 (12 피처)</h3>
+  <p>소화조 pH·온도·VS·CODcr·TS·VFA·알칼리도·VFA/ALK + 투입량합계·VS_in·반입량 + 선택 lag.</p>
+  <div class="tw"><table>
+    <thead><tr><th>모델</th><th class="n">R²</th><th class="n">RMSE</th><th class="n">n</th></tr></thead>
+    <tbody>
+      <tr><td>persistence 기준</td><td class="n">0.836</td><td class="n">433.7</td><td class="n">79</td></tr>
+      <tr><td>XGBoost (2상 화학상태)</td><td class="n bad">−0.089</td><td class="n">1117.1</td><td class="n">79</td></tr>
+    </tbody>
+  </table></div>
+  <p>화학상태는 메탄 발생과 <b>동시대·하류</b> 측정이라 '선행 정보'가 아니다. 게다가 결측 42 %로
+    표본이 154→79 로 급감한다. 다만 가스미터 고장 시 <b>nowcast(소프트센서)</b> 용도로는 유효하다.</p>
+</section>
+
+<section id="p5">
+  <span class="pn">Part 5</span>
+  <h2>persistence 라는 벽</h2>
+  <p>여기서 프로젝트의 성격을 규정하는 사실이 드러났다.</p>
+  <div class="formula">메탄 일별 자기상관 (lag 1) = 0.917
+연평균 추이  2018: 7,164 → 2019: 7,346 → 2020: 6,940
+             2021: 6,568 → 2022: 6,430 → 2023: 6,374 Nm³/일</div>
+  <p>매우 매끄러운 시계열이라 <b>persistence(어제값)만으로 2023 R² ≈ 0.88</b> 이 나온다.
+    동시에 연 단위 하향 국면이동이 있어, 학습기 관계를 외삽하는 트리 계열은 수준(level)을 잃는다.</p>
+
+  <div class="box correct"><span class="bt">정정 1 — persistence 정책</span>
+    <p>초기에는 persistence 를 <b>피처로 앵커링</b>해 baseline 을 넘겼다(R² 0.877→0.883).
+      그러나 "persistence 로 예측하지 말라"는 요구에 따라 <b>persist 피처를 전 모델·메타입력에서 제거</b>하고,
+      persistence 는 <b>비교 기준으로만</b> 사용하도록 전면 재설계했다.</p>
+    <p>그 결과 운전변수 전용 트리는 R² ≈ 0.60 으로 기준선에 크게 미달한다. 이것을 감추지 않고
+      기록한다 — <b>과거 메탄 없이 강한 자기상관 기준선을 트리로 이기는 것은 어렵다.</b></p></div>
+  <p>그렇다면 persist 피처 없이 무엇이 기준선을 넘는가? → <b>시계열 모델</b>(Part 6).</p>
+</section>
+
+<section id="p6">
+  <span class="pn">Part 6</span>
+  <h2>앙상블 확장 — RandomForest, 그리고 시계열</h2>
+
+  <h3>6.1 RandomForest 추가와 스태킹</h3>
+  <p>Base 를 RF + XGB 로 늘리고 비음수 Ridge 메타로 스태킹. 메타피처는 학습기간
+    <code>TimeSeriesSplit(5)</code> 확장창 OOF 로 만들어 누수를 차단했다.
+    그러나 두 모델은 같은 트리 계열이라 <b>잔차 상관 ≈ 0.99</b> — 결합 이득이 거의 없다.</p>
+
+  <h3>6.2 시계열 base 투입 — 다양성의 실질</h3>
+  <p><b>SARIMAX(1,0,1) + 외생 투입부하</b>는 선형 상태공간(칼만필터) 모델로 트리와 계열이 달라
+    잔차 상관 ≈ 0.93. 결측 많은 일별 메탄을 칼만필터가 자연 처리하고 자기상관 구조를 직접
+    모형화한다.</p>
+  <div class="tw"><table>
+    <caption>2023 홀드아웃 동일 154행 · persistence 는 비교 기준</caption>
+    <thead><tr><th>모델</th><th class="n">R²</th><th class="n">RMSE</th><th>메타 가중치</th></tr></thead>
+    <tbody>
+      <tr><td>persistence (기준)</td><td class="n">0.877</td><td class="n">383.5</td><td>—</td></tr>
+      <tr><td>RandomForest</td><td class="n">0.603</td><td class="n">689.2</td><td class="n">0.00</td></tr>
+      <tr><td>XGBoost</td><td class="n">0.597</td><td class="n">694.0</td><td class="n">0.00</td></tr>
+      <tr class="hl"><td><b>SARIMAX</b></td><td class="n"><b>0.891</b></td><td class="n"><b>360.7</b></td><td class="n">0.99</td></tr>
+      <tr><td>스태킹</td><td class="n">0.891</td><td class="n">361.2</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+  <div class="box adopt"><span class="bt">채택 — 그리고 정직한 한계</span>
+    <p>메타가 약한 트리를 <b>0 가중으로 배제</b>하고 SARIMAX 로 수렴한다. 즉 스태킹은 성능
+      부스터가 아니라 <b>누수 없는 자동 모델선택 + 국면변화 대비 안전장치</b> 역할이다.
+      이 점을 과장 없이 기록한다.</p></div>
+</section>
+
+<section id="p7">
+  <span class="pn">Part 7</span>
+  <h2>SARIMAX 교차검증 · 차수선택 · 잔차진단</h2>
+  <p>단일 분할 R² 0.891 이 요행인지 확인하기 위해 <b>롤링-오리진 확장창 CV</b>(최소학습 730일,
+    이동 180일, 블록 180일)를 8폴드 수행했다.</p>
+  <div class="tw"><table>
+    <thead><tr><th>fold</th><th class="n">1</th><th class="n">2</th><th class="n">3</th><th class="n">4</th>
+      <th class="n">5</th><th class="n">6</th><th class="n">7</th><th class="n">8</th><th class="n">평균</th></tr></thead>
+    <tbody><tr><td>R²</td><td class="n">0.796</td><td class="n">0.880</td><td class="n">0.882</td>
+      <td class="n">0.875</td><td class="n">0.916</td><td class="n">0.898</td><td class="n">0.878</td>
+      <td class="n">0.819</td><td class="n hl"><b>0.868±0.040</b></td></tr></tbody>
+  </table></div>
+  <p>단일분할 0.891 이 폴드 분포 안에 있어 <b>과적합·요행이 아님</b>을 확인(pooled 0.900).</p>
+
+  <h4>차수 선택</h4>
+  <div class="tw"><table>
+    <thead><tr><th>order</th><th class="n">CV R²</th><th class="n">CV RMSE</th><th class="n">AIC</th><th class="n">파라미터</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td><b>(1,0,1)</b></td><td class="n">0.868</td><td class="n">366.7</td><td class="n">17,870</td><td class="n"><b>5</b></td></tr>
+      <tr><td>(1,1,1)</td><td class="n">0.865</td><td class="n">370.2</td><td class="n">17,870</td><td class="n">5</td></tr>
+      <tr><td>(2,0,2)</td><td class="n">0.867</td><td class="n">367.6</td><td class="n">17,838</td><td class="n">7</td></tr>
+      <tr><td>(2,1,2)</td><td class="n">0.866</td><td class="n">369.0</td><td class="n">17,840</td><td class="n">7</td></tr>
+      <tr><td>(1,0,2)</td><td class="n">0.868</td><td class="n">366.3</td><td class="n">17,889</td><td class="n">6</td></tr>
+    </tbody>
+  </table></div>
+  <p>CV 오차가 사실상 동률 → <b>파라미터 최소 (1,0,1) 채택</b>(Occam). AIC 는 (2,0,2)를 근소 선호하나
+    CV 개선이 없어 채택하지 않았다.</p>
+  <p><b>잔차 진단</b> — 수렴 True, AR(1)=0.935, Ljung-Box p&lt;0.05 로 약한 자기상관 잔존.
+    다만 결측 42 %로 잔차가 불규칙해 NaN 제거 후 검정한 근사치이며, 고차수가 CV 를 개선하지
+    못하므로 (1,0,1) 을 유지한다.</p>
+</section>
+
+<section id="p8">
+  <span class="pn">Part 8 · 핵심</span>
+  <h2>지연(lag) 3라운드 — 두 번의 정정</h2>
+  <p>투입이 언제 메탄으로 나타나는가. 이 질문에 세 번의 서로 다른 답이 나왔고,
+    두 번 정정했다.</p>
+
+  <h3>Round 1 — XGBoost gain : 2일</h3>
+  <p>트리 분할 이득 기준. <b>문제</b>: ① 서로 강하게 상관된 lag 후보 중 하나가 임의로 뽑히고
+    ② 두 계열의 자기상관이 만드는 허위 상관을 통제하지 못한다.</p>
+
+  <h3>Round 2 — 프리화이트닝 교차상관 : 0일</h3>
+  <p>Box-Jenkins 절차(원인계열의 AR 필터를 x·y 양쪽에 적용) + 순열검정 + 이동블록 부트스트랩.</p>
+  <div class="box note"><span class="bt">먼저 해결해야 했던 제약</span>
+    <p>메탄이 평일만 측정되어 <b>달력일 연속 관측 최대 6일</b> → AR(7) 프리화이트닝이
+      <b>수학적으로 불가능</b>(유효표본 0). <b>영업일(월–금) 격자</b>를 자연 표본격자로 삼아 해결
+      (결측 19.6 %, 연속런 최대 59). 참고로 제공된 로그의 'AR(7) prewhitening' 은 달력일
+      원자료에서는 그대로 성립하지 않는다.</p></div>
+  <div class="tw"><table>
+    <thead><tr><th>원인변수</th><th class="n">peak</th><th class="n">r</th><th class="n">p</th>
+      <th class="n">null95</th><th class="n">부트 10–90%</th><th class="n">±3일 집중</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td><b>투입량합계</b></td><td class="n"><b>0일</b></td><td class="n"><b>0.500</b></td>
+        <td class="n"><b>0.007</b></td><td class="n">0.187</td><td class="n">[0, 0]</td><td class="n"><b>100 %</b></td></tr>
+      <tr><td>feed_음폐수</td><td class="n">2일</td><td class="n">0.132</td><td class="n bad">0.210</td><td class="n">0.147</td><td class="n">[2, 21]</td><td class="n">60 %</td></tr>
+      <tr><td>feed_음식물</td><td class="n">22일</td><td class="n">0.138</td><td class="n bad">0.338</td><td class="n">0.183</td><td class="n">[1, 20]</td><td class="n">5 %</td></tr>
+      <tr><td>유입_VS</td><td class="n">0일</td><td class="n">0.205</td><td class="n bad">0.583</td><td class="n">0.347</td><td class="n">[0, 24]</td><td class="n">40 %</td></tr>
+      <tr><td>반입량</td><td class="n">6일</td><td class="n">0.101</td><td class="n bad">0.843</td><td class="n">0.221</td><td class="n">[2, 25]</td><td class="n">31 %</td></tr>
+    </tbody>
+  </table></div>
+  <p>투입량합계만 유의(p=0.007)하고 AR 차수(1·5·7)와 연도(2019–2023)에 걸쳐 안정.
+    <b>Round 1 의 2일은 기각</b>. 다만 참고 로그가 유의하다고 한 <code>feed_음폐수</code>·
+    <code>유입_VS</code> 는 <b>재현되지 않았다</b>(p=0.210 / 0.583).</p>
+
+  <h3>Round 3 — 반응공학 : 분포지연</h3>
+  <div class="box correct"><span class="bt">정정 2 — 'lag 0' 은 생물학적으로 성립하지 않는다</span>
+    <p><b>① 반응 메커니즘</b> 가수분해→산생성→아세트산생성→메탄생성의 다단계 반응이며
+      입자성 유기물의 가수분해가 율속단계다. 투입 VS 가 당일 메탄이 되는 것은 불가능하다.</p>
+    <p><b>② 물질수지(결정적)</b> HRT 40.6일, <b>1일 투입 = 조 용적의 2.46 %</b>.
+      하루치 투입이 당일 메탄 발생을 지배한다는 것은 물질수지상 성립할 수 없다.</p>
+    <p><b>③ 추정기 오용</b> 투입량 자기상관이 lag1 <b>0.94</b>·lag30 0.63 으로 극단적이라
+      feed(t)와 feed(t−20)이 사실상 구분되지 않는다. 단일 peak 교차상관은 <b>공선성 평지에서
+      임의의 한 점을 고르는 것</b>이며, <b>분포지연 과정에 잘못 적용된 추정기</b>다.
+      lag0 신호의 실체는 급이 시 액상치환(수리·측정 효과) + 음폐수(유입 59 %)의 가용성 COD
+      급속전환이지, 기질의 생물학적 전환지연이 아니다.</p></div>
+
+  <h4>올바른 모델 — CSTR 1차반응 2-pool 분포지연</h4>
+  <div class="formula">완전혼합조 물질수지 :  dS/dt = D·S_in − (k_h + D)·S
+        → 임펄스 응답은 시간상수 τ = 1/(k_h + D) 의 지수감쇠
+
+기질 이질성 (가용성 음폐수 59 % / 입자성 가축분뇨·음식물 41 %) → 2-pool
+
+   S_j(t) = Σ (1/τ_j)·e^(−τ/τ_j)·feed(t−τ)      ← 1차반응의 정확한 이산해 = EWMA
+   메탄(t) ~ b_fast·S_fast(t) + b_slow·S_slow(t) + (소화조 자체 동특성)</div>
+  <p>τ 는 <b>롤링-오리진 CV 로 선택</b>(홀드아웃 미사용)하고, 선택된 τ_slow 에서 가수분해 상수를
+    <code>k_h = 1/τ_slow − D</code> 로 역산해 문헌값과 대조했다.</p>
+  <div class="tw"><table>
+    <thead><tr><th class="n">τ_slow</th><th class="n">k_h = 1/τ_slow − D</th><th>문헌 0.05–0.2 /일</th><th class="n">CV R²</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td class="n"><b>8일</b></td><td class="n"><b>0.100 /일</b></td><td class="good">✓ 정합</td><td class="n">0.8833</td></tr>
+      <tr><td class="n">12일</td><td class="n">0.059 /일</td><td class="good">✓ 정합</td><td class="n">0.8829</td></tr>
+      <tr><td class="n">20일</td><td class="n">0.025 /일</td><td class="bad">✗ 미만</td><td class="n">0.8821</td></tr>
+      <tr><td class="n">30일</td><td class="n">0.009 /일</td><td class="bad">✗ 미만</td><td class="n">0.8814</td></tr>
+    </tbody>
+  </table></div>
+  <div class="box adopt"><span class="bt">역학적 검증</span>
+    <p>CV 가 <b>독립적으로</b> 고른 τ_fast = 1일 / τ_slow = 8일은 가수분해 상수
+      <b>k_h = 0.100 /일</b>을 함의한다. 이는 음식물류·가축분뇨 중온소화의 문헌값(0.05–0.2/일)과
+      정확히 일치한다. 데이터와 생물학이 독립적으로 수렴한 강한 검증이다.</p>
+    <p>적합 기여도 <b>fast 50.9 % : slow 49.1 %</b> — 응답의 절반이 지연된 slow pool.
+      결합 임펄스응답의 <b>평균지연 3.31일, t50 1일, t90 10일</b>.
+      즉 정답은 '0일'이 아니라 <b>수일에 걸친 분포지연</b>이다.</p></div>
+  <p><b>생물학 반영의 대가는 사실상 0</b> — 임시 피처(lag0+load10) 대비 CV 0.8834→0.8819,
+    홀드아웃 0.9054→0.9024 로 차이가 폴드 표준편차(±0.027) 내다. 정확도를 잃지 않고
+    역학적 타당성·해석가능성을 얻었다. 성능이 동률일 때는 기계적 산출물보다 메커니즘에
+    부합하는 표현을 택하는 것이 옳다.</p>
+</section>
+
+<section id="p9">
+  <span class="pn">Part 9</span>
+  <h2>최종 앙상블과 신뢰도</h2>
+  <h4>구성</h4>
+  <ul>
+    <li><b>Base ①</b> SARIMAX(1,0,1) + 외생 [S_fast(τ=1일), S_slow(τ=8일)] — 생물학적 기질가용성 2-pool.
+      외생조합은 <b>홀드아웃이 아닌 롤링 CV</b> 로 선택.</li>
+    <li><b>Base ②③</b> XGBoost(8-시드 평균), RandomForest — 운전변수 전용.</li>
+    <li><b>Meta</b> 비음수 Ridge. 학습기간 OOF(트리: TimeSeriesSplit / SARIMAX: 1-step 인과예측).</li>
+    <li><b>제약</b> persistence 는 예측 입력에 사용하지 않음.</li>
+  </ul>
+  <div class="tw"><table>
+    <caption>신뢰도 — 앙상블 전 파이프라인을 폴드마다 재학습한 롤링-오리진 CV</caption>
+    <thead><tr><th>fold</th><th class="n">1</th><th class="n">2</th><th class="n">3</th><th class="n">4</th>
+      <th class="n">5</th><th class="n">6</th><th class="n">7</th><th class="n">8</th><th class="n">평균</th></tr></thead>
+    <tbody>
+      <tr><td>앙상블</td><td class="n">0.866</td><td class="n">0.877</td><td class="n">0.881</td><td class="n">0.885</td>
+        <td class="n">0.924</td><td class="n">0.900</td><td class="n">0.890</td><td class="n">0.831</td>
+        <td class="n hl"><b>0.8819±0.0267</b></td></tr>
+      <tr><td>기준선</td><td class="n">0.878</td><td class="n">0.841</td><td class="n">0.797</td><td class="n">0.866</td>
+        <td class="n">0.902</td><td class="n">0.890</td><td class="n">0.859</td><td class="n">0.785</td>
+        <td class="n">0.8523</td></tr>
+    </tbody>
+  </table></div>
+  <p>8폴드 중 <b>7폴드에서 기준선 상회</b>(fold 1만 0.866 vs 0.878 로 근소 열세).</p>
+</section>
+
+<section id="p10">
+  <span class="pn">Part 10</span>
+  <h2>감사 — 누수·과적합·시계열 표현력</h2>
+
+  <h3>10.1 누수(인과성) — 이상 없음</h3>
+  <p>테스트 구간 52개 시점에서 "t−1까지만 정보를 주고 재예측"한 값과 보고 예측을
+    <b>날짜 라벨로 대조</b> → <b>최대차이 0.0</b>. exog 결측이 0이라 ffill/bfill 이 개입한 셀도 0.</p>
+  <div class="box correct"><span class="bt">감사 코드 자체의 버그</span>
+    <p>예측 시리즈가 <code>index[1]</code> 부터 시작하는데 위치 인덱싱으로 대조해 t+1 과 비교했다.
+      수정 전 최대차이 1207.5 로 '누수 의심'이 떴으나, 라벨 기준 대조 시 정확히 0이었다.
+      스팟체크에서 차이가 났을 때 넘어가지 않고 끝까지 규명한 것이 맞았다.</p></div>
+
+  <h3>10.2 과적합 — 과적합 아님</h3>
+  <div class="tw"><table>
+    <thead><tr><th>검정</th><th class="n">R²</th><th>해석</th></tr></thead>
+    <tbody>
+      <tr><td>train (2018–2022)</td><td class="n">0.7645</td><td rowspan="2">격차 <b>−0.137</b>(음수) → 과적합의 반대.
+        파라미터 5개 대 관측 ~900 으로 자유도 여유가 크다</td></tr>
+      <tr><td>test (2023)</td><td class="n">0.9012</td></tr>
+      <tr><td>타깃 셔플 (플라시보)</td><td class="n bad">−0.130</td><td>붕괴 → 절차가 허위 신호를 만들지 않음</td></tr>
+      <tr><td>AR-only (외생 제거)</td><td class="n">0.8773</td><td rowspan="2">외생 순기여 <b>+0.0239</b>.
+        외생을 무작위 치환하면 정확히 AR-only 로 회귀 → 기여가 진짜 신호</td></tr>
+      <tr><td>외생 무작위 치환 (플라시보)</td><td class="n">0.8770</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>10.3 시계열 표현력 — 잔차 백색</h3>
+  <p>2023 잔차 <b>Ljung-Box p = 0.68 / 0.88 / 0.67</b>(lag 5/10/20), 잔차 lag1 자기상관 <b>0.04</b>
+    → 남은 시계열 구조가 없다. 편향 −17.4 Nm³/d(평균의 0.3 %), σ = 342.3.
+    경미한 이분산(예측 중간구간 RMSE 415 vs 양끝 272·280)은 실무상 문제되지 않는다.</p>
+
+  <h3>10.4 앙상블 확장성 — 확장 이득 없음</h3>
+  <div class="tw"><table>
+    <thead><tr><th>확장 시도</th><th>결과</th><th class="n">판정</th></tr></thead>
+    <tbody>
+      <tr><td>계절 SARIMAX(1,0,1)×(1,0,1,7), UnobservedComponents</td><td>잔차상관 0.90–0.97 → 결합 시 0.897–0.899 로 악화</td><td class="n"><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td>외생 추가 (소화조 온도 / VFA·ALK / VS)</td><td>CV 동률 또는 악화, 분산 증가(±0.024→±0.067)</td><td class="n"><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td>화학 기반 잔차보정 — RandomForest</td><td>학습 잔차 R²=0.18 학습하나 테스트 0.889→0.750 악화</td><td class="n"><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td>화학 기반 잔차보정 — Ridge</td><td>학습 잔차 R²=0.007 → 기여 사실상 0</td><td class="n"><span class="verdict v-reject">기각</span></td></tr>
+    </tbody>
+  </table></div>
+  <p><b>원인은 명확하다 — 잔차가 이미 백색이라 짜낼 구조가 남아있지 않다.</b> 남은 오차는
+    대체로 계측·공정 잡음이며, 모델을 늘리면 분산만 커진다. 성능 향상은 모델이 아니라
+    <b>정보</b>(온라인 VFA·가스조성 실시간 계측, 조별 #A/#B 분리 계측)로만 가능하다.</p>
+</section>
+
+<section id="p11">
+  <span class="pn">Part 11</span>
+  <h2>예측 가능 기간</h2>
+  <p>2023 홀드아웃에서 <b>154개 origin × horizon 1–28일</b>을 롤링으로 측정했다.</p>
+  <div class="tw"><table>
+    <thead><tr><th>horizon (일)</th><th class="n">1</th><th class="n">3</th><th class="n">5</th><th class="n">7</th>
+      <th class="n">10</th><th class="n">14</th><th class="n">21</th><th class="n">28</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td><b>투입계획 반영 R²</b></td><td class="n"><b>0.951</b></td><td class="n">0.863</td><td class="n">0.769</td>
+        <td class="n"><b>0.753</b></td><td class="n">0.719</td><td class="n"><b>0.690</b></td><td class="n">0.674</td><td class="n">0.647</td></tr>
+      <tr><td>투입 미지 R²</td><td class="n">0.946</td><td class="n">0.827</td><td class="n">0.732</td><td class="n">0.654</td>
+        <td class="n">0.543</td><td class="n">0.501</td><td class="n">0.382</td><td class="n">0.186</td></tr>
+      <tr><td>persistence R²</td><td class="n">0.940</td><td class="n">0.820</td><td class="n">0.660</td><td class="n">0.570</td>
+        <td class="n">0.463</td><td class="n">0.378</td><td class="n">0.111</td><td class="n bad">−0.311</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><b>1–3일</b> R² 0.86–0.95 — 소화조 자체 동특성(AR) 지배, 매우 정확</li>
+    <li><b>4–7일</b> R² 0.75–0.80 — 일상 운전 판단의 실용 구간</li>
+    <li><b>8–14일</b> R² 0.69–0.75 — 투입계획을 반영해야 유지(미지 시 0.50) → 기질수급·정비 계획용</li>
+    <li><b>15–28일</b> R² 0.65 — 투입 미지 시 0.19 로 붕괴 → 시나리오 평가 전용</li>
+  </ul>
+  <p>persistence 는 7일 이후 급락(0.57→−0.31)하는 반면 모델은 완만히 유지되어
+    <b>horizon 이 길수록 모델의 상대 우위가 커진다</b>(28일 R² 격차 0.96).
+    투입량은 운전자가 계획하는 제어입력이므로 계획값을 넣어 시나리오로 쓴다
+    — Choi et al.(2025, <i>Water Research</i>)의 미래 투입부하 제공 전략과 동일하다.</p>
+</section>
+
+<section id="p12">
+  <span class="pn">Part 12</span>
+  <h2>운전이상 경보 시스템</h2>
+  <p>예측 모델과 <b>분리된</b> 독립 시스템. <code>계측값 → 설정값 비교 → 4단계 경보 → 조치 지시</code>.</p>
+
+  <h3>12.1 시설 특성 진단 — 산성화형이 아니라 암모니아 저해형</h3>
+  <div class="tw"><table>
+    <thead><tr><th>지표</th><th class="n">중앙값</th><th>문헌 기준</th><th>본 시설</th></tr></thead>
+    <tbody>
+      <tr><td>소화조 pH</td><td class="n">7.97</td><td>산성화 pH &lt; 6.8</td><td class="bad">발생률 0.0 % (영구 미발화)</td></tr>
+      <tr><td>VFA/알칼리도</td><td class="n">0.17</td><td>안정 &lt; 0.3</td><td class="good">완충 매우 양호</td></tr>
+      <tr><td>총알칼리도</td><td class="n">16,935</td><td>통상 2,000–5,000</td><td>3–4배 높음</td></tr>
+      <tr class="hl"><td><b>유리암모니아 FAN</b></td><td class="n"><b>389</b></td><td>저해 100–150 mg/L</td>
+        <td class="bad">측정일의 98.7 % 초과</td></tr>
+    </tbody>
+  </table></div>
+  <p>가축분뇨(유입 34 %)의 질소가 암모니아성 완충을 만들어 pH·알칼리도를 끌어올린다.
+    그래서 <b>산성화 지표는 안전해 보이지만 실제 저해요인은 유리암모니아</b>다.
+    FAN 은 총암모니아(TAN)와 달리 pH·온도에 따라 수배 달라지므로 Anthonisen 식으로 산출한다.</p>
+  <div class="formula">FAN = TAN / (1 + 10^(pKa − pH)),   pKa = 0.09018 + 2729.92 / T(K)</div>
+
+  <h3>12.2 경보 변수 11종</h3>
+  <div class="tw"><table>
+    <thead><tr><th>구분</th><th>변수</th><th class="n">정상(설정값)</th><th class="n">주의</th><th class="n">점검</th><th class="n">위험</th><th class="n">이탈률</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="4">T1<br>안정성</td><td>pH</td><td class="n">7.7–8.1</td><td class="n">≥8.1 / ≤7.7</td><td class="n">≥8.3 / ≤7.5</td><td class="n">≥8.4 / ≤7.2</td><td class="n">16.0 %</td></tr>
+      <tr><td>VFA/Alk</td><td class="n">&lt; 0.30</td><td class="n">≥0.30</td><td class="n">≥0.40</td><td class="n">≥0.60</td><td class="n">5.7 %</td></tr>
+      <tr><td>온도</td><td class="n">36–40 ℃</td><td class="n">≥40 / ≤36</td><td class="n">≥41 / ≤34</td><td class="n">≥42.5 / ≤32</td><td class="n">20.4 %</td></tr>
+      <tr><td>FAN</td><td class="n">&lt; 530 mg/L</td><td class="n">≥530</td><td class="n">≥650</td><td class="n">≥740</td><td class="n">25.1 %</td></tr>
+      <tr><td rowspan="3">T2<br>부하</td><td>OLR</td><td class="n">&lt; 1.8</td><td class="n">≥1.8</td><td class="n">≥2.5</td><td class="n">≥3.5</td><td class="n">2.7 %</td></tr>
+      <tr><td>HRT</td><td class="n">&gt; 30 일</td><td class="n">≤30</td><td class="n">≤25</td><td class="n">≤20</td><td class="n">1.2 %</td></tr>
+      <tr><td>온도변화</td><td class="n">&lt; 0.5 ℃/일</td><td class="n">≥0.5</td><td class="n">≥1.0</td><td class="n">≥2.0</td><td class="n">1.7 %</td></tr>
+      <tr><td rowspan="4">T3<br>보조</td><td>TAN</td><td class="n">&lt; 4,500</td><td class="n">≥4,500</td><td class="n">≥5,300</td><td class="n">≥5,750</td><td class="n">25.7 %</td></tr>
+      <tr><td>VFA(절대)</td><td class="n">&lt; 3,100</td><td class="n">≥3,100</td><td class="n">≥3,350</td><td class="n">≥3,730</td><td class="n">25.6 %</td></tr>
+      <tr><td>알칼리도</td><td class="n">&gt; 10,800</td><td class="n">≤10,800</td><td class="n">≤8,000</td><td class="n">≤5,000</td><td class="n">9.8 %</td></tr>
+      <tr><td>CH4 함량</td><td class="n">&gt; 61 %</td><td class="n">≤61</td><td class="n">≤58</td><td class="n">≤55</td><td class="n">5.1 %</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>종합경보는 Tier 1·2 가 주도</b>하고 Tier 3(보조)는 최대 '주의'까지만 기여한다 —
+    보조지표가 단독으로 상위 경보를 띄워 신호를 희석하지 않도록.</p>
+
+  <div class="box correct"><span class="bt">정정 3 — 경보 피로(alarm fatigue)</span>
+    <p>1차 설계에서 문헌 절대임계를 일괄 적용하니 <b>TAN 99.6 % · VFA 99.4 % · FAN 99.1 % 가
+      상시 발화</b>해 관제 기능을 잃었다(정상 판정일 n=1). 만성적 운전 특성을 급성 경보로
+      취급한 것이 원인이다.</p>
+    <p>→ <b>급성</b>(문헌 절대임계)과 <b>만성</b>(시설 실측 p75/p90/p97.5 기준)을 분리하고,
+      절대수준 위험은 <b>상시 만성 리스크</b>로 따로 표시. 결과: 정상 65.9 % / 주의 23.0 % /
+      점검 6.4 % / 위험 4.7 % — 운영 가능한 수준.</p></div>
+
+  <h3>12.3 경보에서 제외한 것</h3>
+  <div class="tw"><table>
+    <thead><tr><th>변수</th><th>제외 사유</th></tr></thead>
+    <tbody>
+      <tr><td>비메탄수율</td><td>분모(VS_in) 교란 — 저투입일 수율이 기계적으로 상승(VS_in 저사분위 1.00 vs 고사분위 0.64). 발화율 38 %로 최다였고 검증에서 해석이 뒤집혀 <b>오경보원</b>으로 확인</td></tr>
+      <tr><td>모델 예측잔차</td><td>본 시스템은 계측값–설정값 비교 전용</td></tr>
+      <tr><td>개별 VFA (프로피온산/아세트산 비)</td><td>원본 컬럼은 있으나 값이 전 기간 0 % → <b>계측 개시 권고</b>(&gt;1.4 는 유용한 조기경보)</td></tr>
+      <tr><td>H2S</td><td>변동이 거의 없어(σ≈0) 판별력 없음</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>12.4 검증 관점 — 정직한 한계</h3>
+  <p><b>이 경보를 '성능저하 예측력'으로 검증하는 것은 이 데이터로는 불가능하다.</b></p>
+  <ul>
+    <li>CH4 % 는 부하와 교란 — r(OLR, CH4 %) = −0.118, 저부하일수록 상승</li>
+    <li>비메탄수율은 분모 교란</li>
+    <li>안정성 경보의 점검·위험 표본이 n=28·13 으로 과소</li>
+    <li>무엇보다 <b>과거 데이터에는 운전자 개입이 이미 반영</b>되어 있다. 이탈이 생기면 운전자가
+      조치했으므로 '경보 후 악화'가 관측되지 않는 것이 정상이다</li>
+  </ul>
+  <p>→ 본 시스템은 <b>성능 예측기가 아니라 상태 감시기(condition monitor)</b> 이며, 타당성은
+    ⓐ 설정값의 공정공학적 근거 ⓑ 합리적 발화율 ⓒ off-normal 상태 포착으로 판단한다.</p>
+</section>
+
+<section id="p13">
+  <span class="pn">Part 13</span>
+  <h2>통합 대시보드</h2>
+  <p>예측 모델과 경보 엔진이 <b>한 HTML 파일 안에서 함께 동작</b>한다(30 KB, 외부 리소스 0).</p>
+  <h4>브라우저에서 정확히 계산되는 근거</h4>
+  <p>SARIMAX 예측 평균은 <b>미래 외생변수에 대해 선형</b>이다(검증: 실제 예측 − 선형 재구성
+    오차 = <b>0.000000000</b>).</p>
+  <div class="formula">ŷ(h) = η(h) + β_fast·S_fast(h) + β_slow·S_slow(h)
+        β_fast = 17.67,  β_slow = 17.06
+
+η(h) 와 예측구간 반폭은 미래 투입과 무관한 상수  →  내보내면 브라우저가
+투입 계획으로 2-pool 을 재귀 전개해 근사 없이 정확한 예측을 산출 (서버 불필요)</div>
+  <div class="tw"><table>
+    <thead><tr><th>투입 계획 (㎥/일)</th><th class="n">0</th><th class="n">100</th><th class="n">180 (현재)</th><th class="n">250</th></tr></thead>
+    <tbody>
+      <tr><td>14일 뒤 메탄 (Nm³/일)</td><td class="n">356</td><td class="n">3,533</td><td class="n">6,074</td><td class="n">8,298</td></tr>
+      <tr><td>OLR / HRT</td><td class="n">0.00 / —</td><td class="n">0.59 / 80일</td><td class="n">1.05 / 44일</td><td class="n">1.46 / 32일</td></tr>
+    </tbody>
+  </table></div>
+  <p>메탄 증감과 <b>동시에</b> OLR·HRT 의 안전 범위 이탈 여부를 보여준다 — 예측·감시·제어가
+    한 화면에서 연결되는 지점이다. 계측값을 직접 수정하면 FAN(Anthonisen)이 자동 재계산되고
+    경보 등급·조치 목록이 즉시 갱신된다(예: pH 8.09→8.6 입력 시 FAN 437.6→1,275.3 mg/L,
+    경보 '점검'→'위험').</p>
+</section>
+
+<section id="p14">
+  <span class="pn">Part 14</span>
+  <h2>한계와 다음 단계</h2>
+  <h4>정직하게 남기는 한계</h4>
+  <ul>
+    <li><b>앙상블의 실질</b> — 메타 가중치가 SARIMAX ≈ 1.0 / 트리 = 0 으로, 스태킹은 사실상
+      단일 시계열 모델로 수렴한다. 다양성 base 를 여러 종 시험했으나 모두 악화했다.</li>
+    <li><b>경보의 검증 불가</b> — 위 12.4 참조. 성능 예측력으로는 검증할 수 없다.</li>
+    <li><b>FAN 감시의 간헐성</b> — NH4-N 가용률이 10.5 %뿐이라 핵심 위험 지표가 드문드문 측정된다.</li>
+    <li><b>잔차 백색</b> — 모델 개선 여지가 사실상 소진되었다.</li>
+  </ul>
+  <h4>다음 단계 (우선순위 순)</h4>
+  <ol class="body">
+    <li><b>NH4-N 정기 계측 확대</b> — FAN 이 이 시설의 핵심 위험인데 감시가 간헐적이다.</li>
+    <li><b>개별 VFA 계측 개시</b> — 프로피온산/아세트산 비(&gt;1.4)는 검증된 조기경보인데 데이터가 없다.</li>
+    <li><b>온라인 VFA·가스조성 실시간 계측</b> — 화학상태를 '동시대'가 아닌 '선행' 정보로 전환하면
+      소프트센서가 기준선을 넘어설 여지가 생긴다.</li>
+    <li><b>조별 #A/#B 분리 모델링</b> — 표본이 2배가 되고 조별 국면차를 반영할 수 있다.</li>
+    <li><b>암모니아 저감 운전</b> — 투입 260 ㎥/일까지 OLR 1.52 로 여유가 크다. 증산 여력이 있으나
+      실제 제약은 OLR 이 아니라 <b>암모니아 축적</b>일 가능성이 높아 가축분뇨 비율 조정이 동반돼야 한다.</li>
+  </ol>
+</section>
+
+<section id="p15">
+  <span class="pn">Part 15 · 부록</span>
+  <h2>결정 로그</h2>
+  <div class="tw"><table class="log">
+    <thead><tr><th>결정 사항</th><th>시도 / 결과</th><th class="n">판정</th></tr></thead>
+    <tbody>
+      <tr><td>lag = 2일</td><td>XGBoost gain 최댓값. 상관된 후보 중 임의 선택, 허위상관 미통제</td><td class="n"><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td>lag = 0일</td><td>프리화이트닝 CCF(r=0.500, p=0.007). 통계적으로는 유의하나 HRT 40.6일·물질수지와 모순</td><td class="n"><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td><b>2-pool 분포지연</b></td><td>τ_fast 1일 / τ_slow 8일 → k_h 0.100/일 (문헌 정합). 평균지연 3.3일, t90 10일</td><td class="n"><span class="verdict v-adopt">채택</span></td></tr>
+      <tr><td>persistence 앵커링</td><td>피처로 넣어 R² 0.877→0.883. 요구에 따라 전면 제거</td><td class="n"><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td>MLP base</td><td>2023 국면이동에 일반화 실패(R² ≈ 0)</td><td class="n"><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td>계절 SARIMAX / UC</td><td>잔차상관 0.90–0.97 → 결합 시 악화</td><td class="n"><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td>화학 외생 추가</td><td>온도·VFA/ALK·VS 모두 CV 동률 또는 악화</td><td class="n"><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td>화학 잔차보정</td><td>RF 과적합(0.889→0.750), Ridge 기여 ~0</td><td class="n"><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td>SARIMAX 차수 (2,0,2)</td><td>AIC 근소 우위이나 CV 개선 없음 → 파시모니</td><td class="n"><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td><b>SARIMAX (1,0,1)</b></td><td>CV 0.868±0.040, 파라미터 5개</td><td class="n"><span class="verdict v-adopt">채택</span></td></tr>
+      <tr><td>수율 경보</td><td>분모 교란으로 저투입일 오경보. 발화율 38 %</td><td class="n"><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td>문헌 절대임계 일괄 적용</td><td>FAN·TAN·VFA 99 % 상시 발화 → 경보 피로</td><td class="n"><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td><b>급성/만성 분리 설정값</b></td><td>정상 65.9 / 주의 23.0 / 점검 6.4 / 위험 4.7 %</td><td class="n"><span class="verdict v-adopt">채택</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>파일 구조</h3>
+  <div class="tw"><table>
+    <thead><tr><th>모듈</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/xgb_methane.py</code></td><td>XGBoost 2상 집중, lag gain 스캔(원 과제 절차 재현)</td></tr>
+      <tr><td><code>src/stack_methane.py</code></td><td>RF + XGB + SARIMAX 스태킹</td></tr>
+      <tr><td><code>src/sarimax_cv.py</code></td><td>롤링-오리진 CV · 차수선택 · 잔차진단</td></tr>
+      <tr><td><code>src/lag_validation.py</code></td><td>프리화이트닝 CCF · 순열검정 · 부트스트랩</td></tr>
+      <tr><td><code>src/bio_lag.py</code></td><td><b>반응공학 기반 지연 재산정</b>(HRT·2-pool·k_h)</td></tr>
+      <tr><td><code>src/final_ensemble.py</code></td><td><b>최종 앙상블</b> + CV 신뢰도</td></tr>
+      <tr><td><code>src/diagnostics.py</code></td><td>누수·과적합 감사 + 시계열 진단 + 9패널 대시보드</td></tr>
+      <tr><td><code>src/alarm_system.py</code></td><td>설정값 기반 경보 엔진</td></tr>
+      <tr><td><code>src/dashboard.py</code></td><td>통합 대시보드 HTML 생성(모델 + UI)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<p class="foot">
+  BioGuard-AI · 영천 통합바이오가스화시설 혐기성 소화조 메탄생성량 예측 및 관제<br>
+  최종 모델 Stacking(SARIMAX + XGBoost + RandomForest), 비음수 Ridge 메타 ·
+  2023 홀드아웃 R² 0.9024 / RMSE 341.7 / MAE 244.5 · 롤링-오리진 CV R² 0.882 ± 0.027<br>
+  지연모델 CSTR 1차반응 2-pool 분포지연 (τ_fast 1일, τ_slow 8일, k_h 0.100/일, HRT 40.6일)
+</p>
+
+</div>
