@@ -514,7 +514,60 @@ tbody tr:hover{background:var(--surface)}
       ② <b>만성 암모니아 저해</b>(FAN 중앙 389 mg/L)로 실제 전환속도가 억제되기 때문으로 본다.
       Part 8 의 '문헌값과 정확히 일치' 라는 서술은 <b>이 범위 안에 든다</b> 정도로 완화한다.</p></div>
 
-  <h3>8B.5 결론</h3>
+  <h3>8B.6 그래서 모델을 바꿔야 하는가 — 검증</h3>
+  <p>2상 구조를 확인했으니 모델도 바뀌어야 하는지 <b>주장이 아니라 실측으로</b> 확인했다.
+    세 가지를 검증했고, 결론은 <b>모델 변경 불필요</b>다.</p>
+
+  <h4>① 유량 변수 — 이미 올바른 것을 쓰고 있었다</h4>
+  <p>모델의 투입 변수는 <code>투입량합계</code> = <b>소화조 투입량 A+B</b>(설계 104.5×2)이며,
+    이는 <b>산생성조를 통과해 메탄생성조로 들어가는 유량</b>이다. 원료 <code>반입량</code>
+    (237.2 ㎥/일)이 아니다. 2상 관점에서 요구되는 바로 그 변수를 이미 사용 중이었다.</p>
+
+  <h4>② 외생입력을 '유기물 부하'로 바꾸면? — 악화</h4>
+  <p>메탄생성균에게는 부피보다 전달된 유기물량이 중요하다는 논리로, 산생성조 유출수질
+    (master 의 <code>유입_*</code> 이 유기산화조와 상관 <b>1.0000</b> 로 동일 확인)을 곱한
+    부하로 교체해 롤링 CV 로 비교했다.</p>
+  <div class="tw"><table>
+    <thead><tr><th>외생입력 2-pool</th><th class="n">CV R²</th><th class="n">±std</th><th>판정</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td><b>수리부하 Q (현행)</b></td><td class="n"><b>0.8833</b></td><td class="n"><b>0.0244</b></td><td><span class="verdict v-adopt">유지</span></td></tr>
+      <tr><td>VS 부하 Q × VS%</td><td class="n bad">0.7406</td><td class="n bad">0.1849</td><td><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td>COD 부하 Q × COD</td><td class="n bad">0.7898</td><td class="n">0.0958</td><td><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td>수리 + VS 부하</td><td class="n">0.8655</td><td class="n">0.0554</td><td><span class="verdict v-reject">기각</span></td></tr>
+      <tr><td>수리 + COD 부하</td><td class="n">0.8736</td><td class="n">0.0413</td><td><span class="verdict v-reject">기각</span></td></tr>
+    </tbody>
+  </table></div>
+  <p><b>이유</b> — 유입 VS%·COD 는 결측이 44~51 %라 연속 이력을 만들려면 보간해야 하고,
+    그 보간 노이즈가 신호를 압도한다(분산이 최대 <b>7배</b> 증가). 반면 수리부하는 결측이
+    거의 0이다. <b>이론적으로 더 옳은 변수가 데이터 품질 때문에 실제로는 더 나쁘다.</b></p>
+
+  <h4>③ 2상이면 τ_slow 가 더 짧아야 하지 않나? — 5~8일 구간이 동률</h4>
+  <p>가수분해가 앞단에서 끝나므로 메탄생성조의 응답이 더 빨라야 한다는 가설을 검증하려
+    τ_slow 를 3일까지 낮춰 재탐색했다.</p>
+  <div class="tw"><table>
+    <thead><tr><th class="n">τ_slow (일)</th><th class="n">3</th><th class="n">4</th><th class="n">5</th>
+      <th class="n">6</th><th class="n">8 (현행)</th><th class="n">12</th></tr></thead>
+    <tbody>
+      <tr><td>CV R² (τ_fast=1)</td><td class="n">0.8825</td><td class="n">0.8823</td><td class="n">0.8832</td>
+        <td class="n">0.8833</td><td class="n hl"><b>0.8833</b></td><td class="n">0.8829</td></tr>
+      <tr><td>유효전환속도 k (/일)</td><td class="n">0.309</td><td class="n">0.225</td><td class="n">0.175</td>
+        <td class="n">0.142</td><td class="n hl"><b>0.100</b></td><td class="n">0.059</td></tr>
+    </tbody>
+  </table></div>
+  <p>τ_slow <b>5–8일이 소수점 넷째 자리에서 동률</b>(차이가 폴드 표준편차 ±0.024 의 1/100)이다.
+    <b>데이터가 이 구간을 구분하지 못한다.</b> 현행 8일을 바꿀 근거가 없으므로 유지하되,
+    <b>유효전환속도의 타당 범위는 k = 0.10–0.18 /일</b> 로 넓혀 기술한다. 이 범위는 문헌
+    BMP 가수분해 상수 하한(0.19/일)에 근접해, 2상 선행 산발효 가설과도 모순되지 않는다.</p>
+
+  <div class="box adopt"><span class="bt">결론 — 모델링 과정에 실질적 변화 없음</span>
+    <p>바뀐 것은 <b>해석과 문서</b>뿐이다. 적합된 모델·계수·성능은 그대로다.
+      ① 유량 변수는 처음부터 옳았고 ② 이론적으로 더 나은 유기물부하는 데이터 품질 때문에
+      실제로 악화하며 ③ τ 는 데이터가 구분하지 못하는 구간 안에 있다.</p>
+    <p>다만 이 검증으로 <b>모델이 2상 공정 구조와 정합함을 독립적으로 확인</b>했고,
+      k 를 '가수분해 상수'가 아닌 '메탄생성조 유효 전환속도 상수(0.10–0.18/일)'로
+      정확히 부를 수 있게 되었다.</p></div>
+
+  <h3>8B.7 종합 결론</h3>
   <ul>
     <li><b>"30일 뒤 메탄"은 오독</b> — 30일은 완전 분해를 보장하는 <b>설계 체류시간</b>이지
       투입–메탄 지연시간이 아니다. BMP 곡선은 초기 3–5일에 집중된다.</li>
