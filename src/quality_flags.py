@@ -19,6 +19,9 @@ PLAUS = {
     "소화조_CODcr": (5000, 90000), "소화조_NH4N": (200, 8000),
     "유입_TS": (0.5, 30.0), "유입_VS": (0.3, 30.0), "유입_CODcr": (5000, 250000),
     "CH4_pct": (45.0, 75.0),
+    # 부하 : 소화조 8,000 m3 · 문헌 OLR 상한 5 kg VS/m3/d → VS_in 40,000 kg/d
+    "VS_in": (500, 40000),
+    "COD_in": (2000, 120000),
 }
 FROZEN_MIN = 5          # 동일값 연속 n일 이상이면 센서 정지 의심
 SEVERITY = {"치명": 3, "심각": 2, "주의": 1}
@@ -89,7 +92,8 @@ def rows_regime(d, cols):
 
 
 def main():
-    d = prepare()
+    import src.vs_features as vf
+    d = vf.build(prepare())
     d = d[(d.index.year >= 2018) & (d.index.year <= 2023)]
     e = pd.read_excel("data/monitor_extra.xlsx")
     e["date"] = pd.to_datetime(e["date"])
