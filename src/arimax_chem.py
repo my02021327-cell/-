@@ -48,11 +48,11 @@ def frames():
     return endog, X
 
 
-def run_variant(endog, X, pool_cols, chem_cols):
+def run_variant(endog, X, pool_cols, chem_cols, folds=None):
     cols = pool_cols + chem_cols
     per_h = {h: ([], []) for h in HORIZONS}      # (pred, actual)
     pers_h = {h: [] for h in HORIZONS}
-    for cut, end in FOLDS:
+    for cut, end in (folds or FOLDS):
         ex = X[cols] if cols else None
         fit = SARIMAX(endog.iloc[:cut], exog=ex.iloc[:cut] if cols else None,
                       order=(1, 0, 1), trend="c", enforce_stationarity=False,
