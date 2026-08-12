@@ -1,0 +1,282 @@
+{
+  "biology_verification": {
+    "stoichiometry": {
+      "verdict": "PASS",
+      "n": 920,
+      "Y_COD_median": 0.2892,
+      "pct_of_theoretical": 82.6,
+      "expected_window_pct": "83~90 (균체합성 10~17% 반영)"
+    },
+    "first_order_hydrolysis": {
+      "verdict": "REJECT",
+      "n": 1074,
+      "X_median": 0.811,
+      "X_cv_pct": 5.3,
+      "rho_HRT_vs_X": -0.105,
+      "p": 0.0005767386954158353,
+      "note": "전환율이 HRT(31~56d)에 무반응 → 동역학 제한이 아니라 생분해도 제한"
+    },
+    "carbonate_equilibrium": {
+      "verdict": "PARTIAL",
+      "n": 1240,
+      "bias_median": 0.109,
+      "RMSE_pH": 0.165,
+      "note": "수준은 정합(RMSE 0.165) / 일별 변동은 미설명(pH CV 1.7%가 계측 분해능 수준)"
+    },
+    "carbonate_residual_as_ammonia_proxy": {
+      "verdict": "REJECT",
+      "n": 227,
+      "partial_r_vs_TAN_controlling_pH": -0.035,
+      "p": 0.598,
+      "note": "pH 통제 후 TAN과 무관 → FAN과의 rho=0.648은 pH 경유 순환"
+    },
+    "alkalinity_as_ammonia_proxy": {
+      "verdict": "PASS(추세 한정)",
+      "rho_vs_TAN": 0.615,
+      "p": 2.3216182456749407e-25,
+      "note": "일별 측정 n=1257. 절대값 추정 불가, 추세 감시용. 이 시설에서 알칼리도 상승은 완충능 개선이 아니라 암모니아 축적 신호"
+    }
+  },
+  "horizon_results": {
+    "h1_reversion_ridge": {
+      "h": 1,
+      "n_total": 989,
+      "folds": 3,
+      "lambda_mean": 0.117,
+      "R2_model": 0.939345685943208,
+      "R2_persist": 0.9392628343108682,
+      "MAE_model": 315.04878103283556,
+      "MAE_persist": 315.06332046332045,
+      "skill": 0.0013556790564976569,
+      "skill_min": -0.00043776670919726257
+    },
+    "h1_reversion+bio_ridge": {
+      "h": 1,
+      "n_total": 581,
+      "folds": 3,
+      "lambda_mean": 0.3,
+      "R2_model": 0.9405798540688322,
+      "R2_persist": 0.940755048181936,
+      "MAE_model": 324.7849005061344,
+      "MAE_persist": 310.9401223399673,
+      "skill": -0.005116850329823082,
+      "skill_min": -0.051346402285984194
+    },
+    "h1_reversion+bio_gbm": {
+      "h": 1,
+      "n_total": 581,
+      "folds": 3,
+      "lambda_mean": 0.15,
+      "R2_model": 0.9410898899509815,
+      "R2_persist": 0.940755048181936,
+      "MAE_model": 314.3778649345217,
+      "MAE_persist": 310.9401223399673,
+      "skill": 0.00028380865321582977,
+      "skill_min": -0.038652674296159706
+    },
+    "h1_bio_only_ridge": {
+      "h": 1,
+      "n_total": 581,
+      "folds": 3,
+      "lambda_mean": 0.35,
+      "R2_model": 0.9407825178273508,
+      "R2_persist": 0.940755048181936,
+      "MAE_model": 312.52248256857894,
+      "MAE_persist": 310.9401223399673,
+      "skill": -0.0038105989663093456,
+      "skill_min": -0.03635900848434481
+    },
+    "h3_reversion_ridge": {
+      "h": 3,
+      "n_total": 987,
+      "folds": 3,
+      "lambda_mean": 0.283,
+      "R2_model": 0.8136564529160216,
+      "R2_persist": 0.8110584355259408,
+      "MAE_model": 605.4285738385965,
+      "MAE_persist": 606.9071940017411,
+      "skill": 0.015284568768342202,
+      "skill_min": 0.005760373810088648
+    },
+    "h3_reversion+bio_ridge": {
+      "h": 3,
+      "n_total": 580,
+      "folds": 3,
+      "lambda_mean": 0.267,
+      "R2_model": 0.7897446321155105,
+      "R2_persist": 0.7984279955777523,
+      "MAE_model": 676.4813412122809,
+      "MAE_persist": 627.1097726744006,
+      "skill": -0.05462616337369138,
+      "skill_min": -0.17508065837401454
+    },
+    "h3_reversion+bio_gbm": {
+      "h": 3,
+      "n_total": 580,
+      "folds": 3,
+      "lambda_mean": 0.267,
+      "R2_model": 0.8042207270980816,
+      "R2_persist": 0.7984279955777523,
+      "MAE_model": 642.0482063378471,
+      "MAE_persist": 627.1097726744006,
+      "skill": 0.02284741732928164,
+      "skill_min": -0.016473293453338478
+    },
+    "h3_bio_only_ridge": {
+      "h": 3,
+      "n_total": 580,
+      "folds": 3,
+      "lambda_mean": 0.317,
+      "R2_model": 0.7890132905807657,
+      "R2_persist": 0.7984279955777523,
+      "MAE_model": 680.953855941298,
+      "MAE_persist": 627.1097726744006,
+      "skill": -0.06193414568100323,
+      "skill_min": -0.13860771442386932
+    },
+    "h7_reversion_ridge": {
+      "h": 7,
+      "n_total": 983,
+      "folds": 3,
+      "lambda_mean": 0.6,
+      "R2_model": 0.612781668592239,
+      "R2_persist": 0.5742024762634877,
+      "MAE_model": 899.0851017885353,
+      "MAE_persist": 923.5487862544445,
+      "skill": 0.08266980420050556,
+      "skill_min": 0.04238085323824059
+    },
+    "h7_reversion+bio_ridge": {
+      "h": 7,
+      "n_total": 577,
+      "folds": 3,
+      "lambda_mean": 0.2,
+      "R2_model": 0.5697978217852855,
+      "R2_persist": 0.5715921077539513,
+      "MAE_model": 930.7397700251008,
+      "MAE_persist": 914.4538496884064,
+      "skill": -0.010619487789240564,
+      "skill_min": -0.07043959706057157
+    },
+    "h7_reversion+bio_gbm": {
+      "h": 7,
+      "n_total": 577,
+      "folds": 3,
+      "lambda_mean": 0.4,
+      "R2_model": 0.5689988066028706,
+      "R2_persist": 0.5715921077539513,
+      "MAE_model": 938.255243414825,
+      "MAE_persist": 914.4538496884064,
+      "skill": -0.030263129399666838,
+      "skill_min": -0.09428655624278792
+    },
+    "h7_bio_only_ridge": {
+      "h": 7,
+      "n_total": 577,
+      "folds": 3,
+      "lambda_mean": 0.217,
+      "R2_model": 0.5595981383912637,
+      "R2_persist": 0.5715921077539513,
+      "MAE_model": 950.9162028719026,
+      "MAE_persist": 914.4538496884064,
+      "skill": -0.037537127518460355,
+      "skill_min": -0.15597369628696467
+    },
+    "h14_reversion_ridge": {
+      "h": 14,
+      "n_total": 976,
+      "folds": 3,
+      "lambda_mean": 0.717,
+      "R2_model": 0.4075789057724459,
+      "R2_persist": 0.2882147690584517,
+      "MAE_model": 1183.1544874876045,
+      "MAE_persist": 1256.2217915877789,
+      "skill": 0.1538600591044885,
+      "skill_min": 0.06029696767628645
+    },
+    "h14_reversion+bio_ridge": {
+      "h": 14,
+      "n_total": 574,
+      "folds": 3,
+      "lambda_mean": 0.3,
+      "R2_model": 0.23179270035816998,
+      "R2_persist": 0.2579760210894704,
+      "MAE_model": 1295.9761144605475,
+      "MAE_persist": 1258.1625244532327,
+      "skill": -0.036605609554828944,
+      "skill_min": -0.23435335384157585
+    },
+    "h14_reversion+bio_gbm": {
+      "h": 14,
+      "n_total": 574,
+      "folds": 3,
+      "lambda_mean": 0.4,
+      "R2_model": 0.28141610310070625,
+      "R2_persist": 0.2579760210894704,
+      "MAE_model": 1281.773855282253,
+      "MAE_persist": 1258.1625244532327,
+      "skill": 0.006744666208247911,
+      "skill_min": -0.14652900769602484
+    },
+    "h14_bio_only_ridge": {
+      "h": 14,
+      "n_total": 574,
+      "folds": 3,
+      "lambda_mean": 0.3,
+      "R2_model": 0.2476533146432439,
+      "R2_persist": 0.2579760210894704,
+      "MAE_model": 1276.0042070307065,
+      "MAE_persist": 1258.1625244532327,
+      "skill": -0.01189188153013565,
+      "skill_min": -0.1751634577145451
+    },
+    "h30_reversion_ridge": {
+      "h": 30,
+      "n_total": 960,
+      "folds": 3,
+      "lambda_mean": 0.717,
+      "R2_model": 0.09588139765721267,
+      "R2_persist": -0.27647627855381307,
+      "MAE_model": 1481.3605039307877,
+      "MAE_persist": 1649.1077824101649,
+      "skill": 0.2902866467714024,
+      "skill_min": 0.24657873578626532
+    },
+    "h30_reversion+bio_ridge": {
+      "h": 30,
+      "n_total": 565,
+      "folds": 3,
+      "lambda_mean": 0.45,
+      "R2_model": -0.12870073907263122,
+      "R2_persist": -0.27619922025457483,
+      "MAE_model": 1619.216244731316,
+      "MAE_persist": 1667.1364942325506,
+      "skill": 0.11153454190916208,
+      "skill_min": 0.010456294479232131
+    },
+    "h30_reversion+bio_gbm": {
+      "h": 30,
+      "n_total": 565,
+      "folds": 3,
+      "lambda_mean": 0.633,
+      "R2_model": -0.11149733595770724,
+      "R2_persist": -0.27619922025457483,
+      "MAE_model": 1637.4844372865634,
+      "MAE_persist": 1667.1364942325506,
+      "skill": 0.1272262502724062,
+      "skill_min": 0.029306264300198226
+    },
+    "h30_bio_only_ridge": {
+      "h": 30,
+      "n_total": 565,
+      "folds": 3,
+      "lambda_mean": 0.533,
+      "R2_model": -0.212000534532778,
+      "R2_persist": -0.27619922025457483,
+      "MAE_model": 1692.356905759996,
+      "MAE_persist": 1667.1364942325506,
+      "skill": 0.049607578340108316,
+      "skill_min": -0.01678351797731681
+    }
+  }
+}
