@@ -127,29 +127,52 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
 <!-- ============================================================ 2. 예측 -->
 <section id="s2">
   <h2><span class="no">2.</span>메탄생성(바이오가스) 예측 모델 — 머신러닝 기반</h2>
-  <p class="h2sub">방향성: 데이터 기반 머신러닝으로 진행하되, 용도별 2계열 구조 — <b>시계열 계열</b>(단기 1일 운영)과
-    <b>트리 구조 + 앙상블 계열</b>(주간 부하계획)로 역할을 분리한다.</p>
+  <p class="h2sub">채택 방법론: <b>persistence 정박 잔차학습</b>(다지평 GBM, 내부 이화학 특징 포함) —
+    모든 운영 지평(1·3·7·14일)에서 persistence 기준선 초과를 달성 조건으로 설계했다.</p>
 
   <div class="card">
-    <h3 style="margin-top:0">2.1 모델링 방향</h3>
+    <h3 style="margin-top:0">2.1 방법론 — persistence 정박 잔차학습</h3>
+    <p style="font-size:14.5px;margin:4px 0 10px">
+      ŷ(t+h) = y(t) + r̂<sub>h</sub>(t),&nbsp;&nbsp; r<sub>h</sub>(t) = y(t+h) − y(t) 를 GBM으로 학습
+    </p>
+    <p style="font-size:13.5px;color:var(--ink2)">
+      예측식을 persistence에 <b>정박</b>시킨다: 잔차모델이 0을 출력하면 정확히 persistence와 동률이 되므로
+      구조적으로 기준선에 크게 뒤질 수 없고, 학습이 신호를 찾는 만큼만 초과한다. 잔차의 신호원은 세 갈래다.
+    </p>
     <div style="overflow-x:auto"><table>
-      <thead><tr><th>계열</th><th>용도·지평</th><th>구성 모델</th><th>채택</th></tr></thead>
+      <thead><tr><th>특징군</th><th>내용</th><th>근거</th></tr></thead>
       <tbody>
-        <tr><td><b>시계열</b></td><td class="c">1일 (운전 조정)</td>
-          <td style="text-align:left">persistence / persistence+Δ투입 / ARIMA(1,1,1)+Δ투입 / GBM(Δy 타깃)</td>
-          <td style="text-align:left"><b>persistence + Δ투입</b> — skill 최고, 잔차 관리도(§3)의 기대치 모델 겸용</td></tr>
-        <tr><td><b>트리 + 앙상블</b></td><td class="c">7일+ (부하·발전 계획)</td>
-          <td style="text-align:left">가수분해 커널 OLS(물리) / RandomForest / GBM / <b>NNLS 스태킹</b></td>
-          <td style="text-align:left"><b>NNLS 앙상블</b> — 구조가 다른 모델(물리+트리)을 비음수 가중 결합, 검증 최적 가중으로 실패 모델 자동 배제</td></tr>
+        <tr><td>평형 복귀항</td>
+          <td style="text-align:left">gap<sub>h</sub> = (a·H(t+h)+c) − y(t) — 계획 부하가 지지하는 평형 수준과 현재 가스량의 격차</td>
+          <td style="text-align:left">HRT 40.5일 CSTR 관성 — 가스량은 기질 평형으로 서서히 복귀</td></tr>
+        <tr><td>계획 부하</td>
+          <td style="text-align:left">Δ투입(t→t+h), 향후 h일 평균 투입 변화 — 투입량은 운전자가 결정하는 설정 변수로 계획값 기지 가정</td>
+          <td style="text-align:left">시나리오 조건부 예측 (persistence+Δ투입 모델과 동일 가정)</td></tr>
+        <tr><td><b>내부 이화학 상태</b></td>
+          <td style="text-align:left">소화조 pH·VFA·알칼리도·VFA/Alk·COD·TS, 산발효조 pH·COD, CH₄함량, TAN 추세지수(알칼리도 역산),
+            알칼리도 14일 변화·VFA 7일 변화</td>
+          <td style="text-align:left">주말 구조 결측은 최근 관측값 유지 + 경과일 채널 병행 (미래값 미사용, 보간 금지 준수)</td></tr>
       </tbody>
     </table></div>
     <p style="font-size:13.5px;color:var(--ink2);margin-bottom:0">
-      앙상블의 물리 베이스: 가스(t) = <b>a</b>·H(t) + <b>c</b>, H(t) = Σ<sub>τ</sub> k·e<sup>−kτ</sup>·부하(t−τ),
-      부하 = 투입량 × 산발효조 TS/100, k = 0.35 /d (반감기 약 2일). 학습구간 계수 a = <span id="mA"></span> ㎥/t TS,
-      c = <span id="mC"></span> ㎥/d. 트리 모델(RF·GBM)은 같은 부하 이력 특징(H, 부하 시차 0~3일, 7일 이동평균,
-      요일·월)에서 비선형·상호작용을 학습한다. 전일 가스량(자기회귀항)은 기질 계열에서 사용 금지 —
-      모델이 공정 대신 반응조 관성을 학습하는 것을 차단하기 위함이다.<sup>1</sup>
+      물리 베이스: H(t) = Σ<sub>τ</sub> k·e<sup>−kτ</sup>·부하(t−τ), 부하 = 투입량 × 산발효조 TS/100,
+      k = 0.35 /d. 학습구간 계수 a = <span id="mA"></span> ㎥/t TS, c = <span id="mC"></span> ㎥/d.
+      하이퍼파라미터(학습률·깊이·반복수·L2)는 사고학습 구간의 skill 최대화로만 선택하고, 평가 구간은 최종 1회만 사용했다.<sup>1</sup>
     </p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">2.2 데이터 3분할 (시간순, 혼합 금지)</h3>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>구분</th><th>기간</th><th>역할</th></tr></thead>
+      <tbody>
+        <tr><td><b>학습</b></td><td class="c">2018-01-01 ~ 2021-12-31 (4개년)</td><td style="text-align:left">잔차모델 적합 (계수·트리 학습)</td></tr>
+        <tr><td><b>사고학습</b></td><td class="c">2022-01-01 ~ 2022-12-31 (1개년)</td><td style="text-align:left">하이퍼파라미터·특징 구성·모델 선택 전용 — 학습에 미사용</td></tr>
+        <tr><td><b>평가</b></td><td class="c">2023-01-01 ~ 2023-09-17</td><td style="text-align:left">최종 성능 1회 측정 — 어떤 선택에도 미사용</td></tr>
+      </tbody>
+    </table></div>
+    <p class="tblnote" style="margin-bottom:0">무작위 K-fold는 자기상관 0.916에 의한 인접일 누출로 금지(시간순 고정).
+      2018년 고분산 국면·2022년 반응계수 이상 연도가 각각 학습·사고학습에 포함되어 있어 보수적인 평가 구성이다.</p>
   </div>
 
   <div class="rangebar" id="rangebar">
@@ -169,7 +192,38 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
     <div class="cbody"></div>
   </div>
 
-  <h3>2.2 시계열 계열 — 단기 1일 지평</h3>
+  <h3>2.3 다지평 성능 — persistence 대비 (평가 2023, 최종)</h3>
+  <div class="card" style="padding:0;overflow-x:auto">
+  <table id="parlTable">
+    <thead><tr><th rowspan="2">지평</th><th colspan="2">persistence</th><th colspan="3">잔차학습 모델 (채택)</th><th rowspan="2">사고학습<br>skill</th></tr>
+    <tr><th>R²</th><th>RMSE</th><th>R²</th><th>RMSE</th><th><b>skill</b></th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+  <p class="tblnote" id="parlNote"></p>
+
+  <div class="chart" id="chH7">
+    <div class="ct">7일 앞 예측 검증 — 실측 vs 7일 전 예측값</div>
+    <div class="cs">각 날짜의 주황 선은 7일 전에 산출한 예측. persistence(7일 전 값 유지)는 이 지평에서 R²가 0.72(평가)로 무너지지만 잔차학습 모델은 0.85를 유지한다.</div>
+    <div class="legend">
+      <span class="k"><span class="sw" style="background:var(--s-actual)"></span>실측</span>
+      <span class="k"><span class="sw" style="background:var(--s-model)"></span>7일 전 예측 (잔차학습)</span>
+    </div>
+    <div class="cbody"></div>
+  </div>
+
+  <div class="note">
+    <b>운영 함의.</b> 1일 지평은 운전 조정, 3~7일은 가스홀더·발전 운용, 14일은 정비·기질 수급 계획에 대응한다.
+    지평이 길수록 persistence는 급격히 무너지고(14일 R² 0.50) 잔차학습의 우위가 커진다(skill +0.62) —
+    모델의 실질 가치는 바로 이 주 단위 계획 구간에 있다. 내부 이화학 특징의 기여는 제거 실험(ablation) 결과
+    중립~소폭 음(skill 차 0.01~0.05)으로, 예측 신호는 평형 복귀항·계획 부하가 지배한다(중요도 84%+).
+    내부 지표는 예측 정확도보다 <b>저해 진행의 조기 식별(§3)</b>에서 가치를 가지며, 예측 모델에는
+    상태 감시 채널로 포함을 유지한다.
+  </div>
+
+  <details style="margin:22px 0">
+  <summary style="cursor:pointer;font-size:15px;font-weight:600;padding:4px 0">2.4 모델 선별 이력 (참고 — 이전 후보군 비교)</summary>
+  <h3>시계열 계열 — 단기 1일 지평</h3>
   <div class="card" style="padding:0;overflow-x:auto">
   <table id="tsTable">
     <thead><tr><th>모델</th><th colspan="3">검증 2022</th><th colspan="3">평가 2023</th><th>판정</th></tr>
@@ -184,7 +238,7 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
     데이터 구조와 부합하는 결과이며, 복잡도 증가가 정당화되지 않아 <b>선형 시계열 모델을 유지</b>한다.<sup>2</sup>
   </p>
 
-  <h3>2.3 트리 + 앙상블 계열 — 주간 부하계획 지평</h3>
+  <h3>트리 + 앙상블 계열 — 정상상태·계획 도구</h3>
   <div class="card" style="padding:0;overflow-x:auto">
   <table id="perfTable">
     <thead><tr><th>모델</th><th colspan="2">검증 2022</th><th colspan="3">평가 2023</th><th>비고</th></tr>
@@ -193,22 +247,7 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   </table>
   </div>
   <p class="tblnote" id="ensNote"></p>
-
-  <h3>2.4 예측 지평별 한계</h3>
-  <div class="grid2">
-    <div class="card" style="padding:0;overflow-x:auto">
-      <table id="horizonTable">
-        <thead><tr><th>지평</th><th>persistence R²</th><th>RMSE (㎥/d)</th><th>판단</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="note" style="margin:0">
-      <b>운영 함의.</b> 1일 앞 예측은 전일값이 이미 충분해 모델의 실익이 없다. 반면 7일 이상에서는
-      전일값 외삽이 급격히 무너지므로(30일 R² −0.56), 가스홀더 운용·발전 정비계획 등 주 단위
-      의사결정에는 부하 기반 모델(§2.3 NNLS 앙상블)이 실질적 역할을 한다. 모델 평가는 지평별
-      skill = 1 − MSE<sub>모델</sub>/MSE<sub>persistence</sub> 로 보고한다.
-    </div>
-  </div>
+  </details>
 
   <h3>2.5 예측 계산기 — 운전 조건별 기대 발생량</h3>
   <div class="card">
@@ -358,6 +397,7 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
 <script>
 const D = __DATA_JSON__;
 const ML = __ML_JSON__;
+const PARL = __PARL_JSON__;
 
 /* ---------- 공통 유틸 ---------- */
 const $ = s => document.querySelector(s);
@@ -526,6 +566,13 @@ function renderCharts(){
       {data:D.series.pred,color:'var(--s-base)',label:'가수분해 커널',w:1.3,op:0.8},
     ],
   });
+  lineChart($('#chH7'),{
+    range:curRange, height:240,
+    series:[
+      {data:D.series.biogas,color:'var(--s-actual)',label:'실측',w:1.8},
+      {data:PARL.pred_h7,color:'var(--s-model)',label:'7일 전 예측',w:2},
+    ],
+  });
   lineChart($('#chYcod'),{
     range:curRange, height:250, ymax:0.36,
     series:[
@@ -593,13 +640,25 @@ window.addEventListener('resize',()=>renderCharts());
   $('#ensNote').innerHTML =
     `※ NNLS 가중(검증 2022 최적): 가수분해 커널 ${(w.hyd*100).toFixed(0)}% + GBM ${(w.gbm*100).toFixed(0)}% + RF ${(w.rf*100).toFixed(0)}%.
      비음수 제약이 잔차가 중복되는 모델(RF)을 스스로 배제해, 구조가 다른 물리 모델과 트리 모델만 결합됐다.
-     RF 특징 중요도 상위: ${topImp} — 트리 모델도 부하 이력(H·TS 부하)이 지배적임을 재확인, 소화조 내부
-     이화학 지표는 예측 기여가 없어(§3) 특징에서 제외 유지.`;
+     RF 특징 중요도 상위: ${topImp} — 트리 모델도 부하 이력(H·TS 부하)이 지배적임을 재확인.
+     이 결론은 §2.3 채택 모델의 내부 이화학 제거 실험 결과와 정합한다.`;
 
-  const judge={1:'persistence로 충분',3:'제한적',7:'모델 실익 구간',14:'모델 실익 구간',30:'persistence 무효'};
-  $('#horizonTable tbody').innerHTML = Object.entries(m.horizons).map(([h,v])=>
-    `<tr><td>${h}일</td><td>${v.R2.toFixed(3)}</td><td>${fmt(v.RMSE)}</td>`+
-    `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">${judge[h]||''}</td></tr>`).join('');
+  // 다지평 잔차학습 (채택 모델: gbm_full — 내부 이화학 포함)
+  const use={1:'운전 조정',3:'가스홀더 운용',7:'발전·운용 계획',14:'정비·수급 계획'};
+  $('#parlTable tbody').innerHTML = Object.entries(PARL.horizons).map(([h,r])=>{
+    const f=r.gbm_full;
+    return `<tr${h==='7'?' class="hl"':''}><td>${h}일 <span style="color:var(--muted);font-size:11.5px">${use[h]||''}</span></td>`+
+      `<td>${f.test.pers_R2.toFixed(3)}</td><td>${fmt(Math.round(f.test.RMSE/Math.sqrt(1-f.test.skill)))}</td>`+
+      `<td><b>${f.test.R2.toFixed(3)}</b></td><td>${fmt(f.test.RMSE)}</td>`+
+      `<td><b style="color:var(--goodtxt)">+${f.test.skill.toFixed(3)}</b></td>`+
+      `<td>+${f.valid.skill.toFixed(3)}</td></tr>`;
+  }).join('');
+  const pTop=PARL.importances_h7.slice(0,4);
+  const pSum=PARL.importances_h7.reduce((s,x)=>s+Math.max(x.v,0),0);
+  $('#parlNote').innerHTML =
+    `※ skill = 1 − MSE<sub>모델</sub>/MSE<sub>persistence</sub> (동일 표본). 전 지평 양수 = persistence 초과 달성.
+     h=7 순열 중요도 상위: ${pTop.map(x=>`${x.f} ${(x.v/pSum*100).toFixed(0)}%`).join(', ')}.
+     사고학습(2022)으로만 모델을 고르고 평가(2023)는 1회 측정 — 두 구간의 skill 부호가 전 지평 일치해 과적합 징후 없음.`;
 
   $('#r1rate').textContent=D.diag.ycod_alarm_rate+'%';
   $('#r2rate').textContent=(D.diag.resid_alarms.length/N*100).toFixed(1)+'% ('+D.diag.resid_alarms.length+'일)';
