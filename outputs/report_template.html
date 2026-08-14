@@ -126,57 +126,88 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
 
 <!-- ============================================================ 2. 예측 -->
 <section id="s2">
-  <h2><span class="no">2.</span>메탄생성 예측 모델 — 공정 상태 기반</h2>
-  <p class="h2sub">예측을 <b>투입량·기질 성상</b>과 <b>소화조 내부 상태</b>만으로 수행한다.
-    전일 가스량(자기회귀항)은 전 계층에서 배제 — 반응조 관성이 아니라 공정 자체가 생산량을 설명해야 하기 때문이다.</p>
+  <h2><span class="no">2.</span>메탄생성 예측 모델 — 전 이화학 변수 × 시차 탐색</h2>
+  <p class="h2sub">마스터의 이화학 변수를 전수 후보로 올리고, 각 변수에 시차·이동평균·변화량을 자동 생성해
+    <b>658개 후보</b>에서 모델을 탐색했다. 자기회귀항(전일 가스량)은 전 계층에서 배제한다.</p>
 
   <div class="card">
-    <h3 style="margin-top:0">2.1 특징 구성과 표본</h3>
+    <h3 style="margin-top:0">2.1 특징 생성 — 무엇을 후보로 올렸나</h3>
     <div style="overflow-x:auto"><table>
-      <thead><tr><th>블록</th><th>변수</th><th>성격</th></tr></thead>
+      <thead><tr><th>블록</th><th>기저 변수</th><th>수</th></tr></thead>
       <tbody>
-        <tr><td><b>S<sub>부하</sub></b> 투입량</td>
-          <td style="text-align:left">소화조 투입량, TS 부하, COD 부하, 가수분해 커널 H(k=0.35/d)</td>
-          <td style="text-align:left">공급되는 유기물의 <b>양</b></td></tr>
-        <tr><td><b>S<sub>성상</sub></b> 기질 품질</td>
-          <td style="text-align:left">기질 환원도 COD/VS, 유기물 분율 VS/TS, 산발효조 pH</td>
-          <td style="text-align:left">공급되는 유기물의 <b>질</b> (양과 무관한 비율)</td></tr>
-        <tr><td><b>I</b> 소화조 내부</td>
-          <td style="text-align:left">소화조 pH, VFA, 알칼리도, VFA/Alk, 소화액 COD·TS·VS/TS, COD 제거율,
-            암모니아 부하지수·FAN 지수(알칼리도 역산), 온도(센서결함 구간 제외)</td>
-          <td style="text-align:left">반응조가 놓인 <b>상태</b></td></tr>
+        <tr><td rowspan="4"><b>S</b><br>투입·기질</td><td style="text-align:left">반입: 총반입량, 음폐수, 가축분뇨, 음식물, 가축분뇨 비중</td><td>5</td></tr>
+        <tr><td style="text-align:left">여액저장조: pH, TS, VS, VS/TS</td><td>4</td></tr>
+        <tr><td style="text-align:left">산발효조(기질 성상): pH, TS, VS, COD, TN, VS/TS, COD/VS 환원도, C/N</td><td>8</td></tr>
+        <tr><td style="text-align:left">투입·부하: 투입량, TS·VS·COD·TN 부하, OLR, HRT, 가수분해 커널(k=0.15/0.35/0.80)</td><td>10</td></tr>
+        <tr><td rowspan="3"><b>I</b><br>소화조 내부</td><td style="text-align:left">이화학: pH, A/B pH 편차, 온도, VFA, 알칼리도, VFA/Alk, 중탄산알칼리도(Alk−0.71·VFA)</td><td>7</td></tr>
+        <tr><td style="text-align:left">소화액 성상: TS, VS, VS/TS, COD, TN, NH₃-N, FAN, 암모니아 부하지수</td><td>8</td></tr>
+        <tr><td style="text-align:left">제거율·후단: TS·VS·COD 제거율, VFA/Alk 이탈도, 탈수량</td><td>5</td></tr>
       </tbody>
     </table></div>
-    <p class="tblnote" style="margin-bottom:0">표본은 <b>실측일만</b> 사용한다(학습 877일 / 사고학습 221일 / 평가 148일).
-      실험실 항목은 주말 측정률이 약 1%인 구조적 결측이므로, 보간으로 표본을 부풀리면 존재하지 않는 관측을
-      학습시키게 된다. COD 계열만 최근값 3일 유지를 허용했다.</p>
+    <p style="font-size:13.5px;color:var(--ink2);margin:12px 0 0">
+      <b>시차 전개.</b> 각 기저 변수마다 시차 <b>0·1·2·3·5·7·14일</b>, 이동평균 <b>3·7·14·30일</b>,
+      변화량 <b>7·14·30일</b>을 생성해 총 658개 후보를 만들었다. HRT 40.5일 공정에서 동시점 값만
+      쓰는 것은 물리적으로 부적절하기 때문이다. 실험실 항목은 최근 관측을 유지(최대 7일)한 뒤 시차를 걸어
+      <b>t 시점에 실제로 알 수 있는 값</b>만 사용하며, 마지막 실측 이후 경과일(age) 채널을 함께 넣어
+      값의 신선도를 모델이 인지하게 했다. 2023년 B계열 알칼리도 오염·온도계 결함 구간은 DQ 플래그로 제외.
+    </p>
   </div>
 
   <div class="card">
-    <h3 style="margin-top:0">2.2 데이터 3분할 (시간순, 혼합 금지)</h3>
+    <h3 style="margin-top:0">2.2 특징 선택 — 2단 구조와 데이터 분할</h3>
     <div style="overflow-x:auto"><table>
+      <thead><tr><th>단계</th><th>내용</th><th>사용 데이터</th></tr></thead>
+      <tbody>
+        <tr><td><b>1단계</b><br>대표 시차 추정</td>
+          <td style="text-align:left">각 기저 변수의 14개 변형을 단일 특징으로 롤링 검증해 최선의 시차를 확정.
+            658개를 변수 수준(블록당 20개)으로 압축하면서, 동시에 "이 지표가 몇 일 시차로 반영되는가"를 추정한다</td>
+          <td style="text-align:left">학습구간 내 롤링</td></tr>
+        <tr><td><b>2단계</b><br>변수 전진선택</td>
+          <td style="text-align:left">대표 특징들만으로 Ridge 전진선택. 개선폭 0.005 미만이면 중단</td>
+          <td style="text-align:left">학습구간 내 롤링</td></tr>
+        <tr><td><b>3단계</b><br>최종 적합</td>
+          <td style="text-align:left">선택된 특징으로 Ridge·RandomForest·GBM 학습 후 NNLS 결합</td>
+          <td style="text-align:left">학습 적합 / 사고학습 가중</td></tr>
+      </tbody>
+    </table></div>
+    <p style="font-size:13.5px;color:var(--ink2);margin:12px 0 0">
+      <b>선택 기준을 롤링 검증으로 둔 이유.</b> 처음에는 사고학습(2022) 단일 연도 R²로 선택했으나,
+      선택 자체가 그 해에 과적합되어 <b>사고학습 0.854 → 평가 0.238</b>로 무너졌다. 그래서 학습구간 안에서
+      확장창 3폴드(2018–19→2020, 2018–20→2021, 2018–21→2022)를 돌려 평균 R²로 선택하도록 바꿨다.
+      평가구간(2023)은 선택·학습 어디에도 쓰지 않고 최종 1회만 측정한다.
+    </p>
+    <div style="overflow-x:auto;margin-top:12px"><table>
       <thead><tr><th>구분</th><th>기간</th><th>역할</th></tr></thead>
       <tbody>
-        <tr><td><b>학습</b></td><td class="c">2018-01-01 ~ 2021-12-31</td><td style="text-align:left">모델 적합 (계수·트리 학습)</td></tr>
-        <tr><td><b>사고학습</b></td><td class="c">2022-01-01 ~ 2022-12-31</td><td style="text-align:left">앙상블 가중·하이퍼파라미터·모델 선택 전용 — 학습에 미사용</td></tr>
-        <tr><td><b>평가</b></td><td class="c">2023-01-01 ~ 2023-09-17</td><td style="text-align:left">최종 성능 1회 측정 — 어떤 선택에도 미사용</td></tr>
+        <tr><td><b>학습</b></td><td class="c">2018-01-01 ~ 2021-12-31</td><td style="text-align:left">모델 적합 + 내부 롤링 3폴드로 특징 선택</td></tr>
+        <tr><td><b>사고학습</b></td><td class="c">2022-01-01 ~ 2022-12-31</td><td style="text-align:left">앙상블 가중 산출 · 마지막 폴드의 검증셋</td></tr>
+        <tr><td><b>평가</b></td><td class="c">2023-01-01 ~ 2023-09-17</td><td style="text-align:left">최종 1회 측정 — 어떤 선택에도 미사용</td></tr>
       </tbody>
     </table></div>
-    <p class="tblnote" style="margin-bottom:0">각 계층에서 Ridge·RandomForest·GBM을 학습하고 사고학습 구간에서
-      NNLS(비음수 최소자승)로 결합했다. 자기상관 0.916으로 인한 인접일 누출 때문에 무작위 K-fold는 금지.</p>
   </div>
 
-  <h3>2.3 3계층 예측 결과 — 내부 데이터 기여 검정</h3>
+  <h3>2.3 변수별 대표 시차 — 이화학 지표는 언제 가스에 반영되는가</h3>
   <p style="font-size:13.5px;color:var(--ink2);margin-top:-4px">
-    시간 스케일에 따라 답이 달라진다. 각 계층에서 <b>S단독 / I단독 / S+I</b>를 같은 분할로 비교해
-    내부 데이터의 기여를 분리 측정했다.</p>
+    1단계 결과. <code>L</code>=시차(일), <code>M</code>=이동평균(일), <code>D</code>=변화량(일), <code>age</code>=최종 실측 경과일.
+    괄호 안은 그 변수 단독의 롤링 검증 R².</p>
+  <div class="grid2">
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table id="lagS"><thead><tr><th>S 투입·기질</th><th>대표 시차</th><th>단독 CV R²</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table id="lagI"><thead><tr><th>I 소화조 내부</th><th>대표 시차</th><th>단독 CV R²</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+  <div class="note" id="lagNote"></div>
+
+  <h3>2.4 계층별 예측 결과 — 내부 데이터 기여 검정</h3>
   <div class="card" style="padding:0;overflow-x:auto">
-  <table id="layerTable">
-    <thead><tr><th>계층 · 타깃</th><th>특징 블록</th><th>학습 n</th><th>사고학습 R²</th><th>평가 R²</th><th>평가 RMSE</th><th>MAPE</th></tr></thead>
+  <table id="fsTable">
+    <thead><tr><th>계층 · 타깃</th><th>블록</th><th>선택 특징</th><th>CV 평균</th><th>사고학습 R²</th><th>평가 R²</th><th>평가 RMSE</th><th>MAPE</th></tr></thead>
     <tbody></tbody>
   </table>
   </div>
-  <div class="note" id="ablationNote"></div>
+  <div class="note" id="fsNote"></div>
 
   <div class="rangebar" id="rangebar">
     <button data-r="all">전체 (2018–2023)</button>
@@ -185,8 +216,8 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   </div>
 
   <div class="chart" id="chMain">
-    <div class="ct">일별 메탄생성량 — 실측 vs 공정 상태 기반 예측</div>
-    <div class="cs">투입량·기질 성상·내부 상태만으로 산출. 전일 가스량을 일절 참조하지 않으므로 관성에 의한 착시가 없다. 실측일만 표시.</div>
+    <div class="ct">일별 메탄생성량 — 실측 vs 예측 (L1, S+I)</div>
+    <div class="cs">선택 특징 4개: 투입량 7일 이동평균, TS 부하 당일, 총반입량 14일 이동평균, COD 제거율 7일 이동평균. 실측일만 표시.</div>
     <div class="legend">
       <span class="k"><span class="sw" style="background:var(--s-actual)"></span>실측 메탄생성량</span>
       <span class="k"><span class="sw" style="background:var(--s-model)"></span>모델 예측</span>
@@ -196,8 +227,8 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
 
   <div class="grid2">
     <div class="chart" id="chYield">
-      <div class="ct">월별 비메탄수율 — 실측 vs 기질 성상 기반 예측</div>
-      <div class="cs">㎥CH₄/t TS 투입. 부하량 변수를 배제하고 기질 성상만으로 전환효율을 예측 (평가 R² 0.798).</div>
+      <div class="ct">일별 비메탄수율 — 실측 vs 예측 (L3)</div>
+      <div class="cs">㎥CH₄/t TS 투입. 부하량 계열과 제거율 계열을 배제한 조건에서 기질 성상 중심으로 예측.</div>
       <div class="legend">
         <span class="k"><span class="sw" style="background:var(--s-actual)"></span>실측 수율</span>
         <span class="k"><span class="sw" style="background:var(--s-model)"></span>예측</span>
@@ -205,8 +236,8 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
       <div class="cbody"></div>
     </div>
     <div class="chart" id="chCH4pct">
-      <div class="ct">일별 메탄함량 — 실측 vs 예측</div>
-      <div class="cs">%. 내부 데이터가 예측에 기여하는 유일한 계층 (S단독 0.335 → S+I 0.499).</div>
+      <div class="ct">일별 메탄함량 — 실측 vs 예측 (L2)</div>
+      <div class="cs">%. 내부 데이터 단독이 투입·기질과 대등한 유일한 계층(I 0.502 vs S 0.472).</div>
       <div class="legend">
         <span class="k"><span class="sw" style="background:var(--s-actual)"></span>실측 CH₄</span>
         <span class="k"><span class="sw" style="background:var(--s-model)"></span>예측</span>
@@ -215,9 +246,9 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
     </div>
   </div>
 
-  <h3>2.4 전환효율의 지배 변수 — 월별 수율과의 관계</h3>
+  <h3>2.5 전환효율의 지배 변수 — 월별 수율과의 관계</h3>
   <p style="font-size:13.5px;color:var(--ink2);margin-top:-4px">
-    6년간 단조 추세(암모니아 축적 등)가 만드는 허위 상관을 배제하기 위해 <b>연도 고정효과 통제</b>(연평균 제거) 값을 병기한다.
+    모델과 별개로, 단조 추세가 만드는 허위 상관을 배제하기 위해 <b>연도 고정효과 통제</b>(연평균 제거) 값을 병기한 상관 분석이다.
     통제 후에도 살아남는 관계만 실제 조절 변수로 인정할 수 있다.</p>
   <div class="card" style="padding:0;overflow-x:auto">
   <table id="corrTable">
@@ -230,7 +261,8 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
     <b>판독.</b> 전환효율을 실제로 움직이는 것은 <b>기질 성상</b>이다. 산발효조 pH(ρ=+0.70)와 기질 환원도
     COD/VS(ρ=+0.63)는 연도 효과를 제거해도 관계가 오히려 강해진다 — 추세 아티팩트가 아닌 실재 관계다.
     COD/VS가 높을수록 수율이 높은 것은 Buswell 이론(지질 1.01 &gt; 단백질 0.50 &gt; 탄수화물 0.37 ㎥CH₄/kg VS)과
-    정확히 일치하며, 모델이 물리적으로 타당한 관계를 학습했음을 뒷받침한다.
+    일치하며, 모델이 물리적으로 타당한 관계를 학습했음을 뒷받침한다. §2.4의 L3에서 선택된 최상위 특징이
+    <code>기질 환원도의 14일 변화량</code>(중요도 89%)인 것도 같은 방향이다.
     반면 소화조 내부 이화학 지표는 전체 상관에서 약하게 보이던 것(알칼리도 ρ=+0.21)마저 연도 통제 후
     소멸한다(ρ=+0.08, p=0.51) — 관측된 관계가 암모니아 축적이라는 <b>연 단위 추세</b>에서 나온 것이지
     월 단위 수율 변동을 설명하는 것이 아니라는 뜻이다.
@@ -240,10 +272,10 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
     <b>추가로 조일 여지가 없고, 개선 여력은 전단 공정에 있다</b>는 것이 이 분석의 실행 가능한 결론이다.
   </div>
 
-  <h3>2.5 예측 계산기 — 투입 조건·기질 성상별 기대 생산량</h3>
+  <h3>2.6 예측 계산기 — 투입 조건·기질 성상별 기대 생산량</h3>
   <div class="card">
     <p style="font-size:13.5px;color:var(--ink2);margin-top:0">
-      §2.3 모델과 동일한 학습구간에서 적합한 선형 모델(계수 내장)로 계산한다.
+      동일 학습구간에서 적합한 선형 모델(계수 내장)로 계산한다.
       메탄생성량 평가 R² <span id="calcR2a"></span>, 수율 평가 R² <span id="calcR2b"></span>.
     </p>
     <div class="formrow">
@@ -258,12 +290,11 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   </div>
 
   <details style="margin:22px 0">
-  <summary style="cursor:pointer;font-size:15px;font-weight:600;padding:4px 0">2.6 모델 선별 이력 (참고 — 시계열 계열 검토 결과)</summary>
+  <summary style="cursor:pointer;font-size:15px;font-weight:600;padding:4px 0">2.7 모델 선별 이력 (참고 — 이전 후보군)</summary>
   <p style="font-size:13.5px;color:var(--ink2)">
     아래는 전일 가스량을 사용하는 시계열 계열의 검토 기록이다. 예측 정확도만 보면 이 계열이 높지만,
-    설명력이 반응조 관성(자기상관 0.916)에서 나오므로 "내부 상태에서 기인한 메탄생성"을 설명하지 못한다.
-    본 리포트의 채택 모델은 §2.3의 공정 상태 기반 계열이며, 아래는 비교 목적으로만 남긴다.</p>
-  <h3>시계열 계열 — 단기 1일 지평</h3>
+    설명력이 반응조 관성(자기상관 0.916)에서 나오므로 공정 상태에 기인한 메탄생성을 설명하지 못한다.
+    채택 모델은 §2.4의 공정 상태 기반 계열이며, 아래는 비교 목적으로만 남긴다.</p>
   <div class="card" style="padding:0;overflow-x:auto">
   <table id="tsTable">
     <thead><tr><th>모델</th><th colspan="3">검증 2022</th><th colspan="3">평가 2023</th><th>판정</th></tr>
@@ -271,8 +302,7 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
     <tbody></tbody>
   </table>
   </div>
-  <h3>persistence 정박 잔차학습 — 다지평</h3>
-  <div class="card" style="padding:0;overflow-x:auto">
+  <div class="card" style="padding:0;overflow-x:auto;margin-top:12px">
   <table id="parlTable">
     <thead><tr><th rowspan="2">지평</th><th colspan="2">persistence</th><th colspan="3">잔차학습</th><th rowspan="2">사고학습<br>skill</th></tr>
     <tr><th>R²</th><th>RMSE</th><th>R²</th><th>RMSE</th><th>skill</th></tr></thead>
@@ -280,7 +310,6 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   </table>
   </div>
   <p class="tblnote" id="parlNote"></p>
-  <h3>트리 + 앙상블 계열 — 부하 기반</h3>
   <div class="card" style="padding:0;overflow-x:auto">
   <table id="perfTable">
     <thead><tr><th>모델</th><th colspan="2">검증 2022</th><th colspan="3">평가 2023</th><th>비고</th></tr>
@@ -457,6 +486,7 @@ const D = __DATA_JSON__;
 const ML = __ML_JSON__;
 const PARL = __PARL_JSON__;
 const ST = __STATE_JSON__;
+const FS = __FS_JSON__;
 
 /* ---------- 공통 유틸 ---------- */
 const $ = s => document.querySelector(s);
@@ -620,17 +650,24 @@ function renderCharts(){
   lineChart($('#chMain'),{
     range:curRange,
     series:[
-      {data:ST.series.ch4_obs,color:'var(--s-actual)',label:'실측 메탄',w:1.8},
-      {data:ST.series.ch4_pred,color:'var(--s-model)',label:'예측',w:2},
+      {data:FS.series.ch4_obs,color:'var(--s-actual)',label:'실측 메탄',w:1.8},
+      {data:FS.series.ch4_pred,color:'var(--s-model)',label:'예측',w:2},
     ],
   });
   lineChart($('#chCH4pct'),{
     range:curRange, height:230,
     series:[
-      {data:ST.series.ch4pct_obs,color:'var(--s-actual)',label:'실측 CH₄%',w:1.6},
-      {data:ST.series.ch4pct_pred,color:'var(--s-model)',label:'예측',w:1.8},
+      {data:FS.series.ch4pct_obs,color:'var(--s-actual)',label:'실측 CH₄%',w:1.6},
+      {data:FS.series.ch4pct_pred,color:'var(--s-model)',label:'예측',w:1.8},
     ],
     yFmt:v=>v.toFixed(0)+'%', tipFmt:v=>v.toFixed(1)+'%',
+  });
+  lineChart($('#chYield'),{
+    range:curRange, height:230,
+    series:[
+      {data:FS.series.smy_obs,color:'var(--s-actual)',label:'실측 수율',w:1.6},
+      {data:FS.series.smy_pred,color:'var(--s-model)',label:'예측',w:1.8},
+    ],
   });
   lineChart($('#chDrift'),{
     range:curRange, height:220,
@@ -763,48 +800,90 @@ window.addEventListener('resize',()=>renderCharts());
   }).join('');
 })();
 
-/* ---------- 공정 상태 기반 계층 표 · 상관 표 · 진단 모델 표 ---------- */
-(function(){
-  const NAME={TS_load:'TS 부하',COD_load:'COD 부하',H_TS:'가수분해 커널 H',feed:'투입량',
-    CODVS:'기질 환원도 COD/VS',VSTS_in:'유기물 분율 VS/TS',acid_pH:'산발효조 pH',
-    dig_pH:'소화조 pH',VFA:'VFA',ALK:'알칼리도',vfaalk:'VFA/Alk',dig_COD:'소화액 COD',
-    COD_rem:'COD 제거율',dig_TS:'소화액 TS',dig_VSTS:'소화액 VS/TS',TAN_idx:'암모니아 부하지수',
-    FAN_idx:'FAN 지수',T_B:'소화조 온도'};
-  const nm=k=>NAME[k]||k;
+/* ---------- 특징탐색 계층 표 · 시차 표 · 상관 표 · 진단 모델 표 ---------- */
+const NAME={TS_load:'TS 부하',COD_load:'COD 부하',VS_load:'VS 부하',TN_load:'TN 부하',
+  H_TS:'가수분해 커널',feed:'소화조 투입량',OLR:'유기물 부하율 OLR',HRT:'체류시간 HRT',
+  intake_total:'총 반입량',intake_foodww:'음폐수 반입',intake_manure:'가축분뇨 반입',
+  intake_food:'음식물 반입',manure_share:'가축분뇨 비중',
+  leach_pH:'여액저장조 pH',leach_TS:'여액저장조 TS',leach_VS:'여액저장조 VS',leach_VSTS:'여액저장조 VS/TS',
+  acid_pH:'산발효조 pH',acid_TS:'산발효조 TS',acid_VS:'산발효조 VS',acid_COD:'산발효조 COD',
+  acid_TN:'산발효조 TN',acid_VSTS:'기질 VS/TS',acid_CODVS:'기질 환원도 COD/VS',acid_CN:'기질 C/N',
+  CODVS:'기질 환원도 COD/VS',VSTS_in:'유기물 분율 VS/TS',
+  dig_pH:'소화조 pH',dig_pH_AB_gap:'A/B pH 편차',dig_T:'소화조 온도',T_B:'소화조 온도',
+  VFA:'VFA',ALK:'알칼리도',vfaalk:'VFA/Alk',ALK_minus_VFA:'중탄산 알칼리도',
+  dig_TS:'소화액 TS',dig_VS:'소화액 VS',dig_VSTS:'소화액 VS/TS',dig_COD:'소화액 COD',
+  dig_TN:'소화액 TN',NH3N:'암모니아성 질소',FAN:'유리암모니아 FAN',TAN_idx:'암모니아 부하지수',
+  FAN_idx:'유리암모니아 지수',COD_rem_:'COD 제거율',
+  COD_rem:'COD 제거율',VS_rem:'VS 제거율',TS_rem:'TS 제거율',
+  VFA_per_ALK_dev:'VFA/Alk 이탈도',dewater:'탈수 슬러지량',dow:'요일',month:'월'};
+const LAGTXT=t=>{
+  if(t==='-'||t==null) return '당일';
+  const k=t[0], n=t.slice(1);
+  return k==='L' ? (n==='0'?'당일':`${n}일 시차`)
+       : k==='M' ? `${n}일 이동평균`
+       : k==='D' ? `${n}일 변화량`
+       : t==='age' ? '최종 실측 경과일' : t;
+};
+const featTxt=f=>{ if(!f) return ''; const [v,t]=f.split('@'); return `${NAME[v]||v} · ${LAGTXT(t||'-')}`; };
 
-  // 2.3 계층 ablation
-  const BL={S:'S 투입·기질',I:'I 내부 상태','S+I':'S + I 전체',
-    '기질성상':'S 기질 성상','내부상태':'I 내부 상태','기질+내부':'S 성상 + I 내부'};
+(function(){
+  // 2.3 대표 시차 표 (L1 기준)
+  const lt=FS.layers.L1.lag_table;
+  const rowsOf=arr=>arr.slice(0,12).map(r=>
+    `<tr><td>${NAME[r.var]||r.var}</td><td class="c">${LAGTXT(r.lag)}</td><td>${r.cv.toFixed(3)}</td></tr>`).join('');
+  $('#lagS tbody').innerHTML=rowsOf(lt.S);
+  $('#lagI tbody').innerHTML=rowsOf(lt.I);
+  const iLags=lt.I.slice(0,8).map(r=>r.lag);
+  const longShare=iLags.filter(t=>/^(M14|M30|L14|D30|D14)$/.test(t)).length/iLags.length*100;
+  $('#lagNote').innerHTML=
+    `<b>판독.</b> 부하 계열은 <b>당일~7일</b>에서 최적인 반면(투입량 7일 이동평균, TS 부하 당일),
+     소화조 내부 이화학 지표는 <b>14~30일</b> 구간이 대부분을 차지한다(상위 8개 중 ${longShare.toFixed(0)}%).
+     알칼리도·암모니아 부하지수는 14일 시차, 소화액 VS·VS/TS는 30일 이동평균에서 최적이었다.
+     HRT 40.5일 반응조에서 내부 이화학이 축적성·완충성 지표라는 물리와 부합하는 결과로,
+     동시점 값만 쓰던 이전 판이 왜 내부 데이터의 기여를 제대로 잡지 못했는지도 이것으로 설명된다.
+     한편 탈수 슬러지량(7일 이동평균)은 내부 블록에서 유일하게 단독 CV R²가 양수(+0.21)인 변수로,
+     소화조에서 실제로 처리된 물질량을 반영하는 대리지표 역할을 한다.`;
+
+  // 2.4 계층 표
+  const BL={S:'S 투입·기질',I:'I 내부 상태','S+I':'S + I 전체'};
   let rows='';
-  for(const [lk,L] of Object.entries(ST.layers)){
-    const ks=Object.keys(L.blocks);
+  for(const [lk,L] of Object.entries(FS.layers)){
+    const ks=Object.keys(L.blocks); if(!ks.length) continue;
     const best=ks.reduce((a,b)=>L.blocks[b].test.R2>L.blocks[a].test.R2?b:a,ks[0]);
     ks.forEach((bk,i)=>{
       const b=L.blocks[bk], pick=bk===best;
       rows+=`<tr${pick?' class="hl"':''}>`+
         (i===0?`<td rowspan="${ks.length}"><b>${lk}</b> ${L.label}<div style="color:var(--muted);font-size:11.5px">${L.unit}</div></td>`:'')+
-        `<td style="text-align:left">${pick?'<b>'+BL[bk]+'</b>':BL[bk]}</td><td>${fmt(b.n_train)}</td>`+
-        `<td>${b.valid.R2.toFixed(3)}</td><td><b>${b.test.R2.toFixed(3)}</b></td>`+
-        `<td>${fmt(b.test.RMSE,b.test.RMSE<20?2:0)}</td><td>${b.test.MAPE.toFixed(1)}%</td></tr>`;
+        `<td style="text-align:left">${pick?'<b>'+BL[bk]+'</b>':BL[bk]}</td><td>${b.k}</td>`+
+        `<td>${b.cv_mean==null?'—':b.cv_mean.toFixed(3)}</td><td>${b.valid.R2.toFixed(3)}</td>`+
+        `<td><b>${b.test.R2.toFixed(3)}</b></td><td>${fmt(b.test.RMSE,b.test.RMSE<20?2:0)}</td>`+
+        `<td>${b.test.MAPE.toFixed(1)}%</td></tr>`;
     });
   }
-  $('#layerTable tbody').innerHTML=rows;
+  $('#fsTable tbody').innerHTML=rows;
 
-  const L1=ST.layers.L1.blocks, L2=ST.layers.L2.blocks, L3=ST.layers.L3.blocks;
-  const d2=(L2['S+I'].test.R2-L2.S.test.R2);
-  $('#ablationNote').innerHTML=
-    `<b>내부 데이터 기여 판정.</b> 세 계층 중 소화조 내부 데이터가 예측을 <b>개선한 것은 메탄함량(L2) 하나</b>다
-     (${L2.S.test.R2.toFixed(3)} → ${L2['S+I'].test.R2.toFixed(3)}, +${d2.toFixed(3)}). 중요도에서도 소화조 온도가
-     ${ (ST.importances.L2.find(x=>x.f==='T_B')||{v:0}).v*100|0 }%로 2위를 차지해, 메탄생성 경로의 온도 민감성이 가스 품질에 반영됨을 보여준다.
-     반면 <b>메탄생성량(L1)</b>은 투입·기질만 쓴 쪽이 더 정확했고(${L1.S.test.R2.toFixed(3)} vs ${L1['S+I'].test.R2.toFixed(3)}),
-     <b>월별 수율(L3)</b>은 내부 상태 단독으로는 학습구간 평균만도 못했다(${L3['내부상태'].test.R2.toFixed(3)}).
-     내부 상태만으로도 일별 메탄생성량의 ${(L1.I.test.R2*100).toFixed(0)}%는 설명되지만(I단독 ${L1.I.test.R2.toFixed(3)}),
-     이는 부하가 제공하는 정보와 중복되는 부분이며 부하를 이미 아는 상태에서 추가되는 정보는 없다.
-     <br><br>이는 모델의 실패가 아니라 <b>공정의 성질</b>이다 — 소화조가 설계 범위 안에서 매우 안정적으로 제어되고 있어
-     내부 상태에 예측에 쓸 만한 변동이 존재하지 않는다(pH 변동계수 1.7%, 온도 2.3%, 반면 가스는 23.7%).
-     따라서 내부 데이터는 §3의 진단 계층에 배치한다.`;
+  const L1=FS.layers.L1.blocks, L2=FS.layers.L2.blocks, L3=FS.layers.L3.blocks, L4=FS.layers.L4.blocks;
+  const impI=(FS.layers.L1.blocks['S+I'].importance||[]).filter(x=>x.blk==='I');
+  $('#fsNote').innerHTML=
+    `<b>내부 데이터 기여 판정.</b> 시차를 넣은 뒤에도 결론의 방향은 유지되나, 크기는 달라졌다.
+     <b>메탄생성량(L1)</b>은 내부 데이터를 더해 ${L1.S.test.R2.toFixed(3)} → ${L1['S+I'].test.R2.toFixed(3)}로
+     개선됐고(선택된 내부 특징은 COD 제거율 7일 이동평균 하나),
+     <b>메탄함량(L2)</b>은 내부 단독(${L2.I.test.R2.toFixed(3)})이 투입·기질 단독(${L2.S.test.R2.toFixed(3)})과 대등하다 —
+     소화조 온도 30일 이동평균·소화액 COD 30일 이동평균·VS 제거율이 핵심 특징으로,
+     가스 품질이 내부 상태에 실제로 반응함을 보여준다.
+     반면 <b>비메탄수율(L3)</b>은 내부 단독이 ${L3.I.test.R2.toFixed(3)}에 그쳐 사실상 무력하고,
+     기질 환원도(COD/VS) 14일 변화량이 중요도 89%로 지배한다.
+     <b>7일 후 수율 예보(L4)</b>는 투입·기질로 ${L4.S.test.R2.toFixed(3)}까지 가능하나 롤링 CV가 음수(${L4.S.cv_mean.toFixed(3)})라
+     안정적이라 보기 어렵다 — 평가구간 성능은 참고치로만 읽어야 한다.
+     <br><br>
+     <b>정직하게 남기는 한계.</b> L2의 롤링 CV는 전 블록에서 음수다. 메탄함량이 연도별로 국면 이동
+     (2020년 68.7% → 2021년 62.2%)을 겪어 연도 교차 일반화가 구조적으로 어렵기 때문이며,
+     평가 R² 0.5는 그 국면 안에서의 성능으로 한정해 해석해야 한다.
+     또한 수율 모델에서 TS·VS·COD 제거율을 특징에서 제외했는데, 제거율이 분모(유입 TS)의 대리변수라
+     제거율을 넣으면 평가 R²가 0.59까지 오르지만 이는 기계적 순환이다(TS 제거율 ↔ 유입 TS 상관 +0.909,
+     유입 TS 분위 내 층화 시 관계 붕괴).`;
 
-  // 2.4 상관표 (연도 고정효과 통제)
+  // 2.5 상관표 (연도 고정효과 통제)
   const cr=ST.layers.L3.corr;
   const ent=Object.entries(cr).sort((a,b)=>Math.abs(b[1][2])-Math.abs(a[1][2]));
   const isI=k=>ST.blocks.I.includes(k);
@@ -812,7 +891,7 @@ window.addEventListener('resize',()=>renderCharts());
     const keep=v[3]<0.05, was=v[1]<0.05;
     const verdict = keep ? '<span class="badge ok">실재 관계</span>'
       : (was ? '<span class="badge warn">추세 아티팩트</span>' : '<span style="color:var(--muted)">무관</span>');
-    return `<tr${keep?' class="hl"':''}><td>${nm(k)}</td><td class="c">${isI(k)?'I':'S'}</td>`+
+    return `<tr${keep?' class="hl"':''}><td>${NAME[k]||k}</td><td class="c">${isI(k)?'I':'S'}</td>`+
       `<td>${v[0]>=0?'+':''}${v[0].toFixed(3)}</td><td>${v[1]<0.0001?'&lt;0.0001':v[1].toFixed(3)}</td>`+
       `<td><b>${v[2]>=0?'+':''}${v[2].toFixed(3)}</b></td><td>${v[3]<0.0001?'&lt;0.0001':v[3].toFixed(3)}</td>`+
       `<td style="text-align:left">${verdict}</td></tr>`;
@@ -844,49 +923,6 @@ window.addEventListener('resize',()=>renderCharts());
      이 경우 관리 대응은 경보가 아니라 <b>기준선 재설정과 원인(가축분뇨 혼합비) 조정 검토</b>다.
      참고로 2023년은 B계열 알칼리도 기록 오염(DQ-05)과 온도계 결함이 겹친 해이므로, 지수 상승분에
      계측 요인이 섞여 있을 가능성을 배제하지 못한다.`;
-})();
-
-/* ---------- 월별 수율 차트 (월 단위 x축) ---------- */
-(function(){
-  const el=$('#chYield'), body=el.querySelector('.cbody');
-  const mo=ST.monthly, n=mo.dates.length;
-  const W=760,Hh=250,mL=50,mR=14,mT=10,mB=26,iw=W-mL-mR,ih=Hh-mT-mB;
-  const vals=mo.smy.concat(mo.smy_pred).filter(v=>v!=null);
-  let lo=Math.min(...vals),hi=Math.max(...vals); const pad=(hi-lo)*.08; lo-=pad;hi+=pad;
-  const xs=i=>mL+i/(n-1)*iw, ys=v=>mT+(1-(v-lo)/(hi-lo))*ih;
-  const NS='http://www.w3.org/2000/svg';
-  const svg=document.createElementNS(NS,'svg');
-  svg.setAttribute('viewBox',`0 0 ${W} ${Hh}`); svg.setAttribute('width','100%'); svg.style.display='block';
-  const add=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);svg.appendChild(e);return e;};
-  for(const t of niceTicks(lo,hi,5)){
-    add('line',{x1:mL,x2:W-mR,y1:ys(t),y2:ys(t),stroke:'var(--grid)','stroke-width':1});
-    add('text',{x:mL-8,y:ys(t)+4,'text-anchor':'end','font-size':11,fill:'var(--muted)'}).textContent=fmt(t);
-  }
-  let ly='';
-  mo.dates.forEach((d,i)=>{ const yy=d.slice(0,4);
-    if(yy!==ly){ ly=yy; if(i>0) add('line',{x1:xs(i),x2:xs(i),y1:mT,y2:mT+ih,stroke:'var(--grid)','stroke-width':1});
-      add('text',{x:xs(i)+3,y:Hh-8,'font-size':11,fill:'var(--muted)'}).textContent=yy; }});
-  add('line',{x1:mL,x2:W-mR,y1:mT+ih,y2:mT+ih,stroke:'var(--axis)','stroke-width':1});
-  for(const s of [{d:mo.smy,c:'var(--s-actual)',w:2},{d:mo.smy_pred,c:'var(--s-model)',w:2}]){
-    let p='',pen=false;
-    s.d.forEach((v,i)=>{ if(v==null){pen=false;return;} p+=(pen?'L':'M')+xs(i).toFixed(1)+' '+ys(v).toFixed(1); pen=true; });
-    add('path',{d:p,fill:'none',stroke:s.c,'stroke-width':s.w,'stroke-linejoin':'round','stroke-linecap':'round'});
-  }
-  const tip=document.createElement('div'); tip.className='tip'; el.appendChild(tip);
-  const vl=add('line',{x1:0,x2:0,y1:mT,y2:mT+ih,stroke:'var(--axis)','stroke-width':1,visibility:'hidden'});
-  svg.addEventListener('mousemove',ev=>{
-    const r=svg.getBoundingClientRect(); const i=Math.round((( ev.clientX-r.left)*(W/r.width)-mL)/iw*(n-1));
-    if(i<0||i>=n){tip.style.display='none';vl.setAttribute('visibility','hidden');return;}
-    vl.setAttribute('x1',xs(i));vl.setAttribute('x2',xs(i));vl.setAttribute('visibility','visible');
-    tip.innerHTML=`<b>${mo.dates[i]}</b><br><span style="color:var(--s-actual)">●</span> 실측: <b>${mo.smy[i]==null?'—':fmt(mo.smy[i])}</b>`+
-      `<br><span style="color:var(--s-model)">●</span> 예측: <b>${mo.smy_pred[i]==null?'—':fmt(mo.smy_pred[i])}</b>`;
-    tip.style.display='block';
-    const er=el.getBoundingClientRect(); let tx=ev.clientX-er.left+14;
-    if(tx+tip.offsetWidth>er.width-8) tx-=tip.offsetWidth+28;
-    tip.style.left=tx+'px'; tip.style.top=(ev.clientY-er.top-10)+'px';
-  });
-  svg.addEventListener('mouseleave',()=>{tip.style.display='none';vl.setAttribute('visibility','hidden');});
-  body.appendChild(svg);
 })();
 
 /* ---------- 예측 계산기 (내장 선형모델) ---------- */
