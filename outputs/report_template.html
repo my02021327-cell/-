@@ -302,6 +302,58 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   <p class="tblnote">가축분뇨 반입 비중은 6년간 31.8% → 38.5%로 늘었으나 모델상 메탄 기여율은 10~12%에 머문다.
     분뇨는 <b>메탄 기여는 적으면서 질소 부하는 크게 늘리는</b> 기질이며, 이는 §3의 만성 암모니아 저해 진단과 정합한다.</p>
 
+  <h3>2.7 기저항 분해 <span style="font-weight:400;font-size:13px;color:var(--muted)">— 투입 급감 구간 분석</span></h3>
+  <p style="font-size:13.5px;color:var(--ink2);margin-top:-4px">
+    §2.6에서 기질별 생분해도를 막는 직접 원인이 <b>기저항과의 교환</b>으로 확인됐다.
+    기저항을 독립적으로 고정하면 생분해도가 풀릴 수 있으므로, 투입이 급감한 구간을 찾아
+    지렛대로 삼았다. 투입이 줄면 기질 유래 메탄은 감쇠하지만 기저항은 남기 때문이다.</p>
+
+  <div class="card" style="padding:0;overflow-x:auto">
+  <table id="epTable">
+    <thead><tr><th>저부하 구간</th><th>지속</th><th>투입 수준</th><th>직전 25일 가스</th><th>구간 가스</th><th>변화</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+  <p class="tblnote">60일 이동중앙값 대비 70% 미만이 3일 이상 지속된 구간. 2020-06-16~17은 투입이 0인 날인데도
+    가스가 6,089·6,770 ㎥/d 나왔다 — 기저항의 정성적 증거이나, 이틀로는 잔류 기질과 구분되지 않는다.</p>
+
+  <div class="grid2">
+    <div class="chart" id="chEvent">
+      <div class="ct">이벤트 스터디 — 저부하 시작일 정렬</div>
+      <div class="cs">직전 25일 평균 = 100. 투입이 49%까지 떨어질 때 가스는 57.5%까지만 내려간다.</div>
+      <div class="legend">
+        <span class="k"><span class="sw" style="background:var(--s-model)"></span>투입량</span>
+        <span class="k"><span class="sw" style="background:var(--s-actual)"></span>바이오가스</span>
+      </div>
+      <div class="cbody"></div>
+    </div>
+    <div class="chart" id="chExtrap">
+      <div class="ct">기질 잠재량 구간별 관측 메탄 — S→0 외삽</div>
+      <div class="cs">x축 기질 유래 잠재 메탄 S(㎥/d), y축 관측 메탄. 하위 구간의 직선을 0까지 외삽한 절편이 기저항이다.</div>
+      <div class="legend">
+        <span class="k"><span class="swd" style="background:var(--s-actual)"></span>구간 평균</span>
+        <span class="k"><span class="sw" style="background:var(--s-model)"></span>하위 4구간 외삽</span>
+      </div>
+      <div class="cbody"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table id="baseEstTable">
+        <thead><tr><th>추정 방법</th><th>기저항 (㎥CH₄/d)</th><th>평균 메탄 대비</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table id="bdBaseTable">
+        <thead><tr><th>기저항 가정</th><th>음폐수 BD</th><th>가축분뇨 BD</th><th>음식물 BD</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="note" id="baseNote"></div>
+
   <h3>2.7 예측 계산기 — 반입 조성별 기대 메탄생성량</h3>
   <div class="card">
     <p style="font-size:13.5px;color:var(--ink2);margin-top:0">
@@ -600,6 +652,7 @@ const FS = __FS_JSON__;
 const CU = __CU_JSON__;
 const SK = __SK_JSON__;
 const ID = __ID_JSON__;
+const BL = __BL_JSON__;
 
 /* ---------- 공통 유틸 ---------- */
 const $ = s => document.querySelector(s);
@@ -1416,7 +1469,7 @@ $('#diagBtn').addEventListener('click',()=>{
     ['M4','모델링','<b>불확실성 정량화 부족</b>','성능 지표 대부분이 점추정이다. 부트스트랩은 생분해도에만 적용했다.','전 지표에 블록 부트스트랩 신뢰구간 부여'],
     ['M5','모델링','<b>모델 간 표본 불일치</b>','실측일 기준 모델(n≈1,265)과 전체일 기준 모델(n≈2,086)의 R²를 나란히 비교했다. 엄밀히는 직접 비교가 성립하지 않는다.','공통 표본으로 재평가한 비교표 별도 작성'],
     ['M6','모델링','<b>투입량의 내생성</b>','feed_AB는 운전자가 가스 생산 목표에 맞춰 조정할 수 있는 변수다. 가스→투입의 역인과 경로를 배제하지 못했다.','운전 규칙 확인, 또는 투입 결정이 외생적인 구간 식별'],
-    ['B1','생물공정','<b>기저항의 정체 불명</b>',`추정 기저항 ${fmt(CB.boot.base.median)} ㎥/d로 메탄의 ${CB.boot.base.share_pct}%를 차지하는데 그 실체가 확인되지 않았다. 이것이 기질별 생분해도 식별을 막는 직접 원인이다.`,'투입 급감·중단 구간 확보(정비 기간 활용). 후보: 소화조 축적물의 완만한 분해, 반송 슬러지, 모델 구조 오류'],
+    ['B1','생물공정','<b>기저항의 정체 — 부분 해결</b>',`§2.7의 저부하 구간 분석으로 크기는 좁혔다(회귀 ${fmt(BL.weighted['전체'].base)} → 외삽 ${fmt(BL.summary.median)} ㎥/d, 메탄의 약 20%). 그러나 <b>실체는 여전히 미확인</b>이며, 감쇠 점근선으로 직접 관측하려면 ${Math.max(...Object.values(BL.decay_feasibility.days_to_10pct))}일 연속 저부하가 필요한데 관측된 최장 구간은 ${BL.decay_feasibility.max_observed_episode}일뿐이다. 저부하 표본이 2018년 고분산 국면에 40% 편중된 것도 한계다.`,'정비 등으로 2주 이상 저부하가 발생하면 즉시 일별 가스·성상 집중 계측. 후보: 소화조 축적물의 완만한 분해, 반송 슬러지, 모델 구조 오류'],
     ['B2','생물공정','<b>암모니아 저해가 모델에 없음</b>','FAN 410 mg/L는 명확한 저해 구간인데 생분해도를 상수로 두었다. 실제로는 저해 수준에 따라 시변한다.','NH₃-N 측정 재개 후 ADM1형 저해항 I=1/(1+FAN/K_I) 도입'],
     ['B3','생물공정','<b>기질 조성의 근거가 약함</b>','탄수화물·단백질·지질 분율을 문헌 범위에서 선택했다. 영천 실측이 아니다. 산발효조 TN(5,247 mg/L)으로 단백질 분율을 역산할 수 있는데 하지 않았다.','TN 기반 단백질 분율 역산, 기질별 원소분석 의뢰'],
     ['B4','생물공정','<b>협잡물 제거의 기질별 차이 미반영</b>','반입 210 t/d → 투입 197 t/d에서 제거되는 13 t/d를 기질 공통 비율로 처리했다. 실제로는 음식물의 비닐·이물 제거율이 훨씬 높을 것이다.','전처리 단계별 물질수지 확보'],
@@ -1439,6 +1492,120 @@ $('#diagBtn').addEventListener('click',()=>{
   ].map(r=>`<tr><td class="c"><b>${r[0]}</b></td><td style="text-align:left">${r[1]}</td>`+
     `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">${r[2]}</td>`+
     `<td style="text-align:left;font-size:12.5px">${r[3]}</td></tr>`).join('');
+})();
+
+
+/* ---------- §2.7 기저항 분해 ---------- */
+(function(){
+  const NMK={foodww:'음폐수',manure:'가축분뇨',food:'음식물'};
+  $('#epTable tbody').innerHTML=BL.episodes.map(e=>
+    `<tr><td>${e.start} ~ ${e.end}${e.start.startsWith('2018')?' <span style="color:var(--muted);font-size:11px">※2018 고분산 국면</span>':''}</td>`+
+    `<td class="c">${e.n}일</td><td>${(e.ratio*100).toFixed(0)}%</td>`+
+    `<td>${fmt(e.pre_gas)}</td><td>${fmt(e.in_gas)}</td>`+
+    `<td style="color:${e.drop_pct<-30?'var(--crit)':'var(--ink2)'}">${e.drop_pct}%</td></tr>`).join('');
+
+  const S=BL.summary, E=BL.extrap, W=BL.weighted;
+  $('#baseEstTable tbody').innerHTML=[
+    ['전체 회귀 (지렛대 없음)',W['전체'].base,true],
+    ['저부하 하위 20% 회귀',W['저부하 하위 20%'].base,false],
+    ['저부하 하위 10% 회귀',W['저부하 하위 10%'].base,false],
+    ['구간 외삽 — 하위 4구간',E.low4_intercept,false],
+    ['구간 외삽 — 전 구간',E.all_intercept,false],
+    ['<b>동역학 가정 민감도 중앙값</b>',S.median,false],
+  ].map(r=>`<tr${r[0].startsWith('<b>')?' class="hl"':''}><td style="text-align:left">${r[0]}</td>`+
+    `<td><b>${fmt(r[1])}</b></td><td>${(r[1]/S.mean_ch4*100).toFixed(0)}%</td></tr>`).join('');
+
+  const BS=BL.bd_by_base, LIT={foodww:0.82,manure:0.45,food:0.69};
+  $('#bdBaseTable tbody').innerHTML=Object.entries(BS).map(([tag,v])=>
+    `<tr${tag===BL.closest_to_lit?' class="hl"':''}><td style="text-align:left">${tag}</td>`+
+    ['foodww','manure','food'].map(k=>{
+      const x=v[k];
+      return `<td>${x.median.toFixed(2)} <span style="color:var(--muted);font-size:11px">[${x.ci[0].toFixed(2)},${x.ci[1].toFixed(2)}]</span>`+
+        `${x.identified?' <span style="color:var(--goodtxt)">✓</span>':' <span style="color:var(--crit)">✗</span>'}</td>`;
+    }).join('')+`</tr>`).join('')+
+    `<tr style="background:#f1f0ec"><td style="text-align:left"><i>문헌값</i></td>`+
+    ['foodww','manure','food'].map(k=>`<td><i>${LIT[k].toFixed(2)}</i></td>`).join('')+`</tr>`;
+
+  const F=BL.decay_feasibility, Y=BL.lowload_year_mix;
+  const y18=Y.low10['2018']||0, ytot=Object.values(Y.low10).reduce((a,b)=>a+b,0);
+  $('#baseNote').innerHTML=
+    `<b>결과 — 기저항은 회귀 추정보다 작다.</b> 지렛대 없이 전 구간을 회귀하면 ${fmt(W['전체'].base)} ㎥CH₄/d
+     (평균 메탄의 ${(W['전체'].base/S.mean_ch4*100).toFixed(0)}%)가 나오지만, 저부하 구간으로 좁힐수록
+     ${fmt(W['저부하 하위 20%'].base)} → ${fmt(W['저부하 하위 10%'].base)} ㎥/d로 내려간다.
+     구간 외삽은 ${fmt(E.low4_intercept)}(하위 4구간) / ${fmt(E.all_intercept)}(전 구간),
+     동역학 가정(HRT 6~40.5일, k×0.5~2.0)을 흔든 민감도 범위는 ${fmt(S.range[0])}~${fmt(S.range[1])}, 중앙 ${fmt(S.median)} ㎥/d다.
+     <b>기저항은 메탄의 30%가 아니라 약 20%(1,400 ㎥/d) 수준</b>으로 보는 것이 타당하며,
+     그만큼 기질 유래 기여가 크다는 뜻이다.
+     <br><br><b>생분해도는 부분적으로만 풀렸다.</b> 기저항을 낮춰 고정할수록 생분해도가 문헌값에 접근한다 —
+     음폐수 0.59 → 0.76(문헌 0.82), 음식물 0.00 → 0.43(문헌 0.69)으로 개선되고 기저 0에서는
+     <b>음식물이 처음으로 식별</b>된다(CI 0.02~0.75). 그러나 <b>가축분뇨는 모든 시나리오에서 상한 1.00에 붙어</b>
+     문헌 0.45와 크게 어긋난다. 분뇨 열이 실제 기여가 아니라 다른 변동(계절성·조성 오차)을 대리하고 있을
+     가능성이 있으며, 가정한 분뇨 COD 농도(50 kg/t)가 과소평가됐을 수도 있다.
+     <br><br><b>결정적 검증은 여전히 불가능하다.</b> 감쇠 점근선으로 기저항을 직접 관측하려면
+     가장 느린 기질(가축분뇨, 유효 시상수 ${F.tau_eff.manure}일) 기준 <b>최소 ${Math.max(...Object.values(F.days_to_10pct))}일 연속 저부하</b>가 필요한데,
+     관측된 최장 구간은 ${F.max_observed_episode}일로 그 시점 잔여가 ${F.residual_at_max}%다.
+     <br><br><b>한계 — 저부하 표본이 2018년에 편중됐다.</b> 저부하 하위 10%(${ytot}일) 중 ${y18}일(${(y18/ytot*100).toFixed(0)}%)이
+     2018년으로, 전체 비중 ${(Y.all['2018']/Object.values(Y.all).reduce((a,b)=>a+b,0)*100).toFixed(0)}%보다 크게 높다.
+     2018년은 가스 변동계수 36.8%의 고분산 국면(시설 안정화 기간으로 추정)이므로,
+     저부하 기반 추정치에는 그 국면의 특성이 섞여 있을 수 있다.`;
+
+  // 이벤트 스터디 차트
+  (function(){
+    const el=$('#chEvent'), body=el.querySelector('.cbody');
+    const ks=Object.keys(BL.event_study).map(Number).sort((a,b)=>a-b);
+    const W_=700,H_=250,mL=44,mR=14,mT=10,mB=28,iw=W_-mL-mR,ih=H_-mT-mB;
+    const xs=o=>mL+(o-ks[0])/(ks[ks.length-1]-ks[0])*iw;
+    const lo=40,hi=135, ys=v=>mT+(1-(v-lo)/(hi-lo))*ih;
+    const NS='http://www.w3.org/2000/svg';
+    const svg=document.createElementNS(NS,'svg');
+    svg.setAttribute('viewBox',`0 0 ${W_} ${H_}`);svg.setAttribute('width','100%');svg.style.display='block';
+    const add=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);svg.appendChild(e);return e;};
+    for(const t of [50,75,100,125]){
+      add('line',{x1:mL,x2:W_-mR,y1:ys(t),y2:ys(t),stroke:'var(--grid)','stroke-width':1});
+      add('text',{x:mL-8,y:ys(t)+4,'text-anchor':'end','font-size':11,fill:'var(--muted)'}).textContent=t+'%';
+    }
+    add('line',{x1:xs(0),x2:xs(0),y1:mT,y2:mT+ih,stroke:'var(--axis)','stroke-width':1.4,'stroke-dasharray':'4 3'});
+    add('text',{x:xs(0)+4,y:mT+12,'font-size':10.5,fill:'var(--ink2)'}).textContent='저부하 시작';
+    for(const o of [-10,-5,0,5,10,15,20,25]) if(o>=ks[0]&&o<=ks[ks.length-1])
+      add('text',{x:xs(o),y:H_-8,'text-anchor':'middle','font-size':11,fill:'var(--muted)'}).textContent='D'+(o>=0?'+':'')+o;
+    for(const s_ of [{k:'feed',c:'var(--s-model)'},{k:'gas',c:'var(--s-actual)'}]){
+      let p='',pen=false;
+      ks.forEach(o=>{const v=BL.event_study[o][s_.k]; if(v==null){pen=false;return;}
+        p+=(pen?'L':'M')+xs(o).toFixed(1)+' '+ys(v).toFixed(1); pen=true;});
+      add('path',{d:p,fill:'none',stroke:s_.c,'stroke-width':2,'stroke-linejoin':'round'});
+    }
+    body.appendChild(svg);
+  })();
+
+  // 외삽 차트
+  (function(){
+    const el=$('#chExtrap'), body=el.querySelector('.cbody');
+    const B=BL.bins, E=BL.extrap;
+    const W_=700,H_=250,mL=52,mR=14,mT=10,mB=30,iw=W_-mL-mR,ih=H_-mT-mB;
+    const xmax=Math.max(...B.map(b=>b.S))*1.05, ymax=Math.max(...B.map(b=>b.y))*1.1;
+    const xs=v=>mL+v/xmax*iw, ys=v=>mT+(1-v/ymax)*ih;
+    const NS='http://www.w3.org/2000/svg';
+    const svg=document.createElementNS(NS,'svg');
+    svg.setAttribute('viewBox',`0 0 ${W_} ${H_}`);svg.setAttribute('width','100%');svg.style.display='block';
+    const add=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);svg.appendChild(e);return e;};
+    for(const t of niceTicks(0,ymax,4)){
+      add('line',{x1:mL,x2:W_-mR,y1:ys(t),y2:ys(t),stroke:'var(--grid)','stroke-width':1});
+      add('text',{x:mL-8,y:ys(t)+4,'text-anchor':'end','font-size':11,fill:'var(--muted)'}).textContent=fmt(t);
+    }
+    for(const t of niceTicks(0,xmax,5))
+      add('text',{x:xs(t),y:H_-10,'text-anchor':'middle','font-size':11,fill:'var(--muted)'}).textContent=fmt(t);
+    add('line',{x1:mL,x2:W_-mR,y1:mT+ih,y2:mT+ih,stroke:'var(--axis)','stroke-width':1});
+    add('line',{x1:xs(0),y1:ys(E.low4_intercept),x2:xs(xmax),y2:ys(E.low4_intercept+E.low4_slope*xmax),
+      stroke:'var(--s-model)','stroke-width':1.8,'stroke-dasharray':'6 4'});
+    add('circle',{cx:xs(0),cy:ys(E.low4_intercept),r:5,fill:'var(--s-model)',stroke:'var(--surface)','stroke-width':2});
+    add('text',{x:xs(0)+12,y:ys(E.low4_intercept)-14,'font-size':11.5,fill:'var(--ink)','font-weight':600})
+      .textContent='기저항 '+fmt(E.low4_intercept)+' ㎥/d';
+    B.forEach(b=>{ add('circle',{cx:xs(b.S),cy:ys(b.y),r:4,fill:'var(--s-actual)',
+      stroke:'var(--surface)','stroke-width':1.5}).appendChild(
+      (()=>{const t=document.createElementNS(NS,'title');t.textContent=`S ${fmt(b.S)} → 메탄 ${fmt(b.y)} (투입 ${b.feed} t/d, n=${b.n})`;return t;})()); });
+    add('text',{x:W_-mR,y:mT+ih-8,'text-anchor':'end','font-size':11,fill:'var(--muted)'}).textContent='기질 잠재량 S (㎥CH₄/d) →';
+    body.appendChild(svg);
+  })();
 })();
 
 renderCharts();
