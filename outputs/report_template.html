@@ -114,6 +114,7 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   <a href="#s3">3. 소화조 상태 진단</a>
   <a href="#s4">4. 상태 점검 프로그램</a>
   <a href="#s5">5. 진단 규칙·유의사항</a>
+  <a href="#s6">6. 자체 감사</a>
 </nav>
 
 <!-- ============================================================ 1. 현황 -->
@@ -253,8 +254,44 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
     <div class="cbody"></div>
   </div>
 
-  <h3>2.6 식별가능성 한계 <span style="font-weight:400;font-size:13px;color:var(--muted)">— 정직하게 남기는 결과</span></h3>
+  <h3>2.6 기질별 생분해도 분리 재시도 <span style="font-weight:400;font-size:13px;color:var(--muted)">— 앞선 판정의 정정</span></h3>
+  <div class="card" style="border-left:4px solid var(--crit)">
+    <p style="font-size:13.8px;margin-top:0">
+      <b>앞선 "반입 조성 변동이 작아 분리 불가"라는 진단은 틀렸다.</b> 연평균만 보고 내린 판단이었다.
+      일별로 보면 가축분뇨 비중은 표준편차 19.5%p로 크게 흔들리고, 하위 10%(&lt;12.6%)와
+      상위 10%(&gt;54.4%) 구간이 각각 185일씩 존재한다. 설계행렬 조건수도 1.3,
+      열 간 상관 0.17~0.22로 <b>공선성은 문제가 아니었다</b>.
+    </p>
+    <div style="overflow-x:auto"><table id="varTable">
+      <thead><tr><th>기질</th><th>일별 평균</th><th>일별 표준편차</th><th>10~90% 구간</th><th>연평균 범위</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">원인 추적 — 세 가지를 차례로 검증했다</h3>
+    <div style="overflow-x:auto"><table id="diagSteps">
+      <thead><tr><th>가설</th><th>검증 방법</th><th>결과</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table id="structTable">
+        <thead><tr><th>모델 구조</th><th>사고학습 R²</th><th>평가 R²</th><th>기저항</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table id="bdTable">
+        <thead><tr><th>기질</th><th>추정 BD</th><th>95% 신뢰구간</th><th>판정</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
   <div class="note" id="identNote"></div>
+
   <div class="card" style="padding:0;overflow-x:auto">
   <table id="yearShareTable">
     <thead><tr><th>연도</th><th colspan="3">반입 비율 (%)</th><th colspan="3">모델 메탄 기여율 (%)</th></tr>
@@ -262,9 +299,8 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
     <tbody></tbody>
   </table>
   </div>
-  <p class="tblnote">가축분뇨 반입 비중은 6년간 31.8% → 38.5%로 늘었으나, 모델상 메탄 기여율은 낮은 생분해도 때문에
-    10~12%에 머문다. 이는 "가축분뇨 비중 증가가 암모니아 축적을 통해 성능을 떨어뜨렸다"는 §3의 진단과
-    모순되지 않는다 — 분뇨는 <b>메탄 기여는 적으면서 질소 부하는 크게 늘리는</b> 기질이기 때문이다.</p>
+  <p class="tblnote">가축분뇨 반입 비중은 6년간 31.8% → 38.5%로 늘었으나 모델상 메탄 기여율은 10~12%에 머문다.
+    분뇨는 <b>메탄 기여는 적으면서 질소 부하는 크게 늘리는</b> 기질이며, 이는 §3의 만성 암모니아 저해 진단과 정합한다.</p>
 
   <h3>2.7 예측 계산기 — 반입 조성별 기대 메탄생성량</h3>
   <div class="card">
@@ -507,6 +543,47 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   </div>
 </section>
 
+<!-- ============================================================ 6. 감사 -->
+<section id="s6">
+  <h2><span class="no">6.</span>모델링 과정 자체 감사</h2>
+  <p class="h2sub">모델링 방법론과 생물공정 두 관점에서 이 리포트의 작업 과정을 점검한 결과다.
+    이미 수정한 결함과 아직 남아 있는 결함을 구분해 기록한다.</p>
+
+  <h3>6.1 발견해 수정한 결함</h3>
+  <div class="card" style="padding:0;overflow-x:auto">
+  <table id="fixedTable">
+    <thead><tr><th>#</th><th>관점</th><th>결함</th><th>증거</th><th>조치와 효과</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+
+  <h3>6.2 남아 있는 결함 — 미해결</h3>
+  <div class="card" style="padding:0;overflow-x:auto">
+  <table id="openTable">
+    <thead><tr><th>#</th><th>관점</th><th>결함</th><th>영향</th><th>필요한 조치</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <b>가장 무거운 항목은 M1(평가셋 오염)이다.</b> 이 리포트는 여러 모델 계열을 순차적으로 시도했고,
+    그때마다 2023년 평가 성능을 확인했다. 각 계열 안에서는 "평가는 최종 1회"라는 규칙을 지켰지만,
+    <b>계열 전체를 놓고 보면 평가셋을 여러 번 들여다본 다중 비교</b>다. 따라서 보고된 평가 R²는
+    낙관 편향을 포함하며, 특히 여러 계열 중 최고값(예: COD 기준 0.715)은 그 편향이 가장 크다.
+    엄밀한 성능 판정에는 <b>2024년 이후의 완전히 새로운 데이터</b>가 필요하다.
+    사고학습 구간(2022) 성능이 평가 구간보다 일관되게 낮았다는 점은, 2023년이 우연히 예측하기 쉬운
+    해였을 가능성도 시사한다.
+  </div>
+
+  <h3>6.3 개선 우선순위</h3>
+  <div class="card" style="padding:0;overflow-x:auto">
+  <table id="prioTable">
+    <thead><tr><th>순위</th><th>항목</th><th>기대 효과</th><th>비용</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+</section>
+
 <footer>
   자료: 영천BGP 운영관리현황 워크북 2018–2023 통합 정제 데이터(2,086일 × 61항목) ·
   년계는 사업소운영일지와 교차검증 일치 확인 · 수치 재현: <code>src/analysis_report.py</code>
@@ -522,6 +599,7 @@ const ST = __STATE_JSON__;
 const FS = __FS_JSON__;
 const CU = __CU_JSON__;
 const SK = __SK_JSON__;
+const ID = __ID_JSON__;
 
 /* ---------- 공통 유틸 ---------- */
 const $ = s => document.querySelector(s);
@@ -1050,22 +1128,62 @@ const featTxt=f=>{ if(!f) return ''; const [v,t]=f.split('@'); return `${NAME[v]
     `<td>${fmt(r[1].test.RMSE)}</td><td>${r[1].test.MAPE.toFixed(1)}%</td>`+
     `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">${r[2]}</td></tr>`).join('');
 
-  // 2.6 식별가능성
-  const I=SK.ident, BF=SK.bd_fit;
+  // 2.6 식별 재시도
+  const NMK={foodww:'음폐수',manure:'가축분뇨',food:'음식물'};
+  const V=ID.variation, CB=ID.cod_basis;
+  const am=Object.values(V.annual_mean_manure);
+  $('#varTable tbody').innerHTML=['foodww','manure','food'].map(k=>{
+    const st=SK.intake_share_by_year, vals=Object.values(st).map(o=>o[k]);
+    const rng=`${Math.min(...vals).toFixed(1)}~${Math.max(...vals).toFixed(1)}%`;
+    const dstd=V.daily_std[k];
+    const q={foodww:'39.6~81.0%',manure:'12.6~54.4%',food:'4.3~11.9%'}[k];
+    const mean={foodww:59.1,manure:34.7,food:7.8}[k];
+    return `<tr${k==='manure'?' class="hl"':''}><td><b>${NMK[k]}</b></td><td>${mean}%</td>`+
+      `<td><b>${dstd.toFixed(1)}%p</b></td><td>${q}</td><td>${rng}</td></tr>`;
+  }).join('');
+
+  const S1=ID.structure['RTD만 (앞 모델)'], S2=ID.structure['1차분해+희석 (수정)'];
+  $('#diagSteps tbody').innerHTML=[
+    ['① 반입 조성 변동이 부족하다','일별 비율 분포·설계행렬 조건수·열 간 상관',
+     `<span class="badge crit">기각</span> 일별 표준편차 19.5%p, 조건수 1.3, 상관 0.17~0.22 — 공선성 아님`],
+    ['② 모델 구조가 틀렸다','체류시간 분포만 쓴 커널 vs 1차분해+희석 커널 비교',
+     `<span class="badge ok">확인</span> RTD 커널은 가중치 합이 1이라 HRT를 바꿔도 총량 불변 — 전환율 개념이 없었음. 수정 후 평가 R² ${S1.test.R2.toFixed(3)} → ${S2.test.R2.toFixed(3)}`],
+    ['③ 총량 자체가 안 맞는다','관측 수율을 열역학 상한과 대조',
+     `<span class="badge ok">확인</span> VS 기준 수율 ${CB.yield_check.VS_median} = 이론(0.57)의 131%, ${CB.yield_check.VS_exceed_pct}%의 날이 초과. COD 기준은 ${CB.yield_check.COD_median}로 초과 ${CB.yield_check.COD_exceed_pct}%만`],
+  ].map(r=>`<tr><td style="text-align:left"><b>${r[0]}</b></td>`+
+    `<td style="text-align:left;font-size:12.5px">${r[1]}</td>`+
+    `<td style="text-align:left;font-size:12.5px">${r[2]}</td></tr>`).join('');
+
+  $('#structTable tbody').innerHTML=[
+    ['VS 기준 · RTD 커널 (초기)',S1.valid.R2,S1.test.R2,S1.base],
+    ['VS 기준 · 1차분해+희석',S2.valid.R2,S2.test.R2,S2.base],
+    ['<b>COD 기준 · 1차분해+희석</b>',CB.valid,CB.test,CB.base],
+  ].map((r,i)=>`<tr${i===2?' class="hl"':''}><td style="text-align:left">${r[0]}</td>`+
+    `<td>${r[1].toFixed(3)}</td><td><b>${r[2].toFixed(3)}</b></td><td>${fmt(r[3])}</td></tr>`).join('');
+
+  $('#bdTable tbody').innerHTML=['foodww','manure','food'].map(k=>{
+    const b=CB.boot[k];
+    const ok=b.identified;
+    return `<tr${ok?' class="hl"':''}><td>${NMK[k]}</td><td><b>${b.median.toFixed(2)}</b></td>`+
+      `<td>[${b.ci[0].toFixed(2)}, ${b.ci[1].toFixed(2)}]</td>`+
+      `<td style="text-align:left">${ok?'<span class="badge ok">식별됨</span>':
+        `<span class="badge crit">식별 불가</span> 경계 접촉 ${Math.max(b.at0,b.at1).toFixed(0)}%`}</td></tr>`;
+  }).join('');
+
+  const P=ID.profile||null;
   $('#identNote').innerHTML=
-    `<b>기질별 생분해도는 이 데이터로 분리되지 않는다.</b> BD를 0~1 제약 하에 추정하면
-     음폐수 ${BF.foodww.toFixed(2)}(상한에 붙음) · 가축분뇨 ${BF.manure.toFixed(2)} · 음식물 ${BF.food.toFixed(2)}로,
-     문헌값(0.82 / 0.45 / 0.69)과 크게 어긋나고 분뇨 값은 생물학적으로 비현실적이다.
-     원인은 <b>반입 조성의 변동 부족과 저류조 평활화</b>다 — 6년간 음폐수 비중은 53.6~61.2%,
-     가축분뇨는 31.8~38.5% 범위에서만 움직였고, 저류조를 지나며 그 변동마저 지워진다.
-     세 기질의 투입 시계열이 거의 비례하게 되어(설계행렬 조건수 ${I.cond}) 개별 기여를 분리할 수 없다.
-     <br><br>이는 인계 문서가 기록한 <b>AM2 2단계 파라미터 식별 실패</b>와 같은 구조의 문제이며,
-     "일별 운영 데이터로는 기전 파라미터를 분해할 수 없다"는 한계가 여기서도 재현된 것이다.
-     <br><br><b>따라서 권고는 이렇다.</b> 기질별 수율은 <u>화학양론과 문헌 BD로 고정</u>하고(§2.2),
-     데이터로는 <u>총량과 지연 구조만</u> 보정한다. BD를 데이터에 맞추면 평가 R²는
-     ${SK.final.test.R2.toFixed(3)}까지 오르지만(문헌 고정 시 ${SK.final_lit.test.R2.toFixed(3)}),
-     그 계수는 물리적으로 해석할 수 없다. <b>본 리포트의 기여율·차트는 모두 문헌 BD 고정 모델 기준</b>이다. <b>분리 검증에는 기질별 단독 투입 시험이나
-     반입 조성을 의도적으로 크게 바꾸는 개입 실험이 필요하다.</b>`;
+    `<b>결론 — 부분적으로만 분리된다.</b> COD 기준·1차분해 구조로 바꾼 뒤
+     <b>음폐수의 생분해도는 ${CB.boot.foodww.median.toFixed(2)}
+     (95% CI ${CB.boot.foodww.ci[0].toFixed(2)}~${CB.boot.foodww.ci[1].toFixed(2)})로 경계를 벗어나 식별</b>됐다.
+     반면 가축분뇨는 CI가 [0.00, 1.00]으로 전 구간을 덮고, 음식물은 부트스트랩의 74%에서 하한에 붙는다.
+     고대비 구간(조성 대비 상위 30~50%)만 학습해도 개선되지 않았다 — 표본이 줄어 신뢰구간이 오히려 넓어졌다.
+     <br><br><b>남은 두 기질이 식별되지 않는 이유는 기저항과의 교환이다.</b> 가축분뇨 BD를 0에서 1까지 강제로
+     바꿔가며 나머지를 최적화하면, 학습 R² 변동폭이 0.003에 그치는 대신 기저항이 정확히 반대로 움직여
+     보상한다(2,762 → 2,156 ㎥/d). 기저항이 메탄의 ${CB.boot.base.share_pct}%를 차지하는 한
+     어떤 개별 BD도 데이터만으로는 고정되지 않는다. 음식물은 반입 비중이 7.8%로 작아 신호가 특히 약하다.
+     <br><br><b>분리 검증에 필요한 것</b>: ① 기저항의 정체를 밝히는 투입 급감·중단 구간 확보
+     ② 기질별 단독 BMP 시험으로 BD를 외부에서 고정 ③ 반입 조성을 의도적으로 크게 바꾸는 개입 실험.
+     현재로서는 <b>음폐수 BD만 데이터로 확정하고 나머지는 문헌값으로 고정</b>하는 것이 타당하다.`;
 
   const YS=SK.intake_share_by_year, MS=SK.share_by_year;
   $('#yearShareTable tbody').innerHTML=Object.keys(MS).map(y=>
@@ -1260,6 +1378,68 @@ $('#diagBtn').addEventListener('click',()=>{
       <div style="font-size:12.5px;color:var(--muted);padding:2px 2px 8px">${r[3]}</div>`;
   }).join('') + `<div class="verdict ${worst}"><b>종합 판정 — ${{ok:'정상',warn:'주의',crit:'이상'}[worst]}.</b> ${verdictText}</div>`;
 });
+
+
+/* ---------- §6 자체 감사 ---------- */
+(function(){
+  const CB=ID.cod_basis, S1=ID.structure['RTD만 (앞 모델)'], S2=ID.structure['1차분해+희석 (수정)'];
+  const fixed=[
+    ['F1','생물공정','<b>체류시간 분포와 반응속도를 혼동</b> — 소화조를 CSTR 체류시간 분포 g(τ)=(1/HRT)e<sup>−τ/HRT</sup>만으로 표현했다. 이 커널은 가중치 합이 1이라 HRT를 바꿔도 총 메탄량이 변하지 않는다.',
+     '반응공학의 기본인 전환율 X = k·HRT/(1+k·HRT)가 모델에 아예 없었다. HRT 민감도 분석이 사실상 평활화 효과만 측정하고 있었다.',
+     `1차분해+희석 dS/dt=(S<sub>in</sub>−S)/τ−kS 로 재유도, h(τ)=k·e<sup>−(1/τ+k)τ</sup>. 평가 R² ${S1.test.R2.toFixed(3)} → ${S2.test.R2.toFixed(3)}`],
+    ['F2','모델링','<b>"반입 조성 변동 부족"으로 오진</b> — 연평균(가축분뇨 33.6~37.4%)만 보고 변동이 작다고 판단했다.',
+     '일별 표준편차는 19.5%p이고 극단 구간이 각 185일 존재한다. 설계행렬 조건수 1.3, 열 간 상관 0.17~0.22로 공선성 문제가 아니었다.',
+     '집계 수준을 바꿔 재검증. 진단을 "조성 변동 부족"에서 "모델 구조 + 기저항 교환"으로 정정'],
+    ['F3','생물공정','<b>VS 기준의 열역학 상한 위반</b> — VS 부하로 화학양론 모델을 세웠으나 총량이 구조적으로 맞지 않았다.',
+     `관측 수율 ${CB.yield_check.VS_median} m³CH₄/kg VS는 혼합기질 이론 상한(0.57)의 131%이고 ${CB.yield_check.VS_exceed_pct}%의 날이 초과한다. DQ-08(VS/TS 0.80→0.70 계단)의 과소측정이 원인. 모든 BD를 1.0으로 밀어도 부족해 나머지가 전부 기저항으로 흘렀다.`,
+     `COD 기준 전환(초과일 ${CB.yield_check.COD_exceed_pct}%). 평가 R² ${S2.test.R2.toFixed(3)} → ${CB.test.toFixed(3)}, 음폐수 BD가 경계를 벗어나 식별됨`],
+    ['F4','모델링','<b>수율 타깃의 준-순환 특징</b> — 수율 = CH₄/(투입량×TS)인데 특징에 투입량·TS와 제거율을 넣었다.',
+     'TS 제거율과 유입 TS의 상관이 +0.909(소화액 TS는 거의 불변)로, 제거율이 사실상 분모의 대리변수였다. 유입 TS 분위 내로 층화하면 관계가 붕괴했다.',
+     '분모 성분과 제거율 계열을 특징에서 전면 배제'],
+    ['F5','모델링','<b>특징 선택이 사고학습 구간에 과적합</b> — 단일 연도(2022) R²로 658개 후보를 탐욕 선택했다.',
+     '사고학습 0.854 → 평가 0.238로 붕괴. 선택 자체가 그 해에 맞춰진 결과.',
+     '학습구간 내 확장창 3폴드 평균으로 선택 기준 교체'],
+    ['F6','모델링','<b>누적-누적 회귀의 허위 R²</b> — 누적량끼리 회귀하면 R²가 자동으로 1에 가까워진다.',
+     '메탄과 무관한 난수의 누적합으로 회귀해도 R²=0.560이 나왔다(실제 누적끼리는 0.996, 일별은 0.298).',
+     '누적 곡선은 R² 대신 기울기로만 해석, 예측은 창 누적 위에서만 수행'],
+  ];
+  $('#fixedTable tbody').innerHTML=fixed.map(r=>
+    `<tr><td><b>${r[0]}</b></td><td class="c">${r[1]}</td>`+
+    `<td style="text-align:left;font-size:12.5px">${r[2]}</td>`+
+    `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">${r[3]}</td>`+
+    `<td style="text-align:left;font-size:12.5px">${r[4]}</td></tr>`).join('');
+
+  const open_=[
+    ['M1','모델링','<b>평가셋 오염 (다중 비교)</b>','여러 모델 계열을 시도하며 2023 평가 성능을 반복 확인했다. 계열 내에서는 1회 원칙을 지켰으나 전체로 보면 다중 비교이며, 보고된 평가 R²는 낙관 편향을 포함한다.','2024년 이후 신규 데이터로 재평가. 그 전까지 평가 R²는 상한으로 해석'],
+    ['M2','모델링','<b>평가셋이 단일 연도·9개월</b>','2023-09-18 이후 무자료(DQ-01)라 10~12월이 없다. 학습셋은 전 계절을 포함해 계절 구성이 불일치한다.','최종본 워크북 확보 또는 연도 교차 평가'],
+    ['M3','모델링','<b>타깃 결측의 구조성</b>','CH₄ 생성량은 메탄함량 측정일(60.6%)에만 존재하고 주말 측정률은 ~1%다. 보고된 모든 성능은 사실상 평일 성능이며 주말 일반화는 검증되지 않았다.','주말 가스 계측 확보 또는 주말 성능의 별도 명시'],
+    ['M4','모델링','<b>불확실성 정량화 부족</b>','성능 지표 대부분이 점추정이다. 부트스트랩은 생분해도에만 적용했다.','전 지표에 블록 부트스트랩 신뢰구간 부여'],
+    ['M5','모델링','<b>모델 간 표본 불일치</b>','실측일 기준 모델(n≈1,265)과 전체일 기준 모델(n≈2,086)의 R²를 나란히 비교했다. 엄밀히는 직접 비교가 성립하지 않는다.','공통 표본으로 재평가한 비교표 별도 작성'],
+    ['M6','모델링','<b>투입량의 내생성</b>','feed_AB는 운전자가 가스 생산 목표에 맞춰 조정할 수 있는 변수다. 가스→투입의 역인과 경로를 배제하지 못했다.','운전 규칙 확인, 또는 투입 결정이 외생적인 구간 식별'],
+    ['B1','생물공정','<b>기저항의 정체 불명</b>',`추정 기저항 ${fmt(CB.boot.base.median)} ㎥/d로 메탄의 ${CB.boot.base.share_pct}%를 차지하는데 그 실체가 확인되지 않았다. 이것이 기질별 생분해도 식별을 막는 직접 원인이다.`,'투입 급감·중단 구간 확보(정비 기간 활용). 후보: 소화조 축적물의 완만한 분해, 반송 슬러지, 모델 구조 오류'],
+    ['B2','생물공정','<b>암모니아 저해가 모델에 없음</b>','FAN 410 mg/L는 명확한 저해 구간인데 생분해도를 상수로 두었다. 실제로는 저해 수준에 따라 시변한다.','NH₃-N 측정 재개 후 ADM1형 저해항 I=1/(1+FAN/K_I) 도입'],
+    ['B3','생물공정','<b>기질 조성의 근거가 약함</b>','탄수화물·단백질·지질 분율을 문헌 범위에서 선택했다. 영천 실측이 아니다. 산발효조 TN(5,247 mg/L)으로 단백질 분율을 역산할 수 있는데 하지 않았다.','TN 기반 단백질 분율 역산, 기질별 원소분석 의뢰'],
+    ['B4','생물공정','<b>협잡물 제거의 기질별 차이 미반영</b>','반입 210 t/d → 투입 197 t/d에서 제거되는 13 t/d를 기질 공통 비율로 처리했다. 실제로는 음식물의 비닐·이물 제거율이 훨씬 높을 것이다.','전처리 단계별 물질수지 확보'],
+    ['B5','생물공정','<b>HRT 12일의 물리적 근거</b>','설계 용적 8,000㎥ / 투입 197 t/d = 40.5일이다. 12일이 되려면 유효 용적이 설계의 30%여야 하는데 이는 극단적이다. 다만 수정 모델에서 반응속도 k와 HRT를 분리했으므로, 빠른 응답이 짧은 체류시간 때문인지 빠른 반응속도 때문인지는 이제 구분 가능하다.','추적자 시험(tracer test)으로 실제 유효 용적·RTD 측정'],
+    ['B6','생물공정','<b>온도 의존성 미반영</b>','분해속도 k는 Arrhenius 온도 의존이다. 38℃로 안정 유지되어(변동계수 2.3%) 영향이 작지만 모델에 명시하지 않았다.','온도 보정항 추가 또는 적용 범위 명시'],
+  ];
+  $('#openTable tbody').innerHTML=open_.map(r=>
+    `<tr><td><b>${r[0]}</b></td><td class="c">${r[1]}</td>`+
+    `<td style="text-align:left;font-size:12.5px">${r[2]}</td>`+
+    `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">${r[3]}</td>`+
+    `<td style="text-align:left;font-size:12.5px">${r[4]}</td></tr>`).join('');
+
+  $('#prioTable tbody').innerHTML=[
+    ['1','기저항 분해 — 투입 급감/중단 구간 확보','생분해도 식별의 유일한 경로. 이것이 풀리면 기질별 기여가 확정된다','정비 일정 활용, 추가 비용 없음'],
+    ['2','NH₃-N 주 1회 측정 재개','저해항 도입으로 시변 생분해도 모델링 가능. §3 진단의 전제이기도 하다','분석 주 1회'],
+    ['3','VS 기준 지표 전면 폐기, COD 기준 전환','열역학 상한 위반 해소. 이미 이 리포트에서 확인된 효과(평가 R² +0.14)','계산 방식 변경만'],
+    ['4','기질별 단독 BMP 시험','생분해도를 외부에서 고정해 모델 자유도를 줄인다','시료 3종 × 30일 배양'],
+    ['5','추적자 시험으로 유효 용적·RTD 측정','HRT 가정의 실증. 데드존 비율 확인','1회 시험'],
+    ['6','2024년 이후 데이터로 재평가','평가셋 오염(M1) 해소','데이터 확보만'],
+  ].map(r=>`<tr><td class="c"><b>${r[0]}</b></td><td style="text-align:left">${r[1]}</td>`+
+    `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">${r[2]}</td>`+
+    `<td style="text-align:left;font-size:12.5px">${r[3]}</td></tr>`).join('');
+})();
 
 renderCharts();
 </script>
