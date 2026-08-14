@@ -126,82 +126,105 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
 
 <!-- ============================================================ 2. 예측 -->
 <section id="s2">
-  <h2><span class="no">2.</span>메탄생성 예측 모델 — 누적(cumulative) 프레임</h2>
-  <p class="h2sub">시차 계열 대신 <b>누적량</b>으로 공정을 기술한다. 혐기소화에서 물리적으로 의미 있는 누적량은
-    ①반응조에 체류 중인 누적 유기물 ②창 누적 투입↔창 누적 생산(수율의 적분) ③누적 저해물질 노출량이다.</p>
+  <h2><span class="no">2.</span>기질별 화학양론 · 공정 지연 기반 메탄생성 예측</h2>
+  <p class="h2sub">반입된 <b>가축분뇨·음폐수·음식물</b>을 각각의 화학양론 수율로 환산하고,
+    반입에서 메탄생성까지의 공정 지연을 반영해 생산량을 예측한다.</p>
 
-  <div class="card" style="border-left:4px solid var(--crit)">
-    <h3 style="margin-top:0">2.1 먼저 확인할 것 — 누적-누적 회귀의 함정</h3>
-    <p style="font-size:13.5px;color:var(--ink2);margin-top:0">
-      누적 메탄과 누적 투입은 둘 다 단조증가하므로 회귀 R²가 자동으로 1에 가까워진다.
-      이 값은 성능이 아니다. 실제로 <b>메탄과 아무 관계도 없는 난수의 누적합</b>으로 회귀해도 같은 일이 벌어진다.</p>
-    <div style="overflow-x:auto"><table id="trapTable">
-      <thead><tr><th>회귀</th><th>R²</th><th>해석</th></tr></thead><tbody></tbody>
+  <div class="card" style="border-left:4px solid var(--accent)">
+    <h3 style="margin-top:0">2.1 전제 — 데이터의 날짜는 반입일이지 투입일이 아니다</h3>
+    <p style="font-size:13.8px;color:var(--ink2);margin-top:0">
+      마스터의 <code>date</code>는 유기물이 영천 처리장에 <b>반입된 날</b>이다. 반입은 당일 09~18시에
+      이뤄지고 곧바로 전처리로 들어가지만, 소화조에 도달하기까지는 저류·산발효 단계를 거친다.
+      또한 반입량 전량이 아니라 <code>feed_AB_tpd</code>에 명시된 톤만 소화조로 투입된다.
+      이 두 가지를 반영하지 않으면 <b>원인(반입)과 결과(가스)의 시점이 어긋난 채 회귀</b>하게 된다.
+    </p>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>단계</th><th>거동</th><th>체류시간 근거</th></tr></thead>
+      <tbody>
+        <tr><td>반입 → 전처리</td><td style="text-align:left">09~18시 반입, 즉시 투입. 협잡물 제거·농축</td>
+          <td style="text-align:left">당일 (반입 210 t/d → 소화조 투입 197 t/d)</td></tr>
+        <tr><td>여액저장조</td><td style="text-align:left">완전혼합 완충. 반입 변동을 평활화<br>(반입 변동계수 46.3% → 투입 17.3%)</td>
+          <td style="text-align:left"><b>유효용량 3일 이상</b> — 국립환경과학원 병합처리 설계지침</td></tr>
+        <tr><td>유기산화조(산발효)</td><td style="text-align:left">가수분해·산생성. VFA 형태로 전환되어 소화조로 이송</td>
+          <td style="text-align:left"><b>1~2일</b> — 2상 소화 산발효조 운전 사례<br>(지침 pH 4.5~6.5, 영천 실측 4.85 ✓)</td></tr>
+        <tr><td>혐기소화조</td><td style="text-align:left">메탄발효. 완전혼합 체류시간 분포 <code>g(τ)=(1/HRT)·e<sup>−τ/HRT</sup></code></td>
+          <td style="text-align:left"><b>HRT 12일</b> (이상적 조건 가정)<br>설계 용적 기준 40.5일과 별도</td></tr>
+      </tbody>
     </table></div>
     <p class="tblnote" style="margin-bottom:0">
-      → 누적 곡선은 R²가 아니라 <b>기울기(=실효 수율)</b>로만 해석하고, 예측 모델은 반드시
-      <b>창 누적</b>(구간 합) 위에서 세운다. 이 리포트의 모든 누적 모델은 30일 창 기준이다.</p>
+      → 문헌 사전 예측: 반입 → 소화조 투입 지연 <b>τ₀ ≈ 4~5일</b>(저류 3일 + 산발효 1~2일).
+      이 값을 데이터로 검증하는 것이 §2.4다.</p>
   </div>
 
-  <h3>2.2 누적 곡선의 기울기 — 정규화 기준에 따라 결론이 뒤집힌다</h3>
+  <h3>2.2 기질별 메탄 수율 — Buswell 화학양론</h3>
   <p style="font-size:13.5px;color:var(--ink2);margin-top:-4px">
-    연도별로 누적 투입 대비 누적 메탄을 회귀한 기울기다. 같은 데이터·같은 방법인데 무엇으로 정규화하느냐에 따라
-    6년 변화가 <b>+23%에서 −23%까지</b> 달라진다.</p>
-  <div class="card" style="padding:0;overflow-x:auto">
-  <table id="slopeTable">
-    <thead><tr><th>정규화 기준</th><th>2018</th><th>2019</th><th>2020</th><th>2021</th><th>2022</th><th>2023</th><th>6년 변화</th><th>판정</th></tr></thead>
-    <tbody></tbody>
-  </table>
+    C<sub>c</sub>H<sub>h</sub>O<sub>o</sub>N<sub>n</sub> + (c − h/4 − o/2 + 3n/4)H₂O
+    → (c/2 + h/8 − o/4 − 3n/8)CH₄ + (c/2 − h/8 + o/4 + 3n/8)CO₂ + nNH₃ &nbsp;&nbsp;
+    <b>B<sub>th</sub> = 22.414 × (c/2 + h/8 − o/4 − 3n/8) / 분자량</b> [m³CH₄/kg VS]</p>
+  <div class="grid2">
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table id="compTable">
+        <thead><tr><th>생화학 성분</th><th>분자식</th><th>분자량</th><th>CH₄ (mol)</th><th>B<sub>th</sub></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table id="subTable">
+        <thead><tr><th>기질</th><th colspan="3">조성 (VS 기준)</th><th>이론 수율</th><th>BD</th><th>실효 수율</th></tr>
+        <tr><th></th><th>탄수</th><th>단백</th><th>지질</th><th>m³CH₄/kg VS</th><th></th><th>m³CH₄/kg VS</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
-  <div class="note" id="slopeNote"></div>
+  <div class="note" id="subNote"></div>
 
-  <div class="chart" id="chCumCurve">
-    <div class="ct">누적 투입 대비 누적 메탄 — 연도별 기울기 변화</div>
-    <div class="cs">x축 누적 COD 투입량(천 t), y축 누적 메탄(백만 ㎥). §2.2에서 물질수지가 닫히는 유일한 기준으로 확인된 COD 기준이다. 기울기가 곧 실효 수율이며, 2018년 연장선(점선) 아래로 벌어질수록 전환효율이 떨어진 것이다.</div>
+  <h3>2.3 기질별 실제 투입량 산정</h3>
+  <div class="card">
+    <p style="font-size:13.8px;color:var(--ink2);margin-top:0">
+      반입 비율을 소화조 투입 톤에 적용해 기질별 실제 투입량을 산출한다. 반입 조성은 저류조를 지나며
+      섞이므로, 지연 τ₀와 혼합 시상수 τ_mix의 지수 가중으로 소화조 도달 조성을 계산한다.
+    </p>
+    <p style="font-size:14px;text-align:center;margin:14px 0">
+      투입<sub>i</sub>(t) = feed_AB(t) × r<sub>i</sub>(t−τ₀ 혼합)&nbsp;&nbsp;·&nbsp;&nbsp;
+      VS<sub>i</sub>(t) = 투입<sub>i</sub>(t) × VS함량<sub>i</sub>&nbsp;&nbsp;·&nbsp;&nbsp;
+      CH₄(t) = Σ<sub>i</sub> BD<sub>i</sub>·B<sub>th,i</sub>·Σ<sub>τ</sub> g(τ)·VS<sub>i</sub>(t−τ) + 기저항
+    </p>
+    <p class="tblnote" style="margin-bottom:0">
+      VS 함량은 문헌값을 쓰되, 전처리 농축을 반영해 학습구간 평균 총 VS가 실측과 일치하도록
+      단일 상수(K<sub>VS</sub> = <span id="kvs"></span>)로 정규화했다. 기질 간 상대비는 문헌값 그대로 보존된다.
+    </p>
+  </div>
+
+  <div class="chart" id="chShare">
+    <div class="ct">소화조 도달 기질 조성 — 반입 비율의 저류조 통과 후</div>
+    <div class="cs">% (질량 기준). 반입 변동이 저류조 혼합으로 평활화된 뒤의 조성이며, 이것이 기질별 투입량 산정의 기준이 된다.</div>
     <div class="legend">
-      <span class="k"><span class="sw" style="background:var(--s-actual)"></span>누적 실측</span>
-      <span class="k"><span class="sw" style="background:var(--s-base)"></span>2018년 기울기 연장선</span>
+      <span class="k"><span class="sw" style="background:var(--s-actual)"></span>음폐수</span>
+      <span class="k"><span class="sw" style="background:var(--s-model)"></span>가축분뇨</span>
+      <span class="k"><span class="sw" style="background:#1baf7a"></span>음식물</span>
     </div>
     <div class="cbody"></div>
   </div>
 
-  <div class="card">
-    <h3 style="margin-top:0">2.3 누적 특징 구성과 검증 설계</h3>
-    <div style="overflow-x:auto"><table>
-      <thead><tr><th>블록</th><th>누적량</th><th>물리적 의미</th></tr></thead>
-      <tbody>
-        <tr><td rowspan="4"><b>S</b><br>투입·기질</td>
-          <td style="text-align:left">체류 누적 <code>Σ 부하(t−i)·e<sup>−i/HRT</sup></code> (TS·VS·COD)</td>
-          <td style="text-align:left">CSTR 희석을 반영한, 지금 반응조 안에 남아 있는 기질량</td></tr>
-        <tr><td style="text-align:left">창 누적 투입 (7·14·30·45·60·90일): TS·VS·COD·투입량</td>
-          <td style="text-align:left">구간 동안 공급된 유기물 총량</td></tr>
-        <tr><td style="text-align:left">창 평균 기질 성상 (7·30·90일): 산발효조 pH, COD/VS, VS/TS, 가축분뇨 비중</td>
-          <td style="text-align:left">양이 아닌 질 — 수율 모델에서 분모와 무관한 유일한 S 특징군</td></tr>
-        <tr><td style="text-align:left">누적 처리 이력 (2018년 이후 총 처리량, 운전 경과년)</td>
-          <td style="text-align:left">반응조 순치·노후의 대리지표</td></tr>
-        <tr><td rowspan="2"><b>I</b><br>소화조 내부</td>
-          <td style="text-align:left">창 평균 내부 상태 (7·30·90일): pH, VFA, 알칼리도, VFA/Alk, 소화액 COD·TS·VS/TS, 온도</td>
-          <td style="text-align:left">구간 동안의 반응조 상태 수준</td></tr>
-        <tr><td style="text-align:left">누적 노출 <code>Σ 농도·dt</code> (30·90·180일 및 전기간): FAN·TAN·VFA</td>
-          <td style="text-align:left">만성 저해는 순간 농도가 아니라 <b>노출 총량</b>의 문제 — 이 시설의 지배적 실패 모드에 대응</td></tr>
-      </tbody>
-    </table></div>
-    <p style="font-size:13.5px;color:var(--ink2);margin:12px 0 0">
-      <b>중첩 창 문제.</b> 30일 창을 매일 계산하면 인접일이 29/30 겹쳐 사실상 독립 표본이 아니다.
-      학습은 중첩 창으로 하되 평가는 <b>비중첩 창</b>(30일 간격으로 솎아낸 표본)으로도 병기한다.
-      특징 선택은 학습구간 내 확장창 3폴드로 하고, 평가구간(2023)은 최종 1회만 측정한다.
-      수율 모델에서는 분모 성분(창 누적 투입·체류 누적)을 전면 제외했다.
-    </p>
+  <h3>2.4 반입 → 메탄생성 총 소요시간 <span style="font-weight:400;font-size:13px;color:var(--muted)">— 핵심 추정</span></h3>
+  <div class="tiles" id="timeTiles"></div>
+  <div class="grid2">
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table id="hrtTable">
+        <thead><tr><th>소화조 HRT 가정</th><th>최적 τ₀</th><th>CV R²</th><th>비고</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="note" style="margin:0" id="timeNote"></div>
   </div>
 
-  <h3>2.4 예측 결과 — 내부 데이터 기여 검정</h3>
+  <h3>2.5 예측 결과와 대조군</h3>
   <div class="card" style="padding:0;overflow-x:auto">
-  <table id="cumTable">
-    <thead><tr><th>계층 · 타깃</th><th>블록</th><th>특징</th><th>CV 평균</th><th>사고학습 R²</th><th>평가 R²</th><th>평가<br>비중첩 R²</th><th>MAPE</th></tr></thead>
+  <table id="subPerfTable">
+    <thead><tr><th>모델</th><th>사고학습 R²</th><th>평가 R²</th><th>평가 RMSE</th><th>MAPE</th><th>비고</th></tr></thead>
     <tbody></tbody>
   </table>
   </div>
-  <div class="note" id="cumNote"></div>
 
   <div class="rangebar" id="rangebar">
     <button data-r="all">전체 (2018–2023)</button>
@@ -210,39 +233,77 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   </div>
 
   <div class="chart" id="chMain">
-    <div class="ct">30일 누적 메탄생성량 — 실측 vs 예측 (C1)</div>
-    <div class="cs">직전 30일간 생산된 메탄 총량(㎥). 일별 측정 노이즈가 적분으로 상쇄되어 공정 수준의 변동이 드러난다.</div>
+    <div class="ct">일별 메탄생성량 — 실측 vs 기질별 화학양론 모델</div>
+    <div class="cs">반입 조성·투입 톤·화학양론 수율·공정 지연만으로 산출. 소화조 내부 측정값을 일절 쓰지 않는다.</div>
     <div class="legend">
-      <span class="k"><span class="sw" style="background:var(--s-actual)"></span>실측 누적</span>
+      <span class="k"><span class="sw" style="background:var(--s-actual)"></span>실측 메탄</span>
       <span class="k"><span class="sw" style="background:var(--s-model)"></span>모델 예측</span>
     </div>
     <div class="cbody"></div>
   </div>
 
-  <div class="grid2">
-    <div class="chart" id="chYield">
-      <div class="ct">30일 누적 비메탄수율 — 실측 vs 예측 (C2)</div>
-      <div class="cs">㎥CH₄/t TS. 분모 성분을 특징에서 배제한 조건에서의 전환효율 예측.</div>
-      <div class="legend">
-        <span class="k"><span class="sw" style="background:var(--s-actual)"></span>실측 수율</span>
-        <span class="k"><span class="sw" style="background:var(--s-model)"></span>예측</span>
-      </div>
-      <div class="cbody"></div>
+  <div class="chart" id="chSubs">
+    <div class="ct">기질별 메탄 기여량</div>
+    <div class="cs">㎥/d. 각 기질의 투입 VS × 화학양론 수율 × 생분해도를 체류시간 분포로 가중한 값.</div>
+    <div class="legend">
+      <span class="k"><span class="sw" style="background:var(--s-actual)"></span>음폐수</span>
+      <span class="k"><span class="sw" style="background:var(--s-model)"></span>가축분뇨</span>
+      <span class="k"><span class="sw" style="background:#1baf7a"></span>음식물</span>
     </div>
-    <div class="chart" id="chExpo">
-      <div class="ct">누적 저해물질 노출 — 90일 누적 FAN 지수</div>
-      <div class="cs">Σ FAN·dt (g·d/L). 알칼리도 역산 추정치로, 절대값이 아닌 추세 지표로만 사용한다.</div>
-      <div class="legend">
-        <span class="k"><span class="sw" style="background:var(--s-actual)"></span>90일 누적 노출</span>
-      </div>
-      <div class="cbody"></div>
-    </div>
+    <div class="cbody"></div>
   </div>
 
-  <h3>2.5 누적 노출 ↔ 수율 — 만성 저해 가설 검정</h3>
-  <p style="font-size:13.5px;color:var(--ink2);margin-top:-4px">
-    누적 노출량이 클수록 전환효율이 떨어져야 한다는 것이 만성 암모니아 저해 가설의 예측이다.
-    시간 공변에 의한 허위 상관을 배제하기 위해 <b>연도 고정효과 통제</b> 값을 병기한다.</p>
+  <h3>2.6 식별가능성 한계 <span style="font-weight:400;font-size:13px;color:var(--muted)">— 정직하게 남기는 결과</span></h3>
+  <div class="note" id="identNote"></div>
+  <div class="card" style="padding:0;overflow-x:auto">
+  <table id="yearShareTable">
+    <thead><tr><th>연도</th><th colspan="3">반입 비율 (%)</th><th colspan="3">모델 메탄 기여율 (%)</th></tr>
+    <tr><th></th><th>음폐수</th><th>가축분뇨</th><th>음식물</th><th>음폐수</th><th>가축분뇨</th><th>음식물</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+  <p class="tblnote">가축분뇨 반입 비중은 6년간 31.8% → 38.5%로 늘었으나, 모델상 메탄 기여율은 낮은 생분해도 때문에
+    10~12%에 머문다. 이는 "가축분뇨 비중 증가가 암모니아 축적을 통해 성능을 떨어뜨렸다"는 §3의 진단과
+    모순되지 않는다 — 분뇨는 <b>메탄 기여는 적으면서 질소 부하는 크게 늘리는</b> 기질이기 때문이다.</p>
+
+  <h3>2.7 예측 계산기 — 반입 조성별 기대 메탄생성량</h3>
+  <div class="card">
+    <p style="font-size:13.5px;color:var(--ink2);margin-top:0">
+      반입 조성과 소화조 투입량을 넣으면 화학양론 기반 정상상태 기대치를 계산한다.
+      정상상태에서는 체류시간 분포의 가중합이 1이므로 지연은 총량에 영향을 주지 않는다.
+    </p>
+    <div class="formrow">
+      <div><label>소화조 투입량 (t/d)</label><input id="sFeed" type="number" value="195" step="1"></div>
+      <div><label>음폐수 반입 (t/d)</label><input id="sFoodww" type="number" value="120" step="1"></div>
+      <div><label>가축분뇨 반입 (t/d)</label><input id="sManure" type="number" value="75" step="1"></div>
+      <div><label>음식물 반입 (t/d)</label><input id="sFood" type="number" value="16" step="1"></div>
+    </div>
+    <button class="run" id="sCalcBtn">계산</button>
+    <div class="resultbox" id="sCalcOut"></div>
+  </div>
+
+  <details style="margin:22px 0">
+  <summary style="cursor:pointer;font-size:15px;font-weight:600;padding:4px 0">2.8 모델 선별 이력 (참고 — 누적·시차·시계열 계열)</summary>
+  <p style="font-size:13.5px;color:var(--ink2)">
+    기질별 화학양론 모델 이전에 검토한 통계·기계학습 계열의 기록이다. 예측 정확도만 보면 이들이 높지만,
+    기질 조성과 공정 지연을 명시적으로 다루지 않아 "무엇이 얼마나 메탄을 만드는가"에 답하지 못한다.</p>
+  <div class="card" style="padding:0;overflow-x:auto">
+  <table id="trapTable"><thead><tr><th>누적-누적 회귀</th><th>R²</th><th>해석</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="card" style="padding:0;overflow-x:auto;margin-top:12px">
+  <table id="slopeTable">
+    <thead><tr><th>정규화 기준</th><th>2018</th><th>2019</th><th>2020</th><th>2021</th><th>2022</th><th>2023</th><th>6년 변화</th><th>판정</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+  <div class="note" id="slopeNote"></div>
+  <div class="card" style="padding:0;overflow-x:auto">
+  <table id="cumTable">
+    <thead><tr><th>계층 · 타깃</th><th>블록</th><th>특징</th><th>CV 평균</th><th>사고학습 R²</th><th>평가 R²</th><th>평가<br>비중첩 R²</th><th>MAPE</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+  <div class="note" id="cumNote"></div>
   <div class="card" style="padding:0;overflow-x:auto">
   <table id="expoTable">
     <thead><tr><th>누적 노출 지표</th><th colspan="2">전체</th><th colspan="2">연도 고정효과 통제</th><th>가설 부합</th></tr>
@@ -251,30 +312,6 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   </table>
   </div>
   <div class="note" id="expoNote"></div>
-
-  <h3>2.6 예측 계산기 — 투입 조건·기질 성상별 기대 생산량</h3>
-  <div class="card">
-    <p style="font-size:13.5px;color:var(--ink2);margin-top:0">
-      일별 기준 선형 모델(계수 내장). 메탄생성량 평가 R² <span id="calcR2a"></span>, 수율 평가 R² <span id="calcR2b"></span>.
-    </p>
-    <div class="formrow">
-      <div><label>소화조 투입량 (t/d)</label><input id="calcFeed" type="number" value="195" step="1"></div>
-      <div><label>산발효조 TS (%)</label><input id="calcTS" type="number" value="6.0" step="0.1"></div>
-      <div><label>산발효조 VS (%)</label><input id="calcVS" type="number" value="4.2" step="0.1"></div>
-      <div><label>산발효조 COD (mg/L)</label><input id="calcCOD" type="number" value="140000" step="1000"></div>
-      <div><label>산발효조 pH</label><input id="calcPH" type="number" value="4.90" step="0.05"></div>
-    </div>
-    <button class="run" id="calcBtn">계산</button>
-    <div class="resultbox" id="calcOut"></div>
-  </div>
-
-  <details style="margin:22px 0">
-  <summary style="cursor:pointer;font-size:15px;font-weight:600;padding:4px 0">2.7 모델 선별 이력 (참고 — 시차 계열·시계열 계열)</summary>
-  <p style="font-size:13.5px;color:var(--ink2)">
-    누적 프레임 이전에 검토한 계열들의 기록이다. 시차(lag) 계열은 전 이화학 변수 658개 후보에
-    시차·이동평균·변화량을 전개해 탐색한 것이고, 시계열 계열은 전일 가스량을 사용한다.
-    후자는 설명력이 반응조 관성(자기상관 0.916)에서 나오므로 공정 상태에 기인한 메탄생성을 설명하지 못한다.</p>
-  <h3>시차 계열 — 변수별 대표 시차</h3>
   <div class="grid2">
     <div class="card" style="padding:0;overflow-x:auto">
       <table id="lagS"><thead><tr><th>S 투입·기질</th><th>대표 시차</th><th>단독 CV R²</th></tr></thead><tbody></tbody></table>
@@ -291,7 +328,6 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   </table>
   </div>
   <div class="note" id="fsNote"></div>
-  <h3>시계열 계열</h3>
   <div class="card" style="padding:0;overflow-x:auto">
   <table id="tsTable">
     <thead><tr><th>모델</th><th colspan="3">검증 2022</th><th colspan="3">평가 2023</th><th>판정</th></tr>
@@ -485,6 +521,7 @@ const PARL = __PARL_JSON__;
 const ST = __STATE_JSON__;
 const FS = __FS_JSON__;
 const CU = __CU_JSON__;
+const SK = __SK_JSON__;
 
 /* ---------- 공통 유틸 ---------- */
 const $ = s => document.querySelector(s);
@@ -648,21 +685,26 @@ function renderCharts(){
   lineChart($('#chMain'),{
     range:curRange,
     series:[
-      {data:CU.series.cum_obs,color:'var(--s-actual)',label:'30일 누적 실측',w:1.8},
-      {data:CU.series.cum_pred,color:'var(--s-model)',label:'예측',w:2},
+      {data:SK.series.obs,color:'var(--s-actual)',label:'실측 메탄',w:1.8},
+      {data:SK.series.pred,color:'var(--s-model)',label:'모델 예측',w:2},
     ],
   });
-  lineChart($('#chYield'),{
+  lineChart($('#chSubs'),{
+    range:curRange, height:250,
+    series:[
+      {data:SK.series.sub_foodww,color:'var(--s-actual)',label:'음폐수',w:1.8},
+      {data:SK.series.sub_manure,color:'var(--s-model)',label:'가축분뇨',w:1.8},
+      {data:SK.series.sub_food,color:'#1baf7a',label:'음식물',w:1.8},
+    ],
+  });
+  lineChart($('#chShare'),{
     range:curRange, height:230,
     series:[
-      {data:CU.series.yield_obs,color:'var(--s-actual)',label:'실측 수율',w:1.8},
-      {data:CU.series.yield_pred,color:'var(--s-model)',label:'예측',w:1.8},
+      {data:SK.series.phi_foodww,color:'var(--s-actual)',label:'음폐수',w:1.8},
+      {data:SK.series.phi_manure,color:'var(--s-model)',label:'가축분뇨',w:1.8},
+      {data:SK.series.phi_food,color:'#1baf7a',label:'음식물',w:1.8},
     ],
-  });
-  lineChart($('#chExpo'),{
-    range:curRange, height:230,
-    series:[{data:CU.series.expFAN_90,color:'var(--s-actual)',label:'90일 누적 FAN',w:1.8}],
-    yFmt:v=>v.toFixed(0), tipFmt:v=>v.toFixed(1)+' g·d/L',
+    yFmt:v=>v.toFixed(0)+'%', tipFmt:v=>v.toFixed(1)+'%',
   });
   lineChart($('#chDrift'),{
     range:curRange, height:220,
@@ -928,41 +970,136 @@ const featTxt=f=>{ if(!f) return ''; const [v,t]=f.split('@'); return `${NAME[v]
      판정에는 NH₃-N 정기 측정 재개(주 1회)가 선행되어야 하며, 그것이 이 리포트가 시설에 요청하는 최우선 항목이다.`;
 })();
 
-/* ---------- 누적 곡선 차트 (x=누적 COD, y=누적 메탄) ---------- */
+/* ---------- 기질별 화학양론 모델 렌더 ---------- */
 (function(){
-  const el=$('#chCumCurve'), body=el.querySelector('.cbody');
-  const xs0=CU.series.cum_cod, ys0=CU.series.cum_ch4_obs, dts=D.dates;
-  const pts=[]; for(let i=0;i<dts.length;i++) if(xs0[i]!=null&&ys0[i]!=null) pts.push([xs0[i],ys0[i],dts[i]]);
-  if(!pts.length) return;
-  const W=1000,Hh=300,mL=64,mR=16,mT=12,mB=30,iw=W-mL-mR,ih=Hh-mT-mB;
-  const xmax=pts[pts.length-1][0], ymax=pts[pts.length-1][1];
-  const X=v=>mL+v/xmax*iw, Y=v=>mT+(1-v/ymax)*ih;
-  const NS='http://www.w3.org/2000/svg';
-  const svg=document.createElementNS(NS,'svg');
-  svg.setAttribute('viewBox',`0 0 ${W} ${Hh}`); svg.setAttribute('width','100%'); svg.style.display='block';
-  const add=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);svg.appendChild(e);return e;};
-  for(const t of niceTicks(0,ymax,5)){
-    add('line',{x1:mL,x2:W-mR,y1:Y(t),y2:Y(t),stroke:'var(--grid)','stroke-width':1});
-    add('text',{x:mL-8,y:Y(t)+4,'text-anchor':'end','font-size':11,fill:'var(--muted)'}).textContent=(t/1e6).toFixed(1);
-  }
-  for(const t of niceTicks(0,xmax,6)){
-    add('text',{x:X(t),y:Hh-10,'text-anchor':'middle','font-size':11,fill:'var(--muted)'}).textContent=fmt(t/1e6,0);
-  }
-  add('line',{x1:mL,x2:W-mR,y1:mT+ih,y2:mT+ih,stroke:'var(--axis)','stroke-width':1});
-  // 2018년 기울기 연장선 — §2.2 표의 회귀 기울기를 그대로 사용
-  const s0=CU.yearly_slope.COD.by_year['2018'].slope;
-  add('line',{x1:X(0),y1:Y(0),x2:X(Math.min(xmax,ymax/s0)),y2:Y(Math.min(s0*xmax,ymax)),
-    stroke:'var(--s-base)','stroke-width':1.6,'stroke-dasharray':'6 4'});
-  let d=''; pts.forEach((p,i)=>{ d+=(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1); });
-  add('path',{d:d,fill:'none',stroke:'var(--s-actual)','stroke-width':2.2,'stroke-linejoin':'round'});
-  // 연도 경계 표식
-  let ly='';
-  pts.forEach(p=>{ const y=p[2].slice(0,4);
-    if(y!==ly){ ly=y;
-      add('circle',{cx:X(p[0]),cy:Y(p[1]),r:3.4,fill:'var(--s-actual)',stroke:'var(--surface)','stroke-width':2});
-      add('text',{x:X(p[0])+7,y:Y(p[1])-6,'font-size':10.5,fill:'var(--ink2)'}).textContent=y; }});
-  add('text',{x:W-mR,y:mT+ih-8,'text-anchor':'end','font-size':11,fill:'var(--muted)'}).textContent='누적 COD 투입량 (천 t) →';
-  body.appendChild(svg);
+  const NM={foodww:'음폐수',manure:'가축분뇨',food:'음식물'};
+  const CL={foodww:'var(--s-actual)',manure:'var(--s-model)',food:'#1baf7a'};
+  $('#kvs').textContent=SK.K_VS.toFixed(3);
+
+  $('#compTable tbody').innerHTML=Object.entries(SK.comp).map(([k,v])=>{
+    const nm={carb:'탄수화물',prot:'단백질',lipid:'지질'}[k];
+    return `<tr><td>${nm}</td><td class="c">${v.formula}</td><td>${v.Mw}</td>`+
+      `<td>${v.ch4_mol}</td><td><b>${v.B_th.toFixed(3)}</b></td></tr>`;
+  }).join('');
+
+  $('#subTable tbody').innerHTML=Object.entries(SK.sub).map(([k,v])=>
+    `<tr><td><b>${v.name}</b></td><td>${v.carb.toFixed(2)}</td><td>${v.prot.toFixed(2)}</td>`+
+    `<td>${v.lipid.toFixed(2)}</td><td><b>${v.B_th.toFixed(3)}</b></td>`+
+    `<td>${v.BD.toFixed(2)}</td><td>${v.B_eff.toFixed(3)}</td></tr>`).join('');
+
+  const S=SK.sub;
+  $('#subNote').innerHTML=
+    `<b>계산 근거.</b> 생화학 성분별 이론 수율은 Buswell 식을 각 대표 분자에 적용해 얻었고
+     (탄수화물 ${SK.comp.carb.B_th.toFixed(3)} · 단백질 ${SK.comp.prot.B_th.toFixed(3)} ·
+     지질 ${SK.comp.lipid.B_th.toFixed(3)} m³CH₄/kg VS), 이를 각 기질의 조성비로 가중했다.
+     생분해도(BD)는 문헌 실측/이론 비다 — 음식물류는 국내 BMP 연구의 실측 0.36 / 이론 0.52 Sm³CH₄/kgVS에서
+     0.69, 음폐수는 가용성 분획이 우세해(BMP 28일 478 mLCH₄/gVS) 0.82,
+     가축분뇨는 장내 소화를 이미 거쳐 난분해성 섬유질이 남으므로 0.45를 적용했다.
+     <br><br>결과적으로 <b>음폐수 ${S.foodww.B_eff.toFixed(3)} · 음식물 ${S.food.B_eff.toFixed(3)} ·
+     가축분뇨 ${S.manure.B_eff.toFixed(3)} m³CH₄/kg VS</b>로, 분뇨의 실효 수율이 음폐수의
+     ${(S.manure.B_eff/S.foodww.B_eff*100).toFixed(0)}% 수준이다. 지질 함량이 높을수록 수율이 큰 것은
+     Buswell 식에서 지질의 이론 수율이 탄수화물의 2.4배인 데서 직접 나온다.`;
+
+  // 2.4 총 소요시간
+  const T=SK.total_time, B=SK.best, F=SK.best_free, L=SK.lit_scenario;
+  $('#timeTiles').innerHTML=[
+    {lb:'반입 → 소화조 투입',v:(T.tau0_delay_d+T.tau_mix_d).toFixed(1),u:'일',
+     d:`추정 τ₀ ${T.tau0_delay_d}일 + 혼합 ${T.tau_mix_d}일`},
+    {lb:'소화조 평균 체류',v:T.mean_digester_d.toFixed(1),u:'일',d:'HRT 12일 가정'},
+    {lb:'평균 총 소요시간',v:T.mean_total_d.toFixed(1),u:'일',d:'반입 → 메탄생성'},
+    {lb:'50% 생성 시점',v:T.t50_total_d.toFixed(1),u:'일',d:`90%는 ${T.t90_total_d}일`},
+  ].map(t=>`<div class="tile"><div class="lb">${t.lb}</div>`+
+    `<div class="v">${t.v}<small>${t.u}</small></div><div class="d">${t.d}</div></div>`).join('');
+
+  $('#hrtTable tbody').innerHTML=SK.hrt_scan.map(h=>{
+    const isU=h.hrt===12, isB=h.hrt===F.hrt;
+    return `<tr${isU?' class="hl"':''}><td>${h.hrt}일</td><td class="c">${h.tau0}일</td>`+
+      `<td><b>${h.cv.toFixed(3)}</b></td>`+
+      `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">`+
+      `${isU?'<b>사용자 지정</b>':''}${isB?'<span class="badge ok">데이터 최적</span>':''}`+
+      `${h.hrt===40.5?'설계 용적 기준':''}</td></tr>`;
+  }).join('');
+
+  $('#timeNote').innerHTML=
+    `<b>추정 결과와 문헌 대조.</b> 학습구간 롤링 검증으로 지연을 탐색한 결과
+     <b>반입 → 소화조 투입 ${(T.tau0_delay_d+T.tau_mix_d).toFixed(1)}일</b>이 최적이었다.
+     문헌 사전값(저류 3일 + 산발효 1~2일 = 4~5일)보다 짧지만, 문헌값을 고정한 시나리오
+     (τ₀ 4일·혼합 3일)도 CV R² ${L.cv.toFixed(3)}로 최적 ${B.cv.toFixed(3)}과 큰 차이가 없다 —
+     <b>이 데이터로는 전단 지연을 1일과 5일 사이에서 정밀하게 가릴 수 없다</b>는 뜻이며,
+     저류조 완충이 반입 변동을 지워버리기 때문이다.
+     <br><br><b>소화조 HRT는 짧을수록 잘 맞는다.</b> 사용자 지정 12일에서 CV R² ${SK.hrt_scan.find(h=>h.hrt===12).cv.toFixed(3)},
+     설계 용적 기준 40.5일에서 ${SK.hrt_scan.find(h=>h.hrt===40.5).cv.toFixed(3)}로 떨어지는 반면
+     1~3일에서 ${F.cv.toFixed(3)}로 가장 높다. 즉 <b>가스 응답의 시간상수는 수리학적 체류시간보다 훨씬 짧다.</b>
+     12일 가정은 40.5일보다는 실측에 훨씬 가깝지만, 데이터가 가리키는 반응 시간상수는 그보다도 짧다 —
+     유기산화조에서 이미 VFA로 전환되어 넘어온다는 공정 이해와 부합하는 방향이다.
+     <br><br>따라서 <b>반입 → 메탄생성 총 소요시간은 평균 ${T.mean_total_d}일</b>(50% ${T.t50_total_d}일,
+     90% ${T.t90_total_d}일)로 추정하되, 이 값의 대부분은 가정한 HRT 12일에서 오며
+     전단 지연 성분(${(T.tau0_delay_d+T.tau_mix_d).toFixed(1)}일)만이 데이터에서 직접 추정된 부분이다.`;
+
+  // 2.5 성능표
+  const rows=[
+    ['<b>기질별 화학양론 + 지연 (문헌 BD 고정)</b>',SK.final_lit,'<b>채택</b> — 수율은 화학양론·문헌으로 고정, 데이터로는 지연과 기저항만 보정',true],
+    ['참고: BD를 데이터로 추정',SK.final,'평가 R²는 높으나 계수가 경계에 붙어 물리적 해석 불가 (§2.6)',false],
+    ['변형: 실측 총 VS 배분',SK.alt_obsVS,'총 VS를 실측에 구속하고 조성만 배분',false],
+    ['대조: 기질 구분 없음 (투입 톤만)',SK.ctrl_flat,'조성 정보 제거',false],
+    ['대조: 기질 구분 + 지연 없음',SK.ctrl_nodelay,'지연·체류시간 분포 제거',false],
+  ];
+  $('#subPerfTable tbody').innerHTML=rows.map(r=>
+    `<tr${r[3]?' class="hl"':''}><td style="text-align:left">${r[0]}</td>`+
+    `<td>${r[1].valid.R2.toFixed(3)}</td><td><b>${r[1].test.R2.toFixed(3)}</b></td>`+
+    `<td>${fmt(r[1].test.RMSE)}</td><td>${r[1].test.MAPE.toFixed(1)}%</td>`+
+    `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">${r[2]}</td></tr>`).join('');
+
+  // 2.6 식별가능성
+  const I=SK.ident, BF=SK.bd_fit;
+  $('#identNote').innerHTML=
+    `<b>기질별 생분해도는 이 데이터로 분리되지 않는다.</b> BD를 0~1 제약 하에 추정하면
+     음폐수 ${BF.foodww.toFixed(2)}(상한에 붙음) · 가축분뇨 ${BF.manure.toFixed(2)} · 음식물 ${BF.food.toFixed(2)}로,
+     문헌값(0.82 / 0.45 / 0.69)과 크게 어긋나고 분뇨 값은 생물학적으로 비현실적이다.
+     원인은 <b>반입 조성의 변동 부족과 저류조 평활화</b>다 — 6년간 음폐수 비중은 53.6~61.2%,
+     가축분뇨는 31.8~38.5% 범위에서만 움직였고, 저류조를 지나며 그 변동마저 지워진다.
+     세 기질의 투입 시계열이 거의 비례하게 되어(설계행렬 조건수 ${I.cond}) 개별 기여를 분리할 수 없다.
+     <br><br>이는 인계 문서가 기록한 <b>AM2 2단계 파라미터 식별 실패</b>와 같은 구조의 문제이며,
+     "일별 운영 데이터로는 기전 파라미터를 분해할 수 없다"는 한계가 여기서도 재현된 것이다.
+     <br><br><b>따라서 권고는 이렇다.</b> 기질별 수율은 <u>화학양론과 문헌 BD로 고정</u>하고(§2.2),
+     데이터로는 <u>총량과 지연 구조만</u> 보정한다. BD를 데이터에 맞추면 평가 R²는
+     ${SK.final.test.R2.toFixed(3)}까지 오르지만(문헌 고정 시 ${SK.final_lit.test.R2.toFixed(3)}),
+     그 계수는 물리적으로 해석할 수 없다. <b>본 리포트의 기여율·차트는 모두 문헌 BD 고정 모델 기준</b>이다. <b>분리 검증에는 기질별 단독 투입 시험이나
+     반입 조성을 의도적으로 크게 바꾸는 개입 실험이 필요하다.</b>`;
+
+  const YS=SK.intake_share_by_year, MS=SK.share_by_year;
+  $('#yearShareTable tbody').innerHTML=Object.keys(MS).map(y=>
+    `<tr><td>${y}${y==='2023'?'*':''}</td>`+
+    ['foodww','manure','food'].map(k=>`<td>${(YS[y]||{})[k]??'—'}</td>`).join('')+
+    ['foodww','manure','food'].map(k=>`<td>${MS[y][k]}</td>`).join('')+`</tr>`).join('');
+
+  // 2.7 계산기
+  $('#sCalcBtn').addEventListener('click',()=>{
+    const fd=+$('#sFeed').value, iw=+$('#sFoodww').value, im=+$('#sManure').value, ifo=+$('#sFood').value;
+    const tot=iw+im+ifo;
+    if(!(fd>0&&tot>0)) return;
+    const r={foodww:iw/tot,manure:im/tot,food:ifo/tot};
+    let ch4=0; const per={};
+    for(const k of ['foodww','manure','food']){
+      const vs=fd*r[k]*SK.sub[k].VSfrac;          // t VS/d
+      const m=SK.sub[k].BD*SK.sub[k].B_th*vs*1000; // ㎥CH₄/d
+      per[k]={vs:vs,m:m}; ch4+=m;
+    }
+    const base=SK.base_lit, total=ch4+base;
+    const el=$('#sCalcOut'); el.style.display='block';
+    el.innerHTML=
+      ['foodww','manure','food'].map(k=>
+        `<div class="resline"><span class="k">${NM[k]} — 투입 ${(fd*r[k]).toFixed(1)} t/d
+          (VS ${per[k].vs.toFixed(2)} t/d)</span>
+         <span class="v" style="color:${CL[k]}">${fmt(Math.round(per[k].m))} ㎥CH₄/d</span></div>`).join('')+
+      `<div class="resline"><span class="k">난분해성 기저항</span><span class="v">${fmt(Math.round(base))} ㎥/d</span></div>`+
+      `<div class="resline" style="border-bottom:2px solid var(--ink)"><span class="k"><b>기대 메탄생성량 (정상상태)</b></span>`+
+      `<span class="v" style="font-size:16px">${fmt(Math.round(total))} ㎥/d</span></div>`+
+      `<div class="resline"><span class="k">투입 VS 대비 수율</span>`+
+      `<span class="v">${(ch4/(fd*(r.foodww*SK.sub.foodww.VSfrac+r.manure*SK.sub.manure.VSfrac+r.food*SK.sub.food.VSfrac)*1000)).toFixed(3)} ㎥CH₄/kg VS</span></div>`+
+      `<div class="tblnote" style="margin-top:10px">문헌 BD 고정 기준. 평가구간 오차 MAPE ${SK.final_lit.test.MAPE}%.
+       기질별 BD가 이 데이터로 식별되지 않으므로(§2.6) 기질 간 배분은 문헌값에 의존한 추정치다.</div>`;
+  });
 })();
 
 (function(){
@@ -1064,40 +1201,6 @@ const featTxt=f=>{ if(!f) return ''; const [v,t]=f.split('@'); return `${NAME[v]
      이 경우 관리 대응은 경보가 아니라 <b>기준선 재설정과 원인(가축분뇨 혼합비) 조정 검토</b>다.
      참고로 2023년은 B계열 알칼리도 기록 오염(DQ-05)과 온도계 결함이 겹친 해이므로, 지수 상승분에
      계측 요인이 섞여 있을 가능성을 배제하지 못한다.`;
-})();
-
-/* ---------- 예측 계산기 (내장 선형모델) ---------- */
-(function(){
-  const C=ST.calc;
-  $('#calcR2a').textContent=C.ch4.test_R2.toFixed(3);
-  $('#calcR2b').textContent=C.smy.test_R2.toFixed(3);
-  const apply=(m,vals)=>{
-    let s=m.intercept;
-    m.cols.forEach((c,i)=>{ s+=m.coef[i]*((vals[c]-m.mean[i])/m.scale[i]); });
-    return s;
-  };
-  $('#calcBtn').addEventListener('click',()=>{
-    const feed=+$('#calcFeed').value, ts=+$('#calcTS').value, vs=+$('#calcVS').value,
-          cod=+$('#calcCOD').value, ph=+$('#calcPH').value;
-    if(!(feed>0&&ts>0&&vs>0&&cod>0&&ph>0)) return;
-    const TS_load=feed*ts/100, CODVS=cod/(vs*10000), VSTS=vs/ts;
-    const v={TS_load:TS_load,H_TS:TS_load,CODVS:CODVS,acid_pH:ph,VSTS_in:VSTS};
-    const ch4=apply(C.ch4,v), smy=apply(C.smy,{CODVS:CODVS,VSTS_in:VSTS,acid_pH:ph});
-    const snap=D.diag.snapshot;
-    // 학습범위 외삽 경고
-    const warn=C.ch4.cols.filter(c=>{const r=C.ch4.p1_p99[c]; return v[c]<r[0]||v[c]>r[1];});
-    const el=$('#calcOut'); el.style.display='block';
-    el.innerHTML=
-      `<div class="resline"><span class="k">유기물 부하 (TS 기준)</span><span class="v">${TS_load.toFixed(1)} t TS/d</span></div>`+
-      `<div class="resline"><span class="k">기질 환원도 COD/VS</span><span class="v">${CODVS.toFixed(2)}</span></div>`+
-      `<div class="resline"><span class="k">유기물 분율 VS/TS</span><span class="v">${VSTS.toFixed(3)}</span></div>`+
-      `<div class="resline"><span class="k">기대 메탄생산량</span><span class="v">${fmt(Math.round(ch4))} ㎥/d</span></div>`+
-      `<div class="resline"><span class="k">기대 비메탄수율</span><span class="v">${fmt(Math.round(smy))} ㎥CH₄/t TS</span></div>`+
-      `<div class="resline"><span class="k">최근 90일 실적 대비</span><span class="v">${((ch4/snap.ch4-1)*100).toFixed(1)}%</span></div>`+
-      `<div class="tblnote" style="margin-top:10px">평가구간 오차 메탄생산량 MAPE ${C.ch4.test_MAPE}%, 수율 MAPE ${C.smy.test_MAPE}%.`+
-      (warn.length?` <b style="color:var(--crit)">주의: ${warn.join(', ')}이(가) 학습 관측범위(1~99백분위) 밖입니다 — 외삽 결과는 신뢰할 수 없습니다.</b>`:'')+
-      `</div>`;
-  });
 })();
 
 /* ---------- 상태 점검 프로그램 ---------- */
