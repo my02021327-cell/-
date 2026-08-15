@@ -508,6 +508,38 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   </div>
   <p class="tblnote" id="ensNote"></p>
   </details>
+
+  <h3>2.10 iTransformer 방법론 이식 검정 <span style="font-weight:400;font-size:13px;color:var(--muted)">— Han et al. (2025) 재현과 한계</span></h3>
+  <div class="card" id="itrIntro"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.10.1 변수 대응 — 논문 15개 중 영천에 존재하는 것</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="itrMapTable">
+      <thead><tr><th>논문 변수</th><th>의미</th><th>영천 컬럼</th><th>채택</th><th>사유</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="note" id="itrMapNote"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.10.2 결과 — 논문과 같은 비교군에 persistence를 추가하면</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="itrResTable">
+      <thead><tr><th>설정 · 지평</th><th>모델</th><th>사고학습 R²</th><th>평가 R²</th><th>평가 MAPE</th><th>정확도</th><th>skill<br>(vs persistence)</th><th>파라미터</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="note" id="itrResNote"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.10.3 왜 R² 0.9949가 영천에서 재현되지 않는가</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="itrWhyTable">
+      <thead><tr><th>#</th><th>원인</th><th>논문 시설</th><th>영천</th><th>근거</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="card" style="border-left:4px solid var(--crit)" id="itrVerdict"></div>
+  <div class="note" id="itrKeep"></div>
+  <ol class="fn" id="itrRefs"></ol>
 </section>
 
 <!-- ============================================================ 3. 진단 -->
@@ -735,6 +767,7 @@ const BL = __BL_JSON__;
 const A2 = __A2_JSON__;
 const RT = __RT_JSON__;
 const SRTID = __SRT_JSON__;
+const ITR = __ITR_JSON__;
 
 /* ---------- 공통 유틸 ---------- */
 const $ = s => document.querySelector(s);
@@ -1986,6 +2019,188 @@ $('#diagBtn').addEventListener('click',()=>{
      ② 운영자가 현장에서 체감하는 8~12일과 일치하며, ③ 성능이 어차피 평탄하므로 더 강한 근거를 요구할 실익이 없다</b>는 세 가지 때문이다.
      이 값은 <b>가정이지 추정치가 아니며</b>, 예측 결과를 해석할 때 그렇게 취급해야 한다.
      ${lo.srt}~${hi.srt}일 전 범위의 결과를 위 표에 그대로 남겨 둔 이유가 그것이다.`;
+})();
+
+
+/* ---------- §2.10 iTransformer 이식 검정 ---------- */
+(function(){
+  if(typeof ITR==='undefined'||!ITR.results) return;
+  const K=Object.keys(ITR.results);
+  const lbl=k=>({'A_논문동일_자기이력포함':'설정 A · 논문과 동일<br><span style="font-size:11px;color:var(--muted)">CH₄ 자기이력 입력 포함</span>',
+                 'B_외생변수만_자기이력제외':'설정 B · 외생변수만<br><span style="font-size:11px;color:var(--muted)">CH₄ 자기이력 제외</span>'})[k.split('|')[0]];
+  const H=k=>k.split('|')[1].replace('H','')+'일 뒤';
+
+  /* --- 도입 --- */
+  $('#itrIntro').innerHTML=
+    `<p style="font-size:13.5px;color:var(--ink2);line-height:1.75;margin:0">
+     <b>대상 문헌.</b> Han et al., <i>Chemical Engineering Journal</i> 513 (2025) 163064,
+     "Time series prediction of anaerobic digestion yield and carbon emissions from food waste based on iTransformer model".
+     음식물류폐기물 AD 시설의 2020년 1~6월 일별 자료 15개 변수로 CH₄ 생산량과 CO₂ 배출량을 예측하고,
+     GRU·ARIMA·LSTM·Transformer 대비 <b>R² 0.9949, 정확도 98.55%</b>를 보고했다.
+     iTransformer는 <b>변수를 토큰으로 뒤집는</b> 구조에 시간 임베딩(식 2)·동적 어텐션(식 3)·다중스케일 특징추출(식 4)을 더한 모델이다.
+     <br><br><b>여기서 한 것.</b> 같은 구조를 그대로 구현해(<code>src/itransformer_yeongcheon.py</code>) 영천 데이터에 적용했다.
+     논문의 하이퍼파라미터(hidden 512, head 8, encoder 2, decoder 1, lr 0.001)를 그대로 쓴 판과,
+     영천 표본 수에 맞춰 축소한 판(hidden 64)을 함께 돌렸다. 비교군도 논문과 같이 GRU·ARIMA·LSTM·Transformer를 붙였다.
+     <br><br><b>논문과 다르게 한 것 — 이것이 이 절의 요점이다.</b>
+     원 논문에는 <b>persistence(전일값 유지) 기준선이 없다.</b>
+     AD 가스계열은 자기상관이 극히 높아(영천 ACF₁ = ${ITR.persistence_context.acf1})
+     아무것도 학습하지 않아도 높은 R²가 나온다. 그래서 여기서는
+     ① persistence를 항상 함께 싣고, ② skill score = 1 − MSE/MSE<sub>persistence</sub>로 순수 이득을 표기하며,
+     ③ <b>CH₄ 자기이력을 입력에서 뺀 설정 B</b>를 따로 돌리고,
+     ④ 예측 지평을 1일뿐 아니라 <b>7일</b>까지 늘렸다.
+     ①~④ 중 무엇 하나만 빠져도 "R² 0.99"는 모델의 성능이 아니라 계열의 성질을 재는 숫자가 된다.</p>`;
+
+  /* --- 2.10.1 변수 대응 --- */
+  $('#itrMapTable tbody').innerHTML=ITR.feature_map.map(m=>{
+    const t=m.paper==='production', ok=m.adopted;
+    return `<tr${t?' class="hl"':''}><td><code>${m.paper}</code></td><td style="text-align:left">${m.meaning}</td>`+
+      `<td><code>${m.yeongcheon||'—'}</code></td>`+
+      `<td style="color:${ok?'var(--goodtxt)':'var(--crit)'};font-weight:600">${ok?'○':'✗'}</td>`+
+      `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">${m.note}</td></tr>`;
+  }).join('');
+
+  const drop=ITR.feature_map.filter(m=>!m.adopted);
+  $('#itrMapNote').innerHTML=
+    `<b>논문 15개 변수 중 ${ITR.n_exog}개를 예측변수로, CH₄ 1개를 타깃으로 채택하고 ${drop.length}개를 버렸다.</b>
+     버린 이유는 각각 다르고, 그 차이가 곧 이식 가능성의 진단이다.
+     <br><br>· <b>CO₂ 배출량</b> — 영천은 측정하지 않는다. 논문 성능의 절반은 CO₂ 예측인데 그 절반은 애초에 검정 대상이 아니다.
+     <br>· <b>hVFA(가수분해·산성화조 VFA)</b> — 영천 산생성조에서 VFA를 재지 않는다.
+     논문에서 이 변수는 산성화 진행도를 직접 지시하는 핵심 입력인데, 영천에는 대응물이 없다.
+     <br>· <b>hAM · adAM(암모니아성 질소)</b> — 컬럼은 존재하지만 커버리지가 각각 7.8%·11.0%이고,
+     <b>사고학습(2022)·평가(2023) 구간에서는 사실상 전무</b>하다. 학습에만 있고 평가에 없는 변수는 쓸 수 없다.
+     <br><br><b>제약 4의 반영.</b> 논문 시설은 <b>가수분해조 → 산성화조 → 혐기소화조</b> 3단이고
+     h* 블록은 '가수분해·산성화 통합조'를 잰다. 영천은 <b>산생성조 → 혐기소화조</b> 2단이라
+     대응시킨 <code>acid_*</code>는 가수분해 진행도가 아니라 <b>산생성 결과</b>를 재는 값이다.
+     이름은 맞춰 놓았지만 같은 물리량이 아니며, 아래 2.10.3 #5에서 이 차이가 성능에 어떻게 나타나는지 다룬다.
+     <br><br>결측 처리: 실험실 계측은 주 4회 수준의 계단형이므로 직전값 유지(최대 7일)로 채웠고
+     그 비율이 <b>${(ITR.ffill_frac*100).toFixed(1)}%</b>다. <b>타깃은 채우지 않았다</b> —
+     채운 값을 채점하면 순환이므로, CH₄가 실제로 관측된 ${ITR.target_obs}일만 표본으로 삼았다.`;
+
+  /* --- 2.10.2 결과 --- */
+  let rows='';
+  K.forEach(k=>{
+    const r=ITR.results[k];
+    const names=Object.keys(r).filter(n=>r[n]&&r[n].test);
+    names.forEach((n,i)=>{
+      const v=r[n], sk=r.skill[n];
+      const isP=n==='persistence', isI=n.startsWith('iTransformer');
+      rows+=`<tr${isI?' class="hl"':''}>`+
+        (i===0?`<td rowspan="${names.length}" style="vertical-align:middle;border-right:1px solid var(--line)">${lbl(k)}<br><b>${H(k)} 예측</b><br><span style="font-size:11px;color:var(--muted)">n = ${r.n[2]}</span></td>`:'')+
+        `<td style="text-align:left${isP?';font-weight:600':''}">${n}${isP?' <span class="badge">기준선</span>':''}</td>`+
+        `<td>${v.valid.R2.toFixed(4)}</td><td><b>${v.test.R2.toFixed(4)}</b>${v.test.R2_sd?` <span style="font-size:11px;color:var(--muted)">±${v.test.R2_sd.toFixed(3)}</span>`:''}</td>`+
+        `<td>${v.test.MAPE.toFixed(2)}%</td><td>${v.test.ACC.toFixed(2)}%</td>`+
+        `<td style="color:${isP?'var(--muted)':(sk>0?'var(--goodtxt)':'var(--crit)')};font-weight:600">${isP?'—':(sk>0?'+':'')+sk.toFixed(4)}</td>`+
+        `<td style="font-size:12px;color:var(--ink2)">${v.params?v.params.toLocaleString():'—'}</td></tr>`;
+    });
+  });
+  $('#itrResTable tbody').innerHTML=rows;
+
+  const g=(k,n)=>ITR.results[k][n];
+  const A1='A_논문동일_자기이력포함|H1', A7='A_논문동일_자기이력포함|H7',
+        B1='B_외생변수만_자기이력제외|H1', B7='B_외생변수만_자기이력제외|H7';
+  const bestA1=Object.entries(ITR.results[A1].skill).filter(([n])=>n!=='persistence')
+                     .sort((a,b)=>b[1]-a[1])[0];
+  const bestB7=Object.entries(ITR.results[B7].skill).filter(([n])=>n!=='persistence')
+                     .sort((a,b)=>b[1]-a[1])[0];
+  $('#itrResNote').innerHTML=
+    `<b>설정 A(논문과 동일, 1일 뒤) — 어떤 모델도 persistence를 이기지 못한다.</b>
+     persistence 평가 R² <b>${g(A1,'persistence').test.R2.toFixed(4)}</b>에 대해
+     최선 모델은 ${bestA1[0]}이고 skill <b>${bestA1[1]>0?'+':''}${bestA1[1].toFixed(4)}</b>다.
+     ARIMA는 ${g(A1,'ARIMA').test.R2.toFixed(4)}로 persistence와 소수점 셋째 자리에서 갈린다.
+     <b>여기서 논문의 숫자를 다시 보자.</b> 논문은 ARIMA R² 0.9928, iTransformer 0.9949 —
+     격차가 <b>0.0021</b>이다. 우리 데이터에서 ARIMA와 persistence의 격차는
+     <b>${Math.abs(g(A1,'ARIMA').test.R2-g(A1,'persistence').test.R2).toFixed(4)}</b>로 같은 자릿수다.
+     즉 논문이 보고한 iTransformer의 우위는 <b>"아무것도 하지 않은 것"과 ARIMA 사이의 격차와 구분되지 않는 크기</b>다.
+     기준선이 없으면 이 사실을 알 방법이 없다.
+     <br><br><b>설정 B(자기이력 제외) — 성능이 무너진다. 그리고 그것이 정직한 숫자다.</b>
+     CH₄의 과거값을 입력에서 빼는 순간 평가 R²는
+     ${g(B1,'iTransformer·논문설정')?g(B1,'iTransformer·논문설정').test.R2.toFixed(3):'—'} 수준으로 내려간다.
+     설정 A의 높은 R²는 <b>소화조 내부 상태로부터 메탄을 설명한 것이 아니라 어제의 메탄을 오늘로 옮긴 것</b>이었다.
+     이는 이 리포트가 §2 전체에서 일관되게 거부해 온 구조와 같다.
+     <br><br><b>지평 7일 — 여기서 비로소 모델이 의미를 갖는다.</b>
+     지평이 길어지면 persistence가 무너지고 모델 간 차이가 드러난다.
+     설정 B·7일에서 최선은 ${bestB7[0]}(skill ${bestB7[1]>0?'+':''}${bestB7[1].toFixed(4)})다.
+     운전 의사결정에 쓸 수 있는 예측은 이쪽이지, 1일 뒤 예측이 아니다 —
+     소화조 SRT가 12일이고 전단 공정만 3일인데, 하루 뒤 메탄은 <b>이미 투입이 끝난 물질</b>이 만든다.
+     <br><br><b>파라미터 수.</b> 논문 설정(hidden 512)은 파라미터
+     ${ITR.results[A1]['iTransformer·논문설정']?ITR.results[A1]['iTransformer·논문설정'].params.toLocaleString():''}개인데
+     영천 학습 표본은 ${ITR.results[A1].n[0]}개다. <b>표본 1개당 파라미터 1만 개</b> 수준이며,
+     축소 설정(hidden 64)이 더 낫거나 대등한 것이 그 결과다.`;
+
+  /* --- 2.10.3 원인 --- */
+  const W=[
+    ['1','<b>persistence 기준선의 부재</b><br><span style="font-size:12px;color:var(--muted)">방법론</span>',
+     '기준선 없음. GRU·ARIMA·LSTM·Transformer만 비교',
+     `ACF₁ ${ITR.persistence_context.acf1}. persistence만으로 평가 R² ${g(A1,'persistence').test.R2.toFixed(3)}`,
+     'Zeng et al. (AAAI 2023)이 단층 선형모델 DLinear로 트랜스포머 계열 예측기를 9개 벤치마크에서 능가시켜, 복잡한 구조의 이득이 기준선 없이는 판정 불가함을 보였다<sup>1</sup>. AD 분야에서도 persistence 기준선을 명시적으로 두는 사례가 있다<sup>2</sup>.'],
+    ['2','<b>평가구간의 분산 구조</b><br><span style="font-size:12px;color:var(--muted)">통계</span>',
+     '논문 Fig.5 — 2~3월 설비 정비로 CH₄·CO₂가 0 근처까지 붕괴한 구간을 포함',
+     `2023년 평가구간에 정지 구간 없음. CH₄ 변동계수 ${ITR.persistence_context.cv_pct}%`,
+     'R²의 분모는 평가표본의 분산이다. 0 근처 대붕괴가 포함되면 분모가 커져 R²가 구조적으로 부풀려진다. 같은 모델·같은 오차라도 평가구간을 바꾸면 R²가 달라지므로, 서로 다른 시설의 R²를 직접 비교할 수 없다.'],
+    ['3','<b>표본 수 대비 모델 크기</b><br><span style="font-size:12px;color:var(--muted)">데이터</span>',
+     '6개월 일별 ≈ 180일, 검정 N = 77',
+     `학습 ${ITR.results[A1].n[0]} / 사고학습 ${ITR.results[A1].n[1]} / 평가 ${ITR.results[A1].n[2]}일, 논문설정 파라미터 ${ITR.results[A1]['iTransformer·논문설정']?ITR.results[A1]['iTransformer·논문설정'].params.toLocaleString():''}개`,
+     'iTransformer 원 논문(Liu et al., ICLR 2024)의 벤치마크는 수만 시점·수백 변수 규모다<sup>3</sup>. AD 분야 리뷰는 표본 250개 미만이면 정확하거나 일반화 가능한 성능을 기대하기 어렵다고 지적한다<sup>4</sup>.'],
+    ['4','<b>계측 방식</b><br><span style="font-size:12px;color:var(--muted)">데이터</span>',
+     'pH·VFA·COD·ALK를 online measurement tool로 측정 (논문 Table 4 각주)',
+     `실험실 분석 주 4회 수준. 결측 보간 비율 ${(ITR.ffill_frac*100).toFixed(1)}%`,
+     '계단형으로 보간된 입력은 일 단위 동특성을 지운다. 전일 대비 변화가 0인 날이 다수이므로, 시간 임베딩·동적 어텐션이 잡아야 할 신호 자체가 데이터에 없다.'],
+    ['5','<b>공정 구성 차이</b><br><span style="font-size:12px;color:var(--muted)">생물공정</span>',
+     '가수분해조 + 산성화조 + 혐기소화조 3단. h* 블록이 가수분해 진행도를 직접 계측',
+     '산생성조 + 혐기소화조 2단. 가수분해조 없음 → acid_*는 산생성 결과만 계측',
+     '입자성 기질에서는 가수분해가 율속 단계이지만, 산성화를 분리하면 메탄생성이 율속으로 넘어간다<sup>5</sup>. 영천에서 정보가 있는 곳은 소화조 쪽인데, 그 소화조는 §2.8에서 보듯 소화액 TS 변동계수가 8.2%로 강하게 완충돼 있다.'],
+    ['6','<b>기질 구성</b><br><span style="font-size:12px;color:var(--muted)">생물공정</span>',
+     '음식물류폐기물 단일기질 → 입력 조성이 사실상 일정',
+     '음폐수·가축분뇨·음식물 3종 혼합, 분뇨 반입비율 일별 표준편차 19.5%p',
+     '혼합기질 소화에서는 계절·수거원 변동이 성상 변동으로 직결되어 예측 난도가 올라가며, 이는 모델 이식성을 제약하는 요인으로 보고된다<sup>6</sup>.'],
+    ['7','<b>예측 지평의 실효성</b><br><span style="font-size:12px;color:var(--muted)">공정</span>',
+     '1일 뒤 예측 (Fig.5·6)',
+     'SRT 12일 + 전단 3일. 1일 뒤 메탄은 이미 투입이 끝난 물질이 만든다',
+     '지평 1일에서는 어떤 모델도 persistence를 이기지 못한다(위 표). 조작 가능한 변수를 바꿔 결과를 바꾸려면 최소 수일~열흘의 선행이 필요하므로, 운전 의사결정용 예측은 지평 7일 이상에서 평가해야 한다.'],
+  ];
+  $('#itrWhyTable tbody').innerHTML=W.map(r=>
+    `<tr><td><b>${r[0]}</b></td><td style="text-align:left">${r[1]}</td>`+
+    `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">${r[2]}</td>`+
+    `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">${r[3]}</td>`+
+    `<td style="text-align:left;font-size:12.5px">${r[4]}</td></tr>`).join('');
+
+  /* --- 판정 --- */
+  $('#itrVerdict').innerHTML=
+    `<h3 style="margin-top:0;color:var(--crit)">판정 — 방법론은 재현했으나 영천에는 부적합하다</h3>
+     <p style="font-size:13.5px;color:var(--ink2);line-height:1.75;margin:0">
+     iTransformer 구조 자체에는 문제가 없다. 논문대로 구현했고 정상 학습된다.
+     <b>부적합의 원인은 모델이 아니라 문제 설정에 있다.</b>
+     <br><br>논문의 R² 0.9949는 <b>자기이력을 포함한 1일 뒤 예측</b>을,
+     <b>정지 구간이 포함되어 분산이 큰 평가표본</b>에서, <b>persistence 기준선 없이</b> 잰 숫자다.
+     이 세 조건 중 하나만 바꿔도 숫자는 무너진다. 영천에서는 셋 다 성립하지 않는다.
+     <br><br>영천에 그대로 적용하면 결과는 둘 중 하나다.
+     ① 자기이력을 넣으면 R²는 높지만 <b>skill이 음수</b> — 어제 값을 옮긴 것이지 소화조를 설명한 것이 아니다.
+     ② 자기이력을 빼면 정직해지지만, 그때의 성능은 <b>§2.8의 화학양론·잔존율 모델(평가 R² 0.757, MAPE 7.39%)에 미치지 못한다</b>.
+     파라미터 ${ITR.results[A1]['iTransformer·논문설정']?ITR.results[A1]['iTransformer·논문설정'].params.toLocaleString():''}개를
+     쓰고도 파라미터 3개짜리 물리 모델을 못 이긴다.
+     <br><br><b>따라서 본 리포트의 주력 모델을 iTransformer로 교체하지 않는다.</b>
+     이는 딥러닝이 열등해서가 아니라, 영천의 데이터 밀도(주 4회 실험실 분석)와 공정 구성(2단, 강한 완충)에서
+     <b>고용량 시계열 모델이 학습할 신호가 남아 있지 않기 때문</b>이다.</p>`;
+
+  $('#itrKeep').innerHTML=
+    `<b>그래도 건질 것 — 세 가지.</b>
+     <br><br><b>① 지평 7일 예측의 보조 모델.</b> 위 표에서 유일하게 모델이 persistence를 유의하게 이기는 구간이다.
+     본 화학양론 모델은 투입 조성이 확정된 뒤에야 예측하므로, <b>투입 계획 단계의 사전 예측</b>에는 이쪽이 보완재가 된다.
+     <br><b>② 동적 어텐션의 변수 간 가중치.</b> iTransformer는 변수를 토큰으로 쓰므로
+     어텐션 행렬이 <b>변수 간 상호작용 지도</b>가 된다. 예측 정확도와 별개로 진단 해석에 쓸 수 있다.
+     <br><b>③ 계측 투자 우선순위의 근거.</b> 논문이 쓴 15개 중 4개가 영천에 없거나 못 쓴다.
+     특히 <b>산생성조 VFA</b>와 <b>암모니아성 질소의 상시 측정</b>이 빠져 있는데,
+     이 둘은 §6 감사의 미해결 항목(B2·B3)과 정확히 겹친다. 계측을 늘린다면 이 순서다.`;
+
+  $('#itrRefs').innerHTML=[
+    'Zeng A., Chen M., Zhang L., Xu Q. (2023) Are Transformers Effective for Time Series Forecasting? <i>Proceedings of the AAAI Conference on Artificial Intelligence</i> 37(9), 11121–11128. DOI 10.1609/aaai.v37i9.26317',
+    'Feature Engineering and Supervised Machine Learning to Forecast Biogas Production during Municipal Anaerobic Co-Digestion. <i>ACS ES&amp;T Engineering</i> (2024). DOI 10.1021/acsestengg.3c00435 — baseline persistence model을 비교군으로 명시',
+    'Liu Y., Hu T., Zhang H., Wu H., Wang S., Ma L., Long M. (2024) iTransformer: Inverted Transformers Are Effective for Time Series Forecasting. <i>ICLR 2024</i> (Spotlight). arXiv:2310.06625',
+    'Machine learning vs. ADM1: Reliable biogas prediction with minimal data requirements in full-scale plants. <i>ScienceDirect</i> S2666498426000074 — 표본 250개 미만 연구의 일반화 한계 지적',
+    'Two-phase anaerobic digestion 문헌군 — 산성화와 메탄생성을 분리하면 각 미생물군에 최적 조건이 형성되고 율속 단계가 이동한다는 결과 (예: <i>Bioresource Technology</i> 두상 소화 연구들)',
+    'Prediction of biogas production in anaerobic co-digestion of organic wastes using deep learning models. <i>Water Research</i> (2021) — 혼합기질 조성 변동이 예측 난도를 높이는 요인',
+    '<span style="color:var(--muted)">주: 본 세션의 네트워크 정책상 위 문헌의 전문(full text)에는 접근하지 못했고, 서지정보와 초록 수준의 검색 결과에 근거해 인용했다. 인용 취지에 어긋나는 부분이 없는지는 원문 확인이 필요하다.</span>',
+  ].map(x=>`<li>${x}</li>`).join('');
 })();
 
 renderCharts();
