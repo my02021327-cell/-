@@ -353,8 +353,9 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
     </div>
   </div>
   <div class="note" id="baseNote"></div>
+  <div class="card" style="border-left:4px solid var(--crit)" id="baseRevision"></div>
 
-  <h3>2.7 예측 계산기 — 반입 조성별 기대 메탄생성량</h3>
+  <h3>2.8 예측 계산기 — 반입 조성별 기대 메탄생성량</h3>
   <div class="card">
     <p style="font-size:13.5px;color:var(--ink2);margin-top:0">
       반입 조성과 소화조 투입량을 넣으면 화학양론 기반 정상상태 기대치를 계산한다.
@@ -627,7 +628,18 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
     해였을 가능성도 시사한다.
   </div>
 
-  <h3>6.3 개선 우선순위</h3>
+  <h3>6.3 2차 감사 — 기저항 추정의 통계적 편의</h3>
+  <p style="font-size:13.5px;color:var(--ink2);margin-top:-4px">
+    §2.7의 기저항 추정을 다시 점검한 결과, <b>결론을 뒤집어야 하는 오류</b>를 포함해 5건을 찾았다.</p>
+  <div class="card" style="padding:0;overflow-x:auto">
+  <table id="audit2Table">
+    <thead><tr><th>#</th><th>심각도</th><th>오류</th><th>검증</th><th>정정</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+  <div class="note" id="audit2Note"></div>
+
+  <h3>6.4 개선 우선순위</h3>
   <div class="card" style="padding:0;overflow-x:auto">
   <table id="prioTable">
     <thead><tr><th>순위</th><th>항목</th><th>기대 효과</th><th>비용</th></tr></thead>
@@ -653,6 +665,7 @@ const CU = __CU_JSON__;
 const SK = __SK_JSON__;
 const ID = __ID_JSON__;
 const BL = __BL_JSON__;
+const A2 = __A2_JSON__;
 
 /* ---------- 공통 유틸 ---------- */
 const $ = s => document.querySelector(s);
@@ -1606,6 +1619,80 @@ $('#diagBtn').addEventListener('click',()=>{
     add('text',{x:W_-mR,y:mT+ih-8,'text-anchor':'end','font-size':11,fill:'var(--muted)'}).textContent='기질 잠재량 S (㎥CH₄/d) →';
     body.appendChild(svg);
   })();
+})();
+
+
+/* ---------- 2차 감사 ---------- */
+(function(){
+  const B=A2.B_dilution, C=A2.C_intercept, Dm=A2.D_year_mix, E=A2.E_ridge, Aq=A2.A_error;
+  const lam20=B.find(x=>x.lam===0.20), lam10=B.find(x=>x.lam===0.10);
+
+  $('#baseRevision').innerHTML=
+    `<h3 style="margin-top:0">2.7 결론 정정 — 기저항은 통계적 편의일 가능성이 크다</h3>
+     <p style="font-size:13.8px;margin-top:0">위 분석에서 "기저항 약 1,400 ㎥CH₄/d(메탄의 20%)"로 결론지었으나,
+     그 값은 <b>회귀 절편</b>이고 설명변수의 측정오차에 의해 상향 편의된다(회귀 희석).
+     세 갈래로 재검증한 결과 <b>기저항은 0에 가까울 가능성이 높다</b>.</p>
+     <div style="overflow-x:auto"><table>
+       <thead><tr><th>검증</th><th>결과</th><th>함의</th></tr></thead><tbody>
+       <tr><td>측정오차 크기</td>
+         <td style="text-align:left">문헌 기반 COD와 실측 COD의 상대편차 표준편차 <b>${Aq.cod_rel_sd_pct}%</b> (n=${fmt(Aq.n)}).
+           여기에 투입 계량 오차(일차분 변동계수 ${Aq.feed_diff_cv_pct}%)와 조성 혼합 모델 오차가 더해진다</td>
+         <td style="text-align:left">오차분산비 λ ≥ 0.2가 현실적</td></tr>
+       <tr><td>희석 보정</td>
+         <td style="text-align:left">λ=0.10 → 절편 ${fmt(lam10.intercept)}, λ=0.20 → 절편 <b>${fmt(lam20.intercept)}</b> ㎥/d</td>
+         <td style="text-align:left">현실적 오차 수준에서 절편 소멸</td></tr>
+       <tr class="hl"><td>절편 제거 시 성능</td>
+         <td style="text-align:left">평가 R² ${C.with_intercept.test.R2.toFixed(3)} → <b>${C.no_intercept.test.R2.toFixed(3)}</b>,
+           MAPE ${C.with_intercept.test.MAPE}% → <b>${C.no_intercept.test.MAPE}%</b></td>
+         <td style="text-align:left"><b>절편을 빼니 오히려 개선</b> — 학습구간 적합의 산물</td></tr>
+       </tbody></table></div>
+     <p style="font-size:13.8px;margin-bottom:0">
+       절편 없는 모델의 기울기 <b>${C.no_intercept.slope.toFixed(3)}</b>은 곧 <b>평균 실효 생분해도</b>로 읽히며,
+       문헌 범위(0.45~0.82) 안에 정확히 들어온다. §2.6에서 "기저 0 고정" 시나리오가 문헌값에 가장 가까웠던 것과도
+       독립적으로 일치한다. <b>따라서 기저항을 메탄의 20~30%로 보던 종전 판단을 철회하고,
+       절편 없는 모델(평균 생분해도 ${C.no_intercept.slope.toFixed(2)})을 표준으로 삼는다.</b>
+       다만 이는 "난분해성 기저 기여가 전혀 없다"는 뜻이 아니라, <b>현재 데이터로는 0과 구별되지 않는다</b>는 뜻이다.</p>`;
+
+  const rows=[
+    ['E1','<span class="badge crit">치명</span>',
+     '<b>기저항을 회귀 절편으로 추정하고 편의를 보정하지 않았다</b> — §2.7에서 1,400 ㎥/d(메탄의 20%)로 결론.',
+     `설명변수 S의 상대 측정오차가 최소 ${Aq.cod_rel_sd_pct}%. 희석 보정하면 λ=0.2에서 절편 ${fmt(lam20.intercept)} ㎥/d로 소멸. 절편을 제거하면 평가 R²가 ${C.with_intercept.test.R2.toFixed(3)}→${C.no_intercept.test.R2.toFixed(3)}로 오히려 개선.`,
+     `<b>결론 철회.</b> 기저항은 0과 구별되지 않는다. 절편 없는 모델(기울기 ${C.no_intercept.slope.toFixed(3)} = 평균 생분해도)을 표준으로 교체`],
+    ['E2','<span class="badge crit">치명</span>',
+     '<b>기질별 기여가 분리 가능하다고 전제하고 탐색을 반복했다</b> — 고대비 구간·기저 고정 등.',
+     `분뇨 COD 농도를 30~160 kg/t로 흔들어도 평가 R²가 ${E.r2_range[0].toFixed(3)}~${E.r2_range[1].toFixed(3)}로 평탄하고 BD 조합만 이동한다(분뇨 1.00 고정, 음식물 0.46→0.16). BD를 문헌값 고정해 COD를 역산하면 분뇨 ${E.inverted_cod.manure} kg/t(슬러리로 불가능)·음식물 ${E.inverted_cod.food}(고형폐기물로 불가능), 총 COD가 실측의 ${E.inverted_total_vs_obs_pct}%.`,
+     `<b>능선(ridge) 구조 확정.</b> 세 기질은 총합만 결정되고 개별 분리는 원리적으로 불가. 단 음폐수 BD는 ${E.foodww_bd_range[0].toFixed(2)}~${E.foodww_bd_range[1].toFixed(2)}로 안정(문헌 0.82) — 유일하게 견고`],
+    ['E3','<span class="badge warn">중</span>',
+     '<b>편중 진술을 잘못 연결했다</b> — §2.7에서 "저부하 표본이 2018년에 40% 편중"을 구간 외삽(②)의 한계로 서술.',
+     `40%는 <b>투입 상대비 기준</b> 하위 10%의 값이다. 구간 외삽은 <b>기질 잠재량 S 기준</b>이고, S 기준 하위 10%의 2018 비중은 ${Dm.S_potential.share_2018_pct}%로 전체 ${Dm.all.share_2018_pct}%보다 오히려 낮다.`,
+     '두 기준을 분리해 서술. 구간 외삽에는 2018 편중 문제가 없다'],
+    ['E4','<span class="badge warn">중</span>',
+     '<b>구간평균에 비가중 회귀를 적용했다</b> — 표본수가 41~304로 크게 다른 구간의 평균을 동등 취급.',
+     '비가중 절편 1,546 vs n가중 1,480 vs 개별일 회귀 1,526. 차이는 작으나 개별일 회귀가 표준.',
+     '개별일 회귀로 교체 (E1의 결론에는 영향 없음)'],
+    ['E5','<span class="badge ok">경</span>',
+     '<b>저부하 구간 탐지에 중심 이동창을 썼다</b> — <code>rolling(60, center=True)</code>는 미래 30일을 참조.',
+     '탐지 전용이라 예측 누출은 아니다. 후행창으로 바꾸면 &lt;70% 일수가 55일→81일로 늘어난다.',
+     '기술적 탐지 용도임을 명시. 예측 파이프라인에는 후행창만 사용'],
+  ];
+  $('#audit2Table tbody').innerHTML=rows.map(r=>
+    `<tr><td><b>${r[0]}</b></td><td class="c">${r[1]}</td>`+
+    `<td style="text-align:left;font-size:12.5px">${r[2]}</td>`+
+    `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">${r[3]}</td>`+
+    `<td style="text-align:left;font-size:12.5px">${r[4]}</td></tr>`).join('');
+
+  $('#audit2Note').innerHTML=
+    `<b>이 감사가 바꾼 것.</b> E1과 E2는 §2.7의 결론을 직접 뒤집는다. 기저항을 "메탄의 20%인 실재량"으로
+     보고 그것을 고정해 기질을 분리하려던 전략 자체가 성립하지 않는다 — 기저항은 0과 구별되지 않고,
+     기질 조합은 능선을 이뤄 총합만 결정되기 때문이다.
+     <br><br><b>남는 것은 두 가지다.</b> ① 총 실효 생분해도 <b>${C.no_intercept.slope.toFixed(3)}</b>
+     (평가 R² ${C.no_intercept.test.R2.toFixed(3)}, MAPE ${C.no_intercept.test.MAPE}%) — 절편 없이 데이터로 견고하게 추정된다.
+     ② 음폐수 생분해도 ${E.foodww_bd_range[0].toFixed(2)}~${E.foodww_bd_range[1].toFixed(2)} — 가정을 흔들어도 안정적이며 문헌 0.82와 부합한다.
+     나머지(가축분뇨·음식물 개별 생분해도, 난분해성 기저 기여)는 <b>이 데이터로 답할 수 없는 질문</b>이며,
+     기질별 단독 BMP 시험이나 2주 이상 저부하 관측 같은 <b>외부 정보</b>가 있어야 한다.
+     <br><br><b>방법론적 교훈.</b> 절편이 큰 회귀에서 그 절편을 물리량으로 해석하기 전에
+     ① 설명변수 측정오차에 의한 희석 편의를 보정하고 ② 절편을 뺀 모델의 시간순 평가 성능을 비교해야 한다.
+     이번 사례는 두 검증 모두 절편의 실재성을 부정했다.`;
 })();
 
 renderCharts();
