@@ -579,6 +579,44 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
     <table id="vsSumTable"><thead><tr><th>제약 원천</th><th>하한</th><th>상한</th><th>성격</th></tr></thead><tbody></tbody></table>
   </div>
   <div class="card" style="border-left:4px solid var(--goodtxt)" id="vsVerdict"></div>
+
+  <h3>2.12 메탄<b>수율</b> 다단계 직접예측 <span style="font-weight:400;font-size:13px;color:var(--muted)">— Choi et al. (2025) 이식, 최초로 persistence를 이긴 모델</span></h3>
+  <div class="card" style="border-left:4px solid var(--goodtxt)" id="mtIntro"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.12.1 타깃 재정의와 그 물리적 한계</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="mtStatTable"><thead><tr><th>지표</th><th>영천</th><th>논문 (D_main)</th><th>판정</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="note" id="mtStatNote"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.12.2 데이터 진단 — 정상성·시간 구조·시차</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="mtDiagTable"><thead><tr><th>검정</th><th>영천 결과</th><th>논문 결과</th><th>모델 설계에 반영한 것</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="mtTlccTable"><thead><tr><th>변수</th><th>최대 |τ|</th><th>오프셋</th><th>p</th><th>해석</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="note" id="mtTlccNote"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.12.3 문맥길이 — 체류시간의 배수</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="mtCtxTable"><thead><tr><th>문맥길이</th><th>일수</th><th>사고학습 MSE</th><th>평가 MSE</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="note" id="mtCtxNote"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.12.4 모델 비교 — 지평별, 변수집합별</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="mtResTable"><thead><tr><th>변수집합</th><th>지평</th><th>모델</th><th>사고학습 R²</th><th>평가 R²</th><th>평가 MAE</th><th>skill<br>(vs persistence)</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="note" id="mtResNote"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.12.5 절제 연구 — 어떤 구성요소가 실제로 기여하는가</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="mtAblTable"><thead><tr><th>구성</th><th>평가 MSE</th><th>평가 R²</th><th>MSE 증가율</th><th>skill</th><th>논문 보고 증가율</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="note" id="mtAblNote"></div>
+
+  <div class="card" style="border-left:4px solid var(--goodtxt)" id="mtVerdict"></div>
 </section>
 
 <!-- ============================================================ 3. 진단 -->
@@ -809,6 +847,7 @@ const SRTID = __SRT_JSON__;
 const ITR = __ITR_JSON__;
 const VSS = __VS_JSON__;
 const CCF = __CCF_JSON__;
+const MT = __MT_JSON__;
 
 /* ---------- 공통 유틸 ---------- */
 const $ = s => document.querySelector(s);
@@ -2474,6 +2513,214 @@ $('#diagBtn').addEventListener('click',()=>{
      §2.10의 iTransformer 룩백 30일은 채택 SRT 12일을 충족하지만
      물질수지 상한 40.8일 기준으로는 부족하다 — §2.10 결과를 읽을 때 감안해야 할 조건이다.
      §2.8의 잔존율 커널은 300일까지 적분하므로 어느 SRT에서도 충족한다.`;
+})();
+
+
+/* ---------- §2.12 메탄수율 다단계 직접예측 ---------- */
+(function(){
+  if(typeof MT==='undefined'||!MT.models) return;
+  const S_=MT.stationarity, ST=MT.MY_stats, AN=MT.anova;
+  const FID='논문충실(Q_in 포함)', NOD='분모배제(Q_in·SRT_d 제외)';
+  const g=(set,h,m)=>MT.models[set][h][m];
+  const sk=(set,h,m)=>MT.models[set][h].skill[m];
+
+  $('#mtIntro').innerHTML=
+    `<h3 style="margin-top:0;color:var(--goodtxt)">이 절에서 처음으로 ML 모델이 persistence를 이겼다</h3>
+     <p style="font-size:13.5px;color:var(--ink2);line-height:1.75;margin:0">
+     <b>대상 문헌.</b> S. Choi, S.I. Kim, C. Chairattanawat, S. Hwang (POSTECH),
+     "Transformer-based multi-step time series forecasting of methane yield in full-scale anaerobic digestion",
+     <i>Water Research</i> 286 (2025) 124276. 전규모 AD 2기, 2015.1~2024.6 총 3,451일.
+     시계열 패칭(패치 내부에서 변수를 섞는 PatchTST 변형) + 인스턴스 정규화(RevIN)
+     + ANOVA로 고른 시간 임베딩을 결합하고, 1~14일을 <b>재귀가 아니라 직접(direct)</b> 산출한다.
+     <br><br><b>결정적 이식점은 구조가 아니라 타깃이다.</b>
+     §2.10은 <b>메탄 발생량(㎥/d)</b>을 예측했다. 이 양은 투입량에 지배되어 자기상관이
+     ACF₁ ${S_.acf1_CH4_volume}에 달했고, 그래서 <b>어떤 모델도 persistence를 이기지 못했다</b>.
+     본 논문은 <b>수율(투입 VS 1 kg당 메탄)</b>을 예측한다. 부하를 분모로 나눠버리므로
+     '어제 값을 옮기는' 전략의 위력이 줄고, <b>소화조 내부 상태가 설명해야 할 몫만 남는다</b>.
+     이는 §2 전체가 요구해 온 "소화조 내부에서 기인한 메탄"에 방법론적으로 가장 가깝다.
+     <br><br><b>영천 이식에서 내린 판단</b>(유출·VS 인자 관련은 위임받아 자율 결정):
+     논문의 유출 TS·VS 실측은 영천에 없으므로(§2.11) CSTR 가정하에 <b>조내 TS·VS</b>로 대체했고,
+     §2.11에서 유일하게 유계 신호를 보인 <b>VS/TS 비를 피처로 추가</b>했다.
+     논문의 <code>vol</code>은 계란형 소화조라 일별 변동하지만 영천은 8,000㎥ 고정이라 제외했고,
+     <code>swell</code>은 구성 불가라 <b>탈수량</b>을 대리로 쓰되 혼합 스트림임을 표시했다.
+     H₂S 미측정이므로 AD 안정성 지표인 <b>VFA/ALK</b>로 대체했다.
+     문맥길이는 논문과 같이 <b>체류시간의 배수</b>로 잡았고, SRT는 §2.11에서 확정한 12일을 썼다.
+     그리고 논문에 없는 <b>persistence 기준선</b>을 모든 지평에 함께 실었다.</p>`;
+
+  /* 2.12.1 */
+  const ceil=0.55;
+  $('#mtStatTable tbody').innerHTML=
+    `<tr><td style="text-align:left">MY 평균 (㎥CH₄/kg VS)</td><td><b>${ST.mean}</b></td><td>${ST.paper.mean}</td>
+       <td style="color:var(--crit);font-weight:600">이론 상한의 ${Math.round(ST.mean/ceil*100)}%</td></tr>
+     <tr><td style="text-align:left">중앙값</td><td>${ST.median}</td><td>—</td><td>—</td></tr>
+     <tr><td style="text-align:left">IQR</td><td>${ST.iqr}</td><td>${ST.paper.iqr}</td>
+       <td>영천이 ${(ST.iqr/ST.paper.iqr).toFixed(1)}배 넓다</td></tr>
+     <tr><td style="text-align:left">범위</td><td>${ST.min}~${ST.max}</td><td>${ST.paper.min}~${ST.paper.max}</td><td>—</td></tr>
+     <tr><td style="text-align:left">관측 일수</td><td>${ST.n}일</td><td>3,451일</td>
+       <td>영천이 ${(3451/ST.n).toFixed(1)}배 적다</td></tr>`;
+  $('#mtStatNote').innerHTML=
+    `<b>먼저 인정해야 할 것 — MY의 절대 수준은 물리적으로 성립하지 않는다.</b>
+     영천 MY 평균 <b>${ST.mean} ㎥CH₄/kg VS</b>는 Buswell 화학양론 상한(약 0.55)의 <b>${Math.round(ST.mean/ceil*100)}%</b>다.
+     논문 시설은 ${ST.paper.mean}로 상한 안에 있다.
+     이는 §2.11 V3에서 이미 드러난 것과 <b>같은 하나의 원인</b>을 가리킨다 —
+     <b>분모의 투입 VS가 과소평가돼 있다.</b> 산생성조 시료가 침강 고형물을 덜 포함하거나,
+     계측되지 않는 유기물 유입 경로가 있다는 뜻이다.
+     <br><br><b>그래서 이 절의 결과를 읽는 법.</b> MY의 <b>절대 수준은 신뢰할 수 없고</b>,
+     "영천 소화조의 수율이 0.79다"라고 말해서는 안 된다.
+     그러나 분모의 편향이 시간에 따라 대체로 일정하다면 <b>MY의 변동</b>은 여전히 실재하는 신호이고,
+     예측 모델이 겨루는 대상도 그 변동이다. 아래 성능 수치는 그 전제 위에 있다.
+     분모를 바로잡으려면 §2.11에서 제안한 계측 추가가 선행돼야 한다.`;
+
+  /* 2.12.2 */
+  $('#mtDiagTable tbody').innerHTML=
+    `<tr><td style="text-align:left">KPSS 정상성</td>
+       <td>통계량 ${S_.kpss_stat}, p ${S_.kpss_p} → <b>비정상</b></td>
+       <td>5.74, p&lt;0.01 → 비정상</td>
+       <td style="text-align:left">동일 판정. <b>인스턴스 정규화(RevIN) 채택 근거</b></td></tr>
+     <tr><td style="text-align:left">ACF (수율)</td>
+       <td>lag1 ${S_.acf1} / lag7 ${S_.acf7} / lag30 ${S_.acf30}</td>
+       <td>다중 시차에서 강한 잔존</td>
+       <td style="text-align:left">장기 의존 존재 → 긴 문맥길이 필요</td></tr>
+     <tr class="hl"><td style="text-align:left">ACF (발생량, 대조)</td>
+       <td><b>lag1 ${S_.acf1_CH4_volume}</b></td><td>—</td>
+       <td style="text-align:left">§2.10 타깃. 수율로 바꾸며 ${S_.acf1_CH4_volume} → ${S_.acf1}</td></tr>
+     <tr><td style="text-align:left">월별 변동 (Kruskal–Wallis)</td>
+       <td>H ${AN['월'].H}, p ${AN['월'].p} → <b>유의</b></td>
+       <td>F 3.14, p&lt;0.05 유의</td>
+       <td style="text-align:left">시간 임베딩에 <b>월 포함</b></td></tr>
+     <tr><td style="text-align:left">요일별 변동</td>
+       <td>H ${AN['요일'].H}, p ${AN['요일'].p} → <b>무의미</b></td>
+       <td>F 4.10, p&lt;0.05 유의</td>
+       <td style="text-align:left"><b>요일 제외</b> — 논문과 갈리는 지점</td></tr>`;
+
+  const TLI={SRT_d:'체류시간이 길수록 수율이 오르는 방향이나 |τ|가 작다',
+    Qin_foodww:'<b>오프셋 0에서 강한 음의 상관 — 상당 부분이 MY 분모에서 오는 기계적 관계</b>',
+    Qin_manure:'<b>동일. 분모 효과와 실제 부하 저해가 섞여 있다</b>',
+    Qin_food:'<b>동일</b>',
+    temp:'온도가 수율을 <b>선행</b>(+11일). 누적적 영향',
+    TS_dig:'조내 TS가 수율에 <b>후행</b>(−11일). 축적 지표',
+    VS_dig:'단독으로는 거의 무정보(|τ| 0.05)',
+    VSTS_dig:'§2.11의 핵심 변수. 오프셋 0에서 음의 관계 — 분해가 덜 될수록 수율 낮음',
+    VFA_ALK:'AD 안정성 지표. 산 축적이 클수록 수율 낮음 (논문 H₂S 대응)',
+    dewater:'유출 대리변수. 약한 후행 관계',
+    pH_dig:'약한 양의 관계'};
+  $('#mtTlccTable tbody').innerHTML=Object.entries(MT.tlcc).map(([nm,v])=>{
+    const b=v.best, den=nm.indexOf('Qin_')===0||nm==='SRT_d';
+    return `<tr${den?' class="hl"':''}><td style="text-align:left"><code>${nm}</code></td>`+
+      `<td><b>${b.tau>0?'+':''}${b.tau.toFixed(4)}</b></td><td>${b.offset>0?'+':''}${b.offset}일</td>`+
+      `<td style="font-size:12px">${b.p}</td>`+
+      `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">${TLI[nm]||''}</td></tr>`;
+  }).join('');
+  $('#mtTlccNote').innerHTML=
+    `<b>TLCC가 준순환 위험을 그대로 드러낸다.</b> Q_in 3종이 모두 오프셋 0에서 |τ| ${Math.abs(MT.tlcc.Qin_manure.best.tau).toFixed(2)} 안팎의
+     강한 음의 상관을 보이는데, MY = CH₄ / (투입량 × VS) 이므로 <b>투입량이 오르면 MY가 내려가는 것은 산술적으로 당연</b>하다.
+     실제 부하 저해 효과와 이 기계적 관계를 데이터만으로 분리할 수 없다.
+     <br><br><b>논문은 Q_in을 그대로 피처로 쓴다.</b> 이 리포트는 앞서(§2.3) 같은 이유로
+     수율 예측에서 분모 성분을 금지한 전례가 있으므로, <b>논문충실판과 분모배제판을 모두 돌려 함께 싣는다.</b>
+     결과는 2.12.4에서 보듯 <b>분모배제판이 이긴다</b> — 이 판단이 옳았음을 데이터가 확인해 준다.`;
+
+  /* 2.12.3 */
+  const CS=MT.context.scan_extended||MT.context.scan;
+  $('#mtCtxTable tbody').innerHTML=Object.entries(CS).map(([nm,v])=>
+    `<tr${v.L===MT.context.selected_L?' class="hl"':''}><td style="text-align:left">${nm}${v.L===MT.context.selected_L?' <span style="font-size:11px;color:var(--muted)">본문 채택</span>':''}</td>`+
+    `<td>${v.L}일</td><td><b>${v.valid_MSE.toFixed(6)}</b></td><td>${v.test_MSE.toFixed(6)}</td></tr>`).join('');
+  $('#mtCtxNote').innerHTML=
+    `<b>문맥길이는 길수록 좋고, 격자를 넓혀도 끝이 보이지 않는다.</b>
+     논문은 체류시간의 0.5~2배(14~56일)를 시험했고 영천도 같은 방식으로 0.5·SRT~2·SRT(6~24일)를 훑어
+     <b>2·SRT = 24일</b>을 골랐다. 그런데 최적이 격자 상한에 붙어 3·SRT(36일)·4·SRT(48일)까지 확장하니
+     사고학습 MSE가 계속 내려간다(${CS['2·SRT'].valid_MSE.toFixed(6)} → ${CS['4·SRT']?CS['4·SRT'].valid_MSE.toFixed(6):''}).
+     <b>${MT.context.at_edge_after_extension?'확장 후에도 여전히 상한이다':'확장 후 내부 최적이 생겼다'}.</b>
+     <br><br>이는 참조 문헌의 <b>T<sub>historical</sub> ≥ SRT</b> 원칙과 부합하지만, 영천은 그 배수가 4를 넘는다.
+     해석은 둘 중 하나다 — ① 실제 SRT가 12일보다 길거나(§2.11의 물질수지 상한 40.8일과 정합),
+     ② 소화조가 SRT를 넘는 장기 축적성 기억(암모니아·난분해성 고형물)을 갖거나.
+     §2.11의 CCF에서 가축분뇨가 28~29일에 음의 상관을 보인 것은 ②를 지지한다.
+     <br><br><b>본문의 모델 비교는 보수적으로 L=${MT.context.selected_L}일에서 수행했다.</b>
+     더 긴 문맥에서 성능이 더 오를 여지가 있으므로, 아래 결과는 <b>하한으로 읽어야 한다</b>.`;
+
+  /* 2.12.4 */
+  const MODELS=['persistence','RNN(GRU)','LSTM','Transformer','제안모델'];
+  let rows='';
+  [[FID,'논문충실<br><span style="font-size:11px;color:var(--muted)">Q_in·SRT_d 포함</span>'],
+   [NOD,'분모배제<br><span style="font-size:11px;color:var(--muted)">Q_in·SRT_d 제외</span>']].forEach(([set,lab])=>{
+    const hs=Object.keys(MT.models[set]);
+    let first=true;
+    hs.forEach(h=>{
+      MODELS.forEach((m,i)=>{
+        const v=MT.models[set][h][m], s=MT.models[set][h].skill[m];
+        const isP=m==='persistence', win=!isP&&s>0.01;
+        rows+=`<tr${win?' class="hl"':''}>`+
+          (first?`<td rowspan="${hs.length*MODELS.length}" style="vertical-align:middle;border-right:1px solid var(--line)">${lab}</td>`:'')+
+          (i===0?`<td rowspan="${MODELS.length}" style="vertical-align:middle"><b>${h.replace('H','')}일</b></td>`:'')+
+          `<td style="text-align:left${isP?';font-weight:600':''}">${m}${isP?' <span class="badge">기준선</span>':''}</td>`+
+          `<td>${v.valid.R2.toFixed(3)}</td><td><b>${v.test.R2.toFixed(3)}</b></td><td>${v.test.MAE.toFixed(4)}</td>`+
+          `<td style="color:${isP?'var(--muted)':(s>0?'var(--goodtxt)':'var(--crit)')};font-weight:600">`+
+          `${isP?'—':(s>0?'+':'')+s.toFixed(4)}</td></tr>`;
+        first=false;
+      });
+    });
+  });
+  $('#mtResTable tbody').innerHTML=rows;
+
+  const w7=sk(NOD,'H7','제안모델'), w14=sk(NOD,'H14','제안모델');
+  const r14=sk(NOD,'H14','RNN(GRU)');
+  $('#mtResNote').innerHTML=
+    `<b>결과 ① 지평 7일·14일의 분모배제 구성에서, 이 프로젝트 최초로 ML이 persistence를 이겼다.</b>
+     지평 14일에서 제안모델 평가 R² <b>${g(NOD,'H14','제안모델').test.R2.toFixed(3)}</b> 대 persistence ${g(NOD,'H14','persistence').test.R2.toFixed(3)},
+     <b>skill +${w14.toFixed(3)}</b>. 지평 7일도 +${w7.toFixed(3)}로 양수다.
+     §2.10에서는 네 개 설정 전부에서 음수였다. <b>차이를 만든 것은 모델이 아니라 타깃이다</b> —
+     발생량 대신 수율을 예측하자 persistence의 위력이 줄고 내부 상태가 설명할 여지가 생겼다.
+     <br><br><b>결과 ② 분모배제가 논문충실보다 낫다.</b> 같은 지평 14일에서 논문충실판은
+     skill ${sk(FID,'H14','제안모델').toFixed(3)}로 음수인데 분모배제판은 +${w14.toFixed(3)}다.
+     Q_in을 넣으면 모델이 <b>MY 분모와의 산술적 관계</b>에 붙잡히고, 그 관계는 학습·평가 구간의
+     부하 분포가 달라지면 무너진다. 논문은 Q_in을 그대로 쓰지만 <b>영천에서는 빼는 쪽이 맞다.</b>
+     <br><br><b>결과 ③ 지평이 길수록 이득이 커진다.</b>
+     persistence의 평가 R²는 1일 ${g(NOD,'H1','persistence').test.R2.toFixed(3)} → 14일 ${g(NOD,'H14','persistence').test.R2.toFixed(3)}로 무너지는데
+     제안모델은 ${g(NOD,'H1','제안모델').test.R2.toFixed(3)} → ${g(NOD,'H14','제안모델').test.R2.toFixed(3)}로 완만하다.
+     <b>운전 의사결정에 필요한 것이 바로 이 구간</b>이다 — 하루 뒤가 아니라 1~2주 뒤.
+     <br><br><b>결과 ④ 그런데 최고 성능은 제안모델이 아니라 GRU다.</b>
+     지평 14일 분모배제에서 RNN(GRU)이 skill <b>+${r14.toFixed(3)}</b>로 제안모델 +${w14.toFixed(3)}보다 높다.
+     논문의 정교한 구조가 영천 표본 수(학습 ${'약 750'}일 규모)에서는 이점을 내지 못한다.
+     <b>실무 채택 시 GRU를 우선 후보로 본다</b> — 가볍고, 재현이 쉽고, 성능이 앞선다.`;
+
+  /* 2.12.5 */
+  const AB=MT.ablation_nodenom_H14||MT.ablation;
+  const PAPER={'w/o Patching':'+6.25%','w/o Norm':'+52.69%','w/o Temporal':'+3.88%','제안모델':'—'};
+  $('#mtAblTable tbody').innerHTML=Object.entries(AB).map(([nm,v])=>
+    `<tr${nm==='제안모델'?' class="hl"':''}><td style="text-align:left">${nm}</td>`+
+    `<td>${v.MSE.toFixed(6)}</td><td>${v.R2.toFixed(4)}</td>`+
+    `<td style="color:${v.MSE_increase_pct>0?'var(--crit)':'var(--muted)'};font-weight:600">${v.MSE_increase_pct>0?'+':''}${v.MSE_increase_pct}%</td>`+
+    `<td style="color:${v.skill>0?'var(--goodtxt)':'var(--crit)'};font-weight:600">${v.skill>0?'+':''}${v.skill.toFixed(4)}</td>`+
+    `<td style="color:var(--ink2)">${PAPER[nm]||''}</td></tr>`).join('');
+  $('#mtAblNote').innerHTML=
+    `<b>세 구성요소가 모두 기여하고, 순서까지 논문과 같다.</b>
+     인스턴스 정규화를 빼면 MSE가 <b>+${AB['w/o Norm'].MSE_increase_pct}%</b> 폭증하고 skill이 음수(${AB['w/o Norm'].skill.toFixed(3)})로 떨어져
+     <b>persistence보다 못해진다</b>. 논문도 +52.69%로 가장 큰 요소였다.
+     KPSS가 비정상이라고 판정한 계열에서 분포 이동을 흡수하는 장치가 없으면 학습·평가 구간의
+     차이를 그대로 얻어맞는다는 뜻이다. 패칭 +${AB['w/o Patching'].MSE_increase_pct}%, 시간 임베딩 +${AB['w/o Temporal'].MSE_increase_pct}%로
+     논문의 +6.25%·+3.88%와 자릿수가 같다.
+     <br><br><span style="color:var(--muted);font-size:12.5px"><b>정정 기록.</b>
+     이 절제 연구를 처음에는 <b>논문충실(Q_in 포함)</b> 변수집합으로 돌렸다.
+     그 결과에서는 패칭과 시간 임베딩을 빼는 쪽이 오히려 좋게 나와 논문과 반대였다.
+     그러나 그 구성은 persistence를 이기지 못하는 구성이므로, 거기서 잰 구성요소 기여는 의미가 없다.
+     <b>실제로 이긴 구성(분모배제·지평 14일)에서 다시 재자 세 요소가 모두 기여하는 것으로 뒤집혔다.</b>
+     쓸모없는 구성에서 절제 연구를 하면 결론이 뒤집힌다는 사례로 남긴다.</span>`;
+
+  $('#mtVerdict').innerHTML=
+    `<h3 style="margin-top:0;color:var(--goodtxt)">판정 — 채택한다. 단, 보조 모델로서</h3>
+     <p style="font-size:13.5px;color:var(--ink2);line-height:1.75;margin:0">
+     <b>§2.10의 iTransformer는 기각했고 이 방법론은 채택한다.</b> 차이는 구조가 아니라 문제 설정에 있었다.
+     발생량을 예측하면 persistence를 못 이기고, 수율을 예측하면 이긴다.
+     여기에 ① 분모 성분 배제, ② 지평 7~14일, ③ 인스턴스 정규화의 세 조건이 모두 갖춰져야 한다.
+     <br><br><b>역할 분담.</b> §2.8의 화학양론·잔존율 모델은 <b>투입 조성이 확정된 뒤</b> 총량을 계산한다(평가 R² 0.757).
+     본 절의 수율 모델은 <b>내부 상태로부터 앞으로 1~2주의 수율 추세</b>를 낸다.
+     둘을 곱하면 총량 예측이 되고, 어긋나면 그 자체가 진단 신호다 —
+     화학양론이 기대하는 수율과 데이터가 예측하는 수율이 벌어지는 시점이 곧 내부 이상의 조기 경보다.
+     <b>실무 구성으로는 GRU를 쓴다</b>(지평 14일 skill +${r14.toFixed(3)}로 제안 구조보다 앞섬).
+     <br><br><b>남은 한계를 분명히 한다.</b>
+     <br>· MY 절대 수준이 이론 상한의 ${Math.round(ST.mean/0.55*100)}%다. <b>수율의 절대값을 보고해서는 안 되고</b>, 변동만 쓴다.
+     <br>· 문맥길이 최적이 4·SRT에서도 격자 상한이다. 더 긴 이력에서 성능이 더 오를 수 있어 위 수치는 하한이다.
+     <br>· 평가 표본이 2022년 1년(약 250일)뿐이다. 논문은 3,451일 중 20%를 썼다.
+     <br>· skill +0.125는 실재하지만 크지 않다. <b>단독 운전 판단 근거가 아니라 §2.8 모델의 보조·교차검증용</b>으로 쓴다.</p>`;
 })();
 
 renderCharts();
