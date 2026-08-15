@@ -540,6 +540,45 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   <div class="card" style="border-left:4px solid var(--crit)" id="itrVerdict"></div>
   <div class="note" id="itrKeep"></div>
   <ol class="fn" id="itrRefs"></ol>
+
+  <h3>2.11 조내 VS · 유출 VS 기준 SRT 산정 방안의 평가 <span style="font-weight:400;font-size:13px;color:var(--muted)">— 운영일지 원본 2018~2022</span></h3>
+  <div class="card" id="vsIntro"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.11.1 원본 대조 — master 우선 원칙 적용</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="vsMasterTable"><thead><tr><th>항목</th><th>대조 일수</th><th>1% 초과 불일치</th><th>중앙 상대차</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="note" id="vsMasterNote"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.11.2 V1 — 운영일지 내장 방식은 HRT와 항등이다</h4>
+  <div class="card" style="border-left:4px solid var(--crit)" id="vsV1"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.11.3 V2 — 실측 유출 VS가 없다</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="vsV2Table"><thead><tr><th>운영일지 유출 계열 항목</th><th>기입 일수</th><th>판정</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="note" id="vsV2Note"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.11.4 V3 — VS 파괴 기반, 그리고 VS 수지가 닫히지 않는다는 발견</h4>
+  <div class="card" style="border-left:4px solid var(--crit)" id="vsV3"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.11.5 V4 — VS/TS 동적 응답: 처음으로 유계 구간이 나왔다</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="vsV4Table"><thead><tr><th>응답 변수</th><th>변동계수</th><th>최적 시상수</th><th>R²</th><th>부트스트랩 95% 구간</th><th>격자상한 채택률</th><th>판정</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="note" id="vsV4Note"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.11.6 기질 투입 시차 재검정 — 사전 탈색 교차상관</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="ccfTable"><thead><tr><th>구동변수</th><th>최대 |r|</th><th>해당 시차</th><th>유의 시차 수<br>(탈색 후 / 원자료)</th><th>해석</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="note" id="ccfNote"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.11.7 종합 — SRT 구간의 재확정</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="vsSumTable"><thead><tr><th>제약 원천</th><th>하한</th><th>상한</th><th>성격</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="card" style="border-left:4px solid var(--goodtxt)" id="vsVerdict"></div>
 </section>
 
 <!-- ============================================================ 3. 진단 -->
@@ -768,6 +807,8 @@ const A2 = __A2_JSON__;
 const RT = __RT_JSON__;
 const SRTID = __SRT_JSON__;
 const ITR = __ITR_JSON__;
+const VSS = __VS_JSON__;
+const CCF = __CCF_JSON__;
 
 /* ---------- 공통 유틸 ---------- */
 const $ = s => document.querySelector(s);
@@ -2224,6 +2265,215 @@ $('#diagBtn').addEventListener('click',()=>{
     'Prediction of biogas production in anaerobic co-digestion of organic wastes using deep learning models. <i>Water Research</i> (2021) — 혼합기질 조성 변동이 예측 난도를 높이는 요인',
     '<span style="color:var(--muted)">주: 본 세션의 네트워크 정책상 위 문헌의 전문(full text)에는 접근하지 못했고, 서지정보와 초록 수준의 검색 결과에 근거해 인용했다. 인용 취지에 어긋나는 부분이 없는지는 원문 확인이 필요하다.</span>',
   ].map(x=>`<li>${x}</li>`).join('');
+})();
+
+
+/* ---------- §2.11 VS 기준 SRT 평가 ---------- */
+(function(){
+  if(typeof VSS==='undefined'||!VSS.V1) return;
+  const V1=VSS.V1, V2=VSS.V2, V3=VSS.V3, V4=VSS.V4;
+
+  $('#vsIntro').innerHTML=
+    `<p style="font-size:13.5px;color:var(--ink2);line-height:1.75;margin:0">
+     <b>질문.</b> SRT를 <b>조내 VS</b>와 <b>유출 VS</b> 기준으로 구하는 방안은 유효한가.
+     교과서 형태는 <code>SRT = V<sub>r</sub>·X<sub>r</sub> / (Q<sub>w</sub>·X<sub>w</sub> + Q<sub>e</sub>·X<sub>e</sub>)</code>로,
+     반응기 고형물 재고를 <b>실제로 빠져나가는 고형물 속도</b>로 나눈다.
+     HRT와 SRT가 분리되는 공정(AnMBR·부착성장식)에서 SRT를 제어하는 표준식이다.
+     <br><br><b>검정 범위.</b> 2018~2022년 운영일지 원본 5개 파일을 직접 읽어
+     master에 없는 유출·탈수 계열 항목까지 확보했다.
+     <b>2023년은 온도 붕괴·VFA 붕괴가 있어 제외</b>했고,
+     master와 값이 다른 항목은 <b>master를 우선</b>했다.
+     네 가지 경로(V1~V4)를 각각 평가한다.</p>`;
+
+  /* 2.11.1 */
+  $('#vsMasterTable tbody').innerHTML=VSS.master_check.map(x=>
+    `<tr><td style="text-align:left"><code>${x.col}</code></td><td>${x.n}</td>`+
+    `<td style="color:${x.mismatch_1pct?'var(--crit)':'var(--goodtxt)'};font-weight:600">${x.mismatch_1pct}건 (${x.mismatch_pct}%)</td>`+
+    `<td>${x.median_rel_diff_pct}%</td></tr>`).join('');
+  const tot=VSS.master_check.reduce((a,x)=>a+x.mismatch_1pct,0);
+  $('#vsMasterNote').innerHTML=
+    `<b>대조 결과 — 불일치 ${tot}건.</b> 13개 항목 전부에서 중앙 상대차가 0.000%다.
+     즉 <b>master CSV는 이 운영일지에서 그대로 파생된 파일</b>이며, 두 자료 사이에 값 충돌이 없다.
+     "master 우선" 원칙은 적용했으나 실제로 덮어쓸 대상이 없었다.
+     <br><br>따라서 운영일지에서 새로 얻은 것은 <b>값의 수정이 아니라 항목의 추가</b>다 —
+     탈리액 유량·SS, 탈수 케이크 발생량 등 master에 실리지 않은 유출 계열이 그것이고,
+     이들이 V2 평가의 재료가 된다.`;
+
+  /* 2.11.2 */
+  $('#vsV1').innerHTML=
+    `<h3 style="margin-top:0;color:var(--crit)">V1. 운영일지의 "조내 유기물량 ÷ 유출 유기물량"은 HRT를 다시 쓴 것이다</h3>
+     <p style="font-size:13.5px;color:var(--ink2);line-height:1.75;margin:0">
+     운영일지 <code>Data 계산</code> 시트에는 <b>조내 유기물량</b>과 <b>유출 유기물량(VS기준)</b>이 이미 계산돼 있다.
+     이 둘로 SRT를 구하면 중앙값 <b>${V1.srt_median}일</b>이 나온다.
+     그런데 같은 기간 HRT(= V/Q) 중앙값도 <b>${V1.hrt_median}일</b>이고,
+     두 계열의 <b>최대 절대차가 ${V1.max_abs_diff.toExponential ? V1.max_abs_diff.toExponential(1) : V1.max_abs_diff}일</b> — 부동소수점 오차 수준으로 <b>완전히 동일</b>하다.
+     <br><br><b>이유는 정의에 있다.</b> 운영일지의 유출 유기물량은 실측 유출 VS가 아니라
+     <code>소화조 투입량 × 조내 VS%</code>로 정의돼 있다(2018년 원본 ${V1.workbook_formula_n||''}행에서 직접 검증, 최대 오차 4.6×10<sup>−13</sup> kg).
+     그러면
+     <br><code style="display:inline-block;margin:6px 0 6px 12px">SRT = (V × VS<sub>조내</sub>) / (Q × VS<sub>조내</sub>) = V / Q = HRT</code>
+     <br>로 <b>VS가 분자·분모에서 약분되어 사라진다.</b>
+     <br><br>즉 이 방식은 VS 정보를 쓰는 것처럼 보이지만 실제로는 아무 정보도 추가하지 않는다.
+     "조내 VS와 유출 VS 기준"이 의미를 가지려면 <b>유출 VS가 조내 VS와 다른, 독립적으로 측정된 값</b>이어야 한다.
+     SRT ≠ HRT는 고형물이 선택적으로 잔류할 때만 성립하고, 그것은 유출 농도가 조내 농도보다 낮다는 <b>측정</b>으로만 확인된다.</p>`;
+
+  /* 2.11.3 */
+  const NMV={wb_filtrate_tpd:'탈리액 유량 (t/d)',wb_filtrate_TS:'탈리액 TS(%)',
+             wb_filtrate_VS:'탈리액 VS(%) ★핵심',wb_filtrate_SS:'탈리액 SS (mg/L)',
+             wb_cake_dig_tpd:'소화조 탈수케이크 발생량',wb_cake_dig_TS:'소화조 탈수케이크 TS(%) ★핵심',
+             wb_cake_mix_tpd:'혼합슬러지 탈수케이크 발생량',wb_cake_mix_TS:'혼합슬러지 탈수케이크 TS(%)',
+             wb_mvr_VS:'MVR 농축액 VS(%)'};
+  $('#vsV2Table tbody').innerHTML=Object.entries(V2.have).map(([k,n])=>
+    `<tr${n===0?' class="hl"':''}><td style="text-align:left">${NMV[k]||k}</td><td>${n}일</td>`+
+    `<td style="color:${n===0?'var(--crit)':'var(--goodtxt)'};font-weight:600">${n===0?'전 기간 미기입':'사용 가능'}</td></tr>`).join('');
+  $('#vsV2Note').innerHTML=
+    `<b>V2는 구성할 수 없다 — 유출 VS 실측치가 존재하지 않는다.</b>
+     <br><br>· <b>탈리액 VS(%)</b>는 운영일지 서식에 <b>컬럼은 있으나 전 기간 값이 없다</b>(0일).
+     <br>· <b>소화조 탈수케이크 TS(%)</b>도 0일이고, 케이크 발생량조차 2018년 ${V2.have.wb_cake_dig_tpd}일에만 있다가 이후 서식에서 사라졌다.
+     <br>· 설령 값이 있어도 탈리액은 <b>"소화조 + 슬러지저류조" 혼합 스트림</b>이라 소화조 몫으로 귀속할 수 없다.
+     이는 §2.8에서 탈수기 처리량이 역산 배출유량의 1.59배였던 것과 같은 이야기다.
+     <br><br><b>유일하게 채워진 것은 탈리액 SS다</b>(${V2.filtrate_SS_n}일, 중앙 ${V2.filtrate_SS_median_mgL} mg/L).
+     유량 ${V2.filtrate_flow_median_tpd} t/d와 곱하면 ${V2.filtrate_solids_kgd} kg/d로, 조내 재고의 ${V2.pct_of_inventory}%/일에 해당한다.
+     이것만으로 SRT를 계산하면 ${V2.srt_upper_bound_filtrate_only}일이지만,
+     <b>탈수 케이크로 빠지는 고형물이 통째로 빠져 있으므로 이는 SRT가 아니라 느슨한 상한</b>일 뿐이다.
+     <br><br><b>따라서 조내 VS/유출 VS 방식을 제대로 쓰려면 계측을 추가해야 한다</b> —
+     소화조 배출 라인에서 직접 뜬 시료의 VS(%), 그리고 탈수 케이크의 발생량·TS·VS.
+     이 세 가지가 있으면 위 교과서식이 그대로 성립하고 SRT가 결정된다.`;
+
+  /* 2.11.4 */
+  $('#vsV3').innerHTML=
+    `<h3 style="margin-top:0;color:var(--crit)">V3. k<sub>d</sub>·SRT만 식별되고, 더 큰 문제로 VS 수지가 닫히지 않는다</h3>
+     <p style="font-size:13.5px;color:var(--ink2);line-height:1.75;margin:0">
+     CSTR 정상상태 1차 반응에서는 <code>VS<sub>in</sub>/VS<sub>out</sub> − 1 = k<sub>d</sub> · SRT</code>다.
+     영천 데이터(n=${V3.n}일)의 VS 제거율 중앙값은 <b>${V3.VS_removal_pct}%</b>이고, 여기서
+     <b>k<sub>d</sub>·SRT = ${V3.kd_times_SRT}</b>이 나온다. 그러나 이것은 <b>곱</b>이다:
+     k<sub>d</sub>=0.05/d면 SRT ${V3.srt_if_kd_0p05}일, 0.10이면 ${V3.srt_if_kd_0p10}일, 0.20이면 ${V3.srt_if_kd_0p20}일.
+     <b>§2.8에서 θ와 SRT가 곱으로만 나타났던 것과 정확히 같은 식별 불가 구조</b>다.
+     (X<sub>in</sub>/X − 1)을 1/Q에 회귀해 k<sub>d</sub>·V를 분리하려 했으나 R²가 ${V3.regression_R2}로 관계 자체가 없다.
+     <br><br><b>그런데 더 심각한 것이 나왔다 — 메탄 교차검증에 실패한다.</b>
+     파괴된 VS 1 kg당 메탄이 <b>${V3.CH4_per_VS_destroyed} ㎥</b>다.
+     Buswell 화학양론 상한은 VS 1 kg당 약 0.50~0.55 ㎥(COD 환산 0.35 ㎥CH₄/kg COD × 1.4~1.5 kg COD/kg VS)이므로
+     <b>이론 최대치의 약 ${Math.round(V3.CH4_per_VS_destroyed/0.52*100)}%</b>다. 물리적으로 불가능하다.
+     <br><br><b>해석.</b> 파괴 VS를 <code>투입 VS − 투입량×조내 VS%</code>로 계산했는데,
+     실제 메탄량을 설명하려면 파괴 VS가 지금의 약 1.8배여야 한다. 즉 <b>투입 VS가 과소평가돼 있다.</b>
+     산발효조 시료가 침강 고형물을 덜 포함하는 지점에서 채취되거나, 계측되지 않는 유기물 유입 경로가 있다는 뜻이다.
+     이는 §2.7의 "기저항" 문제와 같은 자리를 가리킨다 — 투입으로 설명되지 않는 메탄이 존재한다.
+     <br><br><b>결론: VS 수지가 닫히지 않으므로, 이 수지에서 유도한 SRT는 그 오차를 그대로 물려받는다.</b>
+     V3은 SRT 산정 근거로 쓸 수 없다.</p>`;
+
+  /* 2.11.5 */
+  $('#vsV4Table tbody').innerHTML=Object.entries(V4).map(([nm,v])=>{
+    const ok=!v.at_edge && v.boot_ci && v.boot_ci[1]<200;
+    return `<tr${ok?' class="hl"':''}><td style="text-align:left">${nm}</td><td>${v.cv_pct}%</td>`+
+      `<td><b>${v.best.tau}일</b></td><td>${v.best.R2.toFixed(4)}</td>`+
+      `<td>${v.boot_ci?`${v.boot_ci[0].toFixed(0)}~${v.boot_ci[1].toFixed(0)}일`:'—'}</td>`+
+      `<td style="color:${v.boot_pct_at_edge>10?'var(--crit)':'var(--goodtxt)'}">${v.boot_pct_at_edge!==undefined?v.boot_pct_at_edge+'%':(v.at_edge?'100%':'—')}</td>`+
+      `<td style="color:${ok?'var(--goodtxt)':'var(--crit)'};font-weight:600">${ok?'유계 — 정보 있음':(v.at_edge?'격자 상한 — 신호 없음':'불안정')}</td></tr>`;
+  }).join('');
+  const vt=V4['소화액 VS/TS'];
+  $('#vsV4Note').innerHTML=
+    `<b>여기서 처음으로 무언가 나왔다.</b> §2.8에서 소화액 <b>TS</b>로 시상수를 찾으려던 시도는
+     최적값이 격자 상한 200일에 붙어 완전히 실패했다(위 표 대조군, 변동계수 ${V4['소화액 TS(대조)'].cv_pct}%).
+     그런데 <b>VS/TS 비</b>로 바꾸면 최적 시상수가 <b>${vt.best.tau}일로 격자 내부</b>에 생기고,
+     30일 블록 부트스트랩 200회에서 <b>95% 구간 ${vt.boot_ci[0].toFixed(0)}~${vt.boot_ci[1].toFixed(0)}일</b>,
+     <b>격자 상한 채택률 ${vt.boot_pct_at_edge}%</b>다.
+     지금까지 시도한 모든 동적 추정 중 <b>상한이 닫힌 유일한 결과</b>다.
+     <br><br><b>왜 VS/TS가 되고 TS는 안 되는가.</b> TS에는 분해되지 않는 무기물이 섞여 있어
+     투입 변동에 대한 응답을 희석한다(변동계수 ${V4['소화액 TS(대조)'].cv_pct}%).
+     VS/TS 비는 <b>고형물 중 유기물 비율</b>, 즉 분해가 얼마나 진행됐는지를 직접 지시하는 양이라
+     체류시간에 민감하다. 사용자의 "조내 VS 기준" 착안이 맞았던 지점이 여기다 —
+     다만 <b>절대 VS가 아니라 VS/TS 비</b>에서 작동한다(소화액 VS 단독은 95% 구간이 ${V4['소화액 VS'].boot_ci[0].toFixed(0)}~${V4['소화액 VS'].boot_ci[1].toFixed(0)}일로 여전히 열려 있다).
+     <br><br><b>다만 과대평가는 금물이다.</b> R²가 ${vt.best.R2.toFixed(3)}에 불과하고,
+     점추정 ${vt.best.tau}일과 부트스트랩 중앙 ${vt.boot_median_tau}일이 어긋난다.
+     이것은 <b>SRT를 결정한 것이 아니라 상한을 ${vt.boot_ci[1].toFixed(0)}일로 끌어내린 것</b>이다.
+     그 자체로는 큰 진전인데, §2.8의 물질수지 상한이 40.8일이었기 때문이다.`;
+
+  /* 2.11.7 종합 */
+  const rows=[
+    ['세척(washout) 임계 — 1/(μ<sub>max</sub>−d<sub>b</sub>)', `${CCF.washout.SRT_min_d['표준 μmax 0.33']}일`, '—',
+     '물리적 하한. 아세트산 이용성 메탄균이 세척되지 않을 최소 조건'],
+    ['세척 임계 × 안전율 3~5배 (설계 관행)', `${CCF.washout.safety_3x['표준 μmax 0.33']}일`,
+     `${CCF.washout.safety_5x['표준 μmax 0.33']}일`, '설계 지침. 추정치가 아니라 운전 권장 범위'],
+    ['고형물 물질수지 (§2.8)', `${SRTID.C_balance.srt_by_V['2400(30%)']}일`,
+     `${SRTID.C_balance.srt_by_V['8000']}일`, '유효 용적 30~100% 가정에 따른 구간'],
+    ['<b>VS/TS 동적 응답 부트스트랩 (§2.11.5)</b>', `<b>${vt.boot_ci[0].toFixed(0)}일</b>`,
+     `<b>${vt.boot_ci[1].toFixed(0)}일</b>`, '<b>영천 실측 데이터에서 나온 유일한 유계 구간</b>'],
+    ['예측 성능 (§2.8.4)', '8일', '60일', '이 범위 전체에서 평가 R² 차이 0.013 — 제약 없음'],
+  ];
+  $('#vsSumTable tbody').innerHTML=rows.map(r=>
+    `<tr><td style="text-align:left">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td>`+
+    `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">${r[3]}</td></tr>`).join('');
+
+  const lo=Math.max(CCF.washout.safety_3x['표준 μmax 0.33'], vt.boot_ci[0]);
+  const hi=Math.min(vt.boot_ci[1], SRTID.C_balance.srt_by_V['8000']);
+  $('#vsVerdict').innerHTML=
+    `<h3 style="margin-top:0;color:var(--goodtxt)">종합 판정 — SRT 채택 근거가 처음으로 데이터에서 나왔다</h3>
+     <p style="font-size:13.5px;color:var(--ink2);line-height:1.75;margin:0">
+     <b>제안하신 "조내 VS · 유출 VS 기준" 방안의 평가 결과는 갈린다.</b>
+     <br><br>· <b>운영일지에 이미 들어 있는 형태(V1)로는 무효다.</b> 유출 VS를 조내 VS로 대체해 놓아서 HRT와 항등이 된다.
+     <br>· <b>교과서 형태(V2)는 옳지만 영천에서는 구성할 수 없다.</b> 유출 VS 실측치가 전 기간 미기입이다.
+     <br>· <b>VS 파괴 기반(V3)은 쓸 수 없다.</b> 파괴 VS당 메탄이 이론 상한의 ${Math.round(V3.CH4_per_VS_destroyed/0.52*100)}%로 수지 자체가 닫히지 않는다.
+     <br>· <b>그러나 VS를 동적 응답으로 쓰는 길(V4)이 열렸다.</b> VS/TS 비의 응답 시상수가
+     95% 구간 <b>${vt.boot_ci[0].toFixed(0)}~${vt.boot_ci[1].toFixed(0)}일</b>로 닫힌다.
+     <br><br><b>구간 교차.</b> 세척 임계 × 안전율 3배(${CCF.washout.safety_3x['표준 μmax 0.33']}일)와
+     VS/TS 부트스트랩 상한(${vt.boot_ci[1].toFixed(0)}일)이 겹치는 곳은 <b>${lo.toFixed(1)}~${hi.toFixed(0)}일</b>이다.
+     기존 채택값 <b>SRT 12일이 이 구간의 상단</b>에 정확히 놓인다.
+     <br><br><b>이것이 이전 판과 다른 점.</b> §2.8에서는 SRT 12일을 "물질수지 허용 구간 안에 있고 현장 감각과 맞는다"는
+     <b>가정</b>으로 채택했다. 이제는 <b>영천 데이터에서 직접 나온 유계 구간(VS/TS 응답)</b>과
+     <b>미생물 증식속도라는 독립적 물리 제약(세척 임계)</b>이 교차하는 지점으로 지지된다.
+     문헌 생분해도를 정답으로 놓고 역산했던 폐기된 논거와는 성격이 다르다.
+     <br><br><b>남은 한계.</b> VS/TS 응답의 R²는 ${vt.best.R2.toFixed(3)}로 여전히 약하고, 점추정과 부트스트랩 중앙값이 어긋난다.
+     세척 임계의 μ<sub>max</sub>는 문헌값이며 영천 균총의 실측이 아니다.
+     <b>SRT를 확정하려면 여전히 추적자 시험이 필요하고</b>, 그보다 먼저
+     <b>소화조 배출 라인의 VS와 탈수 케이크의 발생량·TS·VS를 계측</b>하면 V2 교과서식이 바로 성립한다.
+     후자가 훨씬 싸고 상시 운영에도 쓰인다.</p>`;
+})();
+
+
+/* ---------- §2.11.6 사전 탈색 교차상관 ---------- */
+(function(){
+  if(typeof CCF==='undefined'||!CCF.ccf) return;
+  const INT={
+    '소화조 투입량':'투입 당일 최대. 산생성조를 거쳐 이미 산성화된 기질이라 가수분해 유도기가 없다',
+    'VS 부하 (투입량×산발효조VS)':'당일 최대. 위와 같은 이유',
+    'TS 부하 (투입량×산발효조TS)':'당일 최대. 위와 같은 이유',
+    '반입 총량':'<b>3일 지연 최대 — 전단 공정 통과 시간</b>',
+    '음폐수 반입량':'<b>3일 지연 최대 — 전단 공정 통과 시간</b>',
+    '가축분뇨 반입량':'28~29일에 <b>음의</b> 상관. 생산 지연이 아니라 암모니아 축적 저해로 읽힌다(§3)',
+    '음식물 반입량':'12~20일. 입자성이 커 분해가 느린 것과 부합',
+  };
+  $('#ccfTable tbody').innerHTML=Object.entries(CCF.ccf).map(([nm,v])=>{
+    const r=CCF.raw_ccf[nm]||{};
+    const hi=(nm.indexOf('반입')>=0&&nm.indexOf('총량')>=0)||nm==='음폐수 반입량';
+    return `<tr${hi?' class="hl"':''}><td style="text-align:left">${nm}</td>`+
+      `<td><b>${v.best_r>0?'+':''}${v.best_r.toFixed(4)}</b></td><td><b>${v.best_lag}일</b></td>`+
+      `<td>${v.sig_lags.length} / ${r.n_sig!==undefined?r.n_sig:'—'}</td>`+
+      `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">${INT[nm]||''}</td></tr>`;
+  }).join('');
+
+  const f=CCF.ccf['소화조 투입량'], it=CCF.ccf['반입 총량'];
+  $('#ccfNote').innerHTML=
+    `<b>사전 탈색이 왜 필요한가 — 숫자가 직접 말한다.</b>
+     원자료로 교차상관을 돌리면 소화조 투입량에서 <b>41개 시차 전부가 "유의"</b>하게 나온다.
+     자기상관 때문에 생기는 허위 상관이다. 입력을 ARIMA(2,1,2)로 백색잡음화하고
+     같은 필터를 출력에 적용하면 유의 시차가 <b>${f.sig_lags.length}개</b>로 줄어든다.
+     §2.4·§2.8의 격자탐색이 "예측이 잘 맞는 지연"을 골랐다면, 이쪽은 "통계적으로 유의한 지연"이다.
+     <br><br><b>결과 ① 소화조 투입 → 메탄은 당일이 최대다</b>(r ${f.best_r>0?'+':''}${f.best_r.toFixed(3)}, 시차 ${f.best_lag}일).
+     참조 문헌의 기질별 시차 표에서 하수슬러지는 10~20일, 농업부산물은 48~96시간인데
+     영천은 <b>가용성 유기물(0~12시간) 범주</b>에 해당한다.
+     <b>영천에 가수분해조가 없고 산생성조에서 이미 VFA로 전환되어 넘어오기 때문</b>이며,
+     §2.8에서 유효 반응 시상수가 2일 안팎으로 짧게 나왔던 것과 같은 이야기다.
+     <br><br><b>결과 ② 반입 → 메탄은 3일 지연이 최대다</b>(r +${it.best_r.toFixed(3)}, 음폐수도 동일하게 3일).
+     이것이 <b>전처리 → 여액저장조 → 산생성조를 통과하는 시간</b>이다.
+     §2.8이 롤링 검증으로 고른 전단 혼합 시상수 τ_mix = ${RT.params.tmix}일과
+     <b>독립적인 방법으로 같은 값에 도달했다</b> — 서로 다른 두 기준(예측오차 최소화 / 사전탈색 유의성)이
+     같은 3일을 가리키므로 전단 지연 설정의 신뢰도가 올라간다.
+     <br><br><b>결과 ③ 가축분뇨만 부호가 음수다</b>(28~29일, r ${CCF.ccf['가축분뇨 반입량'].best_r.toFixed(4)}).
+     분뇨 투입이 늘면 약 4주 뒤 메탄이 <b>줄어드는</b> 경향인데, 이는 생산 지연이 아니라
+     <b>암모니아 축적에 의한 저해</b>로 읽는 것이 자연스럽다(§3의 TAN 3,337→4,913 mg/L, FAN 306→585 mg/L 관측과 부합).
+     <br><br><b>학습 윈도우 점검.</b> 참조 문헌은 T<sub>historical</sub> ≥ SRT를 권고한다.
+     §2.10의 iTransformer 룩백 30일은 채택 SRT 12일을 충족하지만
+     물질수지 상한 40.8일 기준으로는 부족하다 — §2.10 결과를 읽을 때 감안해야 할 조건이다.
+     §2.8의 잔존율 커널은 300일까지 적분하므로 어느 SRT에서도 충족한다.`;
 })();
 
 renderCharts();
