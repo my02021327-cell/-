@@ -357,6 +357,21 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
 
   <h3>2.8 잔존율 가중 적분과 SRT — 시점 정렬 재검증</h3>
   <div class="card" style="border-left:4px solid var(--goodtxt)" id="rtIntro"></div>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="weightTable">
+      <thead><tr><th>소화조 투입 후 경과일</th><th>SRT 8일</th><th>SRT 12일</th><th>SRT 20일</th><th>SRT 40.5일</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="tblnote">순수 잔존율 exp(−τ/SRT). 오늘 투입분은 100%, τ일 전 투입분은 위 비율만큼 소화조에 남아 있다.
+    실제 모델은 여기에 미분해 비율 exp(−kτ)를 곱한 <code>w(τ)=k·exp(−(1/SRT+k)τ)</code>를 쓴다.</p>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="litScanTable">
+      <thead><tr><th>SRT</th><th>모델 총량</th><th>실측 대비</th><th>사고학습 R²</th><th>평가 R²</th><th>MAPE</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="note" id="srtNote"></div>
   <div class="grid2">
     <div class="card" style="padding:0;overflow-x:auto">
       <table id="srtTable"><thead><tr><th>SRT</th><th>θ 음폐수</th><th>θ 분뇨</th><th>θ 음식물</th><th>사고학습 R²</th><th>평가 R²</th></tr></thead><tbody></tbody></table>
@@ -1798,6 +1813,49 @@ $('#diagBtn').addEventListener('click',()=>{
      <b>반입 기질별 COD·TS·VS 실측</b>이 반드시 필요하다. 현재는 세 기질의 COD 농도를 모두
      문헌값으로 가정하고 있어, 그 가정 오차가 그대로 BD 추정으로 전가된다.
      이것이 이 모델링의 마지막 남은 병목이며, <b>시료 3종의 성상 분석 한 번</b>으로 풀린다.`;
+})();
+
+
+/* ---------- §2.8 SRT 결정 근거 ---------- */
+(function(){
+  if(!RT.lit_free_scan) return;
+  const NMK={foodww:'음폐수',manure:'가축분뇨',food:'음식물'};
+  $('#weightTable tbody').innerHTML=[0,1,2,3,5,7,10,14,20,30,45].map(t=>
+    `<tr${t===0?' class="hl"':''}><td>${t}일 전 투입분</td>`+
+    [8,12,20,40.5].map(s=>`<td>${(Math.exp(-t/s)*100).toFixed(1)}%</td>`).join('')+`</tr>`).join('');
+
+  $('#litScanTable tbody').innerHTML=RT.lit_free_scan.map(x=>{
+    const ok=Math.abs(x.total_pct-100)<=3;
+    return `<tr${x.srt===40.5?' class="hl"':''}><td>${x.srt}일${x.srt===40.5?' <span style="font-size:11px;color:var(--muted)">설계 용적 기준</span>':''}</td>`+
+      `<td>${fmt(x.total)}</td><td${ok?' style="color:var(--goodtxt);font-weight:600"':''}>${x.total_pct}%</td>`+
+      `<td>${x.valid_R2.toFixed(3)}</td><td><b>${x.test_R2.toFixed(3)}</b></td><td>${x.test_MAPE.toFixed(2)}%</td></tr>`;
+  }).join('');
+
+  const S=RT.srt_sensitivity, L=RT.lit_free_scan;
+  const g=v=>L.find(x=>x.srt===v);
+  $('#srtNote').innerHTML=
+    `<b>채택 SRT는 40.5일이다 — 근거는 문헌값 무보정 예측의 총량 정합.</b>
+     위 표는 <b>파라미터를 하나도 추정하지 않고</b> 문헌 생분해도·COD 농도만 넣어 예측한 결과다.
+     가장 엄격한 검정이며, 여기서 SRT가 결정된다.
+     SRT 8~12일에서는 총량이 실측의 ${g(8).total_pct}~${g(12).total_pct}%에 그쳐 메탄이 부족하고
+     평가 R²도 ${g(8).test_R2.toFixed(2)}~${g(12).test_R2.toFixed(2)}다. 반면
+     <b>SRT 40.5일에서 총량 ${g(40.5).total_pct}%, 평가 R² ${g(40.5).test_R2.toFixed(3)}, MAPE ${g(40.5).test_MAPE.toFixed(2)}%</b>로
+     정합한다. 40.5일은 설계 용적 8,000㎥ ÷ 투입 197 t/d 라는 <b>독립적 물리 근거</b>를 갖는다.
+     <br><br><b>왜 8~12일 직관과 어긋나는가 — 응답 속도와 체류시간은 다른 물리량이다.</b>
+     산발효조에서 이미 가수분해된 기질이 넘어오므로 <b>가스 응답이 빠른 것은 맞다</b>.
+     그러나 그 빠름은 체류시간이 짧아서가 아니라 <b>분해속도 k가 커서</b>다.
+     실제 유효 시상수 1/(1/SRT+k)를 보면 —
+     <br>· 음폐수(k=0.40): SRT 8일 ${S.foodww.tau_eff['8']}일 → SRT 60일 ${S.foodww.tau_eff['60']}일, 변동 <b>${S.foodww.range_pct}%</b>뿐
+     <br>· 음식물(k=0.30): ${S.food.tau_eff['8']}일 → ${S.food.tau_eff['60']}일, 변동 ${S.food.range_pct}%
+     <br>· 가축분뇨(k=0.08): ${S.manure.tau_eff['8']}일 → ${S.manure.tau_eff['60']}일, 변동 <b>${S.manure.range_pct}%</b>
+     <br><br>즉 <b>빠른 기질은 SRT가 8일이든 60일이든 응답이 2일 안팎으로 거의 같아 SRT를 드러내지 못한다.</b>
+     SRT를 관측 가능하게 하는 것은 느린 기질(가축분뇨)뿐이고, 분뇨의 물질수지가 긴 SRT를 요구한다.
+     현장에서 체감하는 "8~12일"은 <b>가용성 기질의 응답 시간</b>을 본 것이고,
+     고형물이 실제로 반응조에 머무는 시간은 설계값에 가깝다는 해석이 데이터와 맞는다.
+     이는 참조 문서의 "가스 응답 시간상수(반감기 2일)는 HRT 40.5일과 무관하다"는 관측과도 정확히 같은 이야기다.
+     <br><br><b>정정 기록.</b> 직전 판에서는 사고학습 R²가 최대인 SRT 5일을 채택했는데,
+     SRT 5일과 12일의 R² 차이는 0.007에 불과한 반면 가축분뇨 환산 생분해도는 5.13 대 2.98로 크게 달랐다.
+     성능이 평탄한 구간에서 미세한 R² 차이로 고른 것이 잘못이었고, 물리적 정합성을 기준으로 교체했다.`;
 })();
 
 renderCharts();

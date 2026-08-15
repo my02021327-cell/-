@@ -106,17 +106,35 @@ print(f"  {'SRT':>5s} {'모드':>4s} | {'θ 음폐수':>9s} {'θ 분뇨':>8s} {'
       f"{'사고학습R²':>9s} {'평가R²':>7s} {'평가MAPE':>8s}")
 scan = []
 for mode in ["A", "B"]:
-    for srt in [5, 8, 12, 16, 20, 25, 30, 40, 50, 60]:
+    for srt in [5, 8, 10, 12, 16, 20, 25, 30, 40.5, 50, 60]:
         X = design(srt, mode)
         th = fit_theta(X, TR)
         sv, st = score(X, VA, th), score(X, TE, th)
-        scan.append({"srt": srt, "mode": mode, "theta": {k: round(v, 3) for k, v in th.items()},
+        scan.append({"srt": float(srt), "mode": mode, "theta": {k: round(v, 3) for k, v in th.items()},
                      "valid_R2": sv["R2"], "test_R2": st["R2"], "test_MAPE": st["MAPE"]})
-        print(f"  {srt:5d} {mode:>4s} | {th['foodww']:9.2f} {th['manure']:8.2f} {th['food']:9.2f} | "
+        print(f"  {srt:5.1f} {mode:>4s} | {th['foodww']:9.2f} {th['manure']:8.2f} {th['food']:9.2f} | "
               f"{sv['R2']:9.3f} {st['R2']:7.3f} {st['MAPE']:7.2f}%")
-best = max(scan, key=lambda x: x["valid_R2"])
-print(f"  → 사고학습 기준 최적: SRT {best['srt']}일, 모드 {best['mode']} "
-      f"(평가 R² {best['test_R2']:.3f}, MAPE {best['test_MAPE']}%)")
+# SRT 선택 규칙 — 성능이 평탄하면 물리적 정합성으로 고른다.
+#   모드 B에서 SRT 5~60일의 사고학습 R² 차이는 0.015에 불과하다(분해속도 k가
+#   체류시간보다 빨라 감쇠를 지배). 이렇게 평탄한 구간에서 미세한 R² 차이로 고르면
+#   물리적으로 부적절한 값이 선택된다 — R² 최대인 SRT 5일에서는 가축분뇨 환산
+#   생분해도가 5.13으로 상한을 5배 넘었다.
+#   결정적 기준은 따로 있다: **문헌 BD·COD를 그대로 넣었을 때 총량이 맞는가.**
+#   파라미터를 하나도 추정하지 않은 순수 예측이므로 가장 엄격한 검정이다.
+#     SRT  5일 → 총량 72%, 평가 R² −1.73
+#     SRT 12일 → 총량 87%, 평가 R² +0.25
+#     SRT 40.5일(설계 용적 기준) → 총량 98%, 평가 R² +0.79   ← 채택
+#     SRT 60일 → 총량 100%, 평가 R² +0.79
+#   설계 용적(8,000㎥ / 197 t/d = 40.5일)이라는 독립적 물리 근거가 있으므로 이를 채택한다.
+SRT_ADOPTED = 40.5
+best = min([x for x in scan if x["mode"] == "B"],
+           key=lambda x: abs(x["srt"] - SRT_ADOPTED))
+_b = [x for x in scan if x["mode"] == "B"]
+print(f"  → 채택: SRT {SRT_ADOPTED}일 (설계 용적 8,000㎥ / 투입 197 t/d), 모드 B")
+print(f"     R² 최대는 SRT {max(_b, key=lambda x: x['valid_R2'])['srt']}일이나 "
+      f"분뇨 환산 BD {max(_b, key=lambda x: x['valid_R2'])['theta']['manure']/(LIT_C['manure']*0.35):.2f}로 상한 초과")
+print(f"     선택 근거는 문헌 BD·COD 무보정 예측의 총량 정합 (§7 참조)")
+best = dict(best); best["srt"] = SRT_ADOPTED
 OUT["srt_scan"] = scan
 OUT["best"] = best
 
@@ -289,5 +307,38 @@ print(f"  문헌 BD로 총량을 맞추려면 COD 농도가 {scale:.2f}배 필�
 print("  (문헌 범위: 음폐수 100~180, 돈분슬러리 40~80, 음식물 200~300)")
 OUT["constrained"] = cons
 
+with open("outputs/retention_results.json", "w", encoding="utf-8") as f:
+    json.dump(OUT, f, ensure_ascii=False)
+
+
+# ================================================================ 8. 문헌값 무보정 예측 — SRT 결정 근거
+# 파라미터를 하나도 추정하지 않고 문헌 BD·COD만으로 예측했을 때 총량이 맞는 SRT를 찾는다.
+# 가장 엄격한 검정이며, 이것이 SRT 채택의 결정 근거다.
+print("\n=== 8. 문헌 BD·COD 무보정 예측 — SRT 결정 근거 ===")
+th_lit0 = {k: LIT_BD[k] * LIT_C[k] * 0.35 for k in KS}
+lit_scan = []
+for srt in [5, 8, 10, 12, 16, 20, 25, 30, 40.5, 50, 60, 80]:
+    Xl = design(srt, "B", gbest["tau0"], gbest["tmix"])
+    tot = float(sum(th_lit0[k] * Xl[k].loc[TR].mean() for k in KS))
+    sv, st = score(Xl, VA, th_lit0), score(Xl, TE, th_lit0)
+    lit_scan.append({"srt": srt, "total": round(tot),
+                     "total_pct": round(tot / float(y.loc[TR].mean()) * 100),
+                     "valid_R2": sv["R2"], "test_R2": st["R2"], "test_MAPE": st["MAPE"],
+                     "conv": {k: round(KS[k] * srt / (1 + KS[k] * srt), 3) for k in KS}})
+    print(f"  SRT {srt:5.1f}일 총량 {tot:6.0f} ({lit_scan[-1]['total_pct']:3d}%) "
+          f"사고학습 {sv['R2']:+.3f} 평가 {st['R2']:+.3f} MAPE {st['MAPE']:5.2f}%"
+          f"{'   ★총량 정합' if abs(lit_scan[-1]['total_pct'] - 100) <= 3 else ''}")
+OUT["lit_free_scan"] = lit_scan
+# 기질별 SRT 민감도
+sens = {k: {str(s_): round(1 / (1 / s_ + KS[k]), 2) for s_ in [8, 12, 20, 40.5, 60]} for k in KS}
+OUT["srt_sensitivity"] = {k: {"tau_eff": sens[k], "k": KS[k],
+                              "range_pct": round((max(sens[k].values()) - min(sens[k].values()))
+                                                 / min(sens[k].values()) * 100)} for k in KS}
+print("\n  기질별 유효 시상수 1/(1/SRT+k) — SRT를 관측 가능하게 하는 것은 느린 기질뿐")
+for k in KS:
+    v = OUT["srt_sensitivity"][k]
+    print(f"    {NM[k]:6s} k={KS[k]:.2f} → " + " ".join(f"SRT{s}:{t}일" for s, t in v["tau_eff"].items()) +
+          f"  변동 {v['range_pct']}%")
+OUT["params"]["srt"] = SRT_ADOPTED
 with open("outputs/retention_results.json", "w", encoding="utf-8") as f:
     json.dump(OUT, f, ensure_ascii=False)
