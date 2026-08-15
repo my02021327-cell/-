@@ -355,7 +355,26 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   <div class="note" id="baseNote"></div>
   <div class="card" style="border-left:4px solid var(--crit)" id="baseRevision"></div>
 
-  <h3>2.8 예측 계산기 — 반입 조성별 기대 메탄생성량</h3>
+  <h3>2.8 잔존율 가중 적분과 SRT — 시점 정렬 재검증</h3>
+  <div class="card" style="border-left:4px solid var(--goodtxt)" id="rtIntro"></div>
+  <div class="grid2">
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table id="srtTable"><thead><tr><th>SRT</th><th>θ 음폐수</th><th>θ 분뇨</th><th>θ 음식물</th><th>사고학습 R²</th><th>평가 R²</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table id="thetaTable"><thead><tr><th>기질</th><th>θ (㎥CH₄/t)</th><th>95% CI</th><th>판정</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="placeboTable"><thead><tr><th>검정</th><th>평가 R²</th><th>해석</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="note" id="rtNote"></div>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="consTable"><thead><tr><th>제약</th><th>θ 음폐수</th><th>θ 분뇨</th><th>θ 음식물</th><th>환산 BD</th><th>평가 R²</th><th>총량</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="note" id="consNote"></div>
+
+  <h3>2.9 예측 계산기 — 반입 조성별 기대 메탄생성량</h3>
   <div class="card">
     <p style="font-size:13.5px;color:var(--ink2);margin-top:0">
       반입 조성과 소화조 투입량을 넣으면 화학양론 기반 정상상태 기대치를 계산한다.
@@ -666,6 +685,7 @@ const SK = __SK_JSON__;
 const ID = __ID_JSON__;
 const BL = __BL_JSON__;
 const A2 = __A2_JSON__;
+const RT = __RT_JSON__;
 
 /* ---------- 공통 유틸 ---------- */
 const $ = s => document.querySelector(s);
@@ -1693,6 +1713,91 @@ $('#diagBtn').addEventListener('click',()=>{
      <br><br><b>방법론적 교훈.</b> 절편이 큰 회귀에서 그 절편을 물리량으로 해석하기 전에
      ① 설명변수 측정오차에 의한 희석 편의를 보정하고 ② 절편을 뺀 모델의 시간순 평가 성능을 비교해야 한다.
      이번 사례는 두 검증 모두 절편의 실재성을 부정했다.`;
+})();
+
+
+/* ---------- §2.8 잔존율·SRT 재검증 ---------- */
+(function(){
+  const NMK={foodww:'음폐수',manure:'가축분뇨',food:'음식물'};
+  const P=RT.params, TC=RT.theta_ci, PL=RT.placebo, CN=RT.constrained, SC=RT.srt_scan;
+
+  $('#rtIntro').innerHTML=
+    `<h3 style="margin-top:0">Q. 잔존율 가중 적분이 반영됐는가 → <span style="color:var(--goodtxt)">반영돼 있다</span></h3>
+     <p style="font-size:14px;margin:4px 0 10px;text-align:center">
+       h(τ) = <b>k</b> · exp( −(<b>1/SRT</b> + <b>k</b>)·τ )<br>
+       <span style="font-size:12.5px;color:var(--ink2)">
+       exp(−τ/SRT) = <b>잔존율</b> — 오늘 투입분 100%, τ일 전 투입분 e<sup>−τ/SRT</sup> ·
+       exp(−kτ) = 아직 분해되지 않은 비율 · k = 순간 메탄 발생률</span></p>
+     <p style="font-size:13.8px;color:var(--ink2);margin-bottom:0">
+       두 변형을 나눠 검증했다. <b>모드 A</b>는 잔존만 반영(분해로 소비된 물질을 재고에서 빼지 않음),
+       <b>모드 B</b>는 잔존과 분해를 함께 푼 것(물질수지 정합)이다.
+       <b>중요한 발견</b>: 모드 B에서는 SRT가 5일이든 60일이든 성능이 거의 같다
+       (사고학습 R² ${SC.filter(x=>x.mode==='B')[0].valid_R2.toFixed(3)} ~ ${SC.filter(x=>x.mode==='B').slice(-1)[0].valid_R2.toFixed(3)}).
+       분해속도 k가 체류시간보다 빠르기 때문이다 — 음폐수 k=0.40/d의 시상수 2.5일이
+       SRT 12일의 1/12=0.083보다 훨씬 커서 감쇠를 지배한다.
+       <b>따라서 SRT를 정확히 아는 것이 예측 성능의 열쇠는 아니다.</b>
+       다만 분뇨는 k=0.08/d로 느려 SRT의 영향을 받는다.</p>`;
+
+  $('#srtTable tbody').innerHTML=SC.filter(x=>x.mode==='B').map(x=>
+    `<tr${x.srt===P.srt?' class="hl"':''}><td>${x.srt}일</td>`+
+    ['foodww','manure','food'].map(k=>`<td>${x.theta[k].toFixed(1)}</td>`).join('')+
+    `<td>${x.valid_R2.toFixed(3)}</td><td>${x.test_R2.toFixed(3)}</td></tr>`).join('');
+
+  $('#thetaTable tbody').innerHTML=['foodww','manure','food'].map(k=>{
+    const t=TC[k];
+    return `<tr${t.identified?' class="hl"':''}><td>${NMK[k]}</td><td><b>${t.median.toFixed(1)}</b></td>`+
+      `<td>[${t.ci[0].toFixed(1)}, ${t.ci[1].toFixed(1)}]</td>`+
+      `<td style="text-align:left">${t.identified?'<span class="badge ok">식별됨</span>':'<span class="badge crit">불안정</span>'} 상대폭 ${t.rel_width.toFixed(2)}</td></tr>`;
+  }).join('');
+
+  $('#placeboTable tbody').innerHTML=[
+    ['<b>실제 반입 조성</b>',PL.real_R2,'기준'],
+    ['조성 블록 셔플 200회 — 중앙',PL.shuffle_median,`최대 ${PL.shuffle_max.toFixed(3)}, 95백분위 ${PL.shuffle_p95.toFixed(3)}`],
+    ['조성을 전 기간 평균으로 고정',PL.const_composition_R2,'조성 정보 완전 제거'],
+    ['총 투입량만 (단일 커널)',PL.total_only_R2,'조성 없이 총량만'],
+  ].map((r,i)=>`<tr${i===0?' class="hl"':''}><td style="text-align:left">${r[0]}</td>`+
+    `<td><b>${r[1].toFixed(3)}</b></td><td style="text-align:left;font-size:12.5px;color:var(--ink2)">${r[2]}</td></tr>`).join('');
+
+  $('#rtNote').innerHTML=
+    `<b>A. 지적이 옳았다 — 시점 정렬이 핵심이었다.</b> 잔존율 가중 적분으로 시점을 맞추자
+     조성 정보가 <b>통계적으로 유의</b>해졌다. 조성 시계열을 30일 블록으로 200회 섞었을 때
+     실제 성능을 넘은 경우가 <b>${(PL.p_value*100).toFixed(1)}%</b>다(셔플 최대 ${PL.shuffle_max.toFixed(3)} vs 실제 ${PL.real_R2.toFixed(3)}).
+     총 투입량만 쓰는 모델(${PL.total_only_R2.toFixed(3)}) 대비 <b>순 기여 +${PL.gain_over_total.toFixed(3)}</b>이며,
+     이 모델의 평가 R² ${PL.real_R2.toFixed(3)}·MAPE ${RT.final_score.test.MAPE}%는 이 리포트 전체에서 가장 높다.
+     <br><br>참조 문서가 "기질별 반입량은 당일 가스와 r≈0.00"이라 기록한 것은
+     <b>당일 반입량과 당일 가스의 단순 상관</b>을 본 결과다. 반입분이 저류·산발효를 거쳐
+     소화조에 도달하고 잔존율에 따라 분해되는 시간 구조를 넣으면 결론이 달라진다.
+     <br><br><b>B. 따라서 "기질 분리 불가"라는 제 표현은 부정확했다.</b> 정확히는 이렇다 —
+     <b>θ<sub>i</sub>(기질 1톤당 실효 메탄수율)는 음폐수에 대해 명확히 식별된다</b>
+     (${TC.foodww.median.toFixed(1)} ㎥CH₄/t, 95% CI ${TC.foodww.ci[0].toFixed(1)}~${TC.foodww.ci[1].toFixed(1)}, 상대폭 ${TC.foodww.rel_width.toFixed(2)}).
+     식별되지 않는 것은 θ를 <b>생분해도와 COD 농도로 다시 쪼개는 일</b>이다.
+     두 값은 언제나 곱(θ = BD × C × 0.35)으로만 나타나므로, C를 실측하지 않는 한 BD는 결정되지 않는다.
+     기질별 메탄 기여는 <b>음폐수 ${RT.contribution.foodww.pct}% · 가축분뇨 ${RT.contribution.manure.pct}% · 음식물 ${RT.contribution.food.pct}%</b>,
+     총량은 실측의 ${RT.total_check.pct}%로 물질수지가 닫힌다.`;
+
+  $('#consTable tbody').innerHTML=['제약 없음','BD ≤ 1','문헌 BD 고정'].map(t=>{
+    const c=CN[t];
+    return `<tr${t==='제약 없음'?' class="hl"':''}><td style="text-align:left">${t}</td>`+
+      ['foodww','manure','food'].map(k=>`<td>${c.theta[k].toFixed(1)}</td>`).join('')+
+      `<td style="font-size:12px">${['foodww','manure','food'].map(k=>`${NMK[k]} ${c.bd[k].toFixed(2)}`).join(' / ')}</td>`+
+      `<td><b>${c.test_R2.toFixed(3)}</b></td><td>${c.total_pct}%</td></tr>`;
+  }).join('');
+
+  $('#consNote').innerHTML=
+    `<b>C. 남은 문제 — 시점 정렬로 해결되지 않는 부분.</b> 자유 추정에서 가축분뇨 θ가
+     ${CN['제약 없음'].theta.manure.toFixed(0)} ㎥CH₄/t로 나오는데, 문헌 COD 농도 50 kg/t로 환산하면
+     생분해도 <b>${CN['제약 없음'].bd.manure.toFixed(2)}</b>로 물리적 상한(1.0)을 4배 넘는다.
+     전처리 손실을 음식물에 몰아주는 등 배분 가정을 바꿔봐도 4.1~4.5로 유지돼 해소되지 않았다.
+     <br><br>물리 제약을 걸면 성능이 떨어진다 — BD≤1에서 평가 ${CN['BD ≤ 1'].test_R2.toFixed(3)},
+     문헌 BD를 그대로 고정하면 <b>${CN['문헌 BD 고정'].test_R2.toFixed(3)}</b>이고 총량이 실측의 <b>${CN['문헌 BD 고정'].total_pct}%</b>에 그친다.
+     문헌 BD로 총량을 맞추려면 COD 농도가 일제히 <b>${CN.scale_needed}배</b>여야 하는데
+     (음폐수 ${CN.cod_needed.foodww} · 분뇨 ${CN.cod_needed.manure} · 음식물 ${CN.cod_needed.food} kg COD/t),
+     음폐수와 음식물은 문헌 범위(100~180, 200~300)를 벗어난다.
+     <br><br><b>결론.</b> 잔존율 가중 적분으로 조성 정보를 살리는 데는 성공했고 총량도 닫힌다.
+     그러나 기질별 θ를 <b>화학양론적으로 타당한 BD와 COD 농도</b>로 분해하려면
+     <b>반입 기질별 COD·TS·VS 실측</b>이 반드시 필요하다. 현재는 세 기질의 COD 농도를 모두
+     문헌값으로 가정하고 있어, 그 가정 오차가 그대로 BD 추정으로 전가된다.
+     이것이 이 모델링의 마지막 남은 병목이며, <b>시료 3종의 성상 분석 한 번</b>으로 풀린다.`;
 })();
 
 renderCharts();
