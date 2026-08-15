@@ -105,7 +105,7 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   <span>대상 공정 <b>2상 혐기소화 (산발효조 → 소화조 #A/#B 병렬, 각 4,000㎥)</b></span>
   <span>분석 기간 <b>2018-01-01 ~ 2023-09-17</b> (2,086일)</span>
   <span>검증 방식 <b>시간순 분할</b> (학습 2018–2021 / 검증 2022 / 평가 2023)</span>
-  <span>운전 조건 <b>중온 38℃ · HRT 40.5일 · OLR 1.14 kgVS/㎥·d</b></span>
+  <span>운전 조건 <b>중온 38℃ · 체류시간 12~41일(미확정, §2.8) · OLR 1.14 kgVS/㎥·d</b></span>
 </div>
 
 <nav class="toc">
@@ -149,7 +149,7 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
         <tr><td>유기산화조(산발효)</td><td style="text-align:left">가수분해·산생성. VFA 형태로 전환되어 소화조로 이송</td>
           <td style="text-align:left"><b>1~2일</b> — 2상 소화 산발효조 운전 사례<br>(지침 pH 4.5~6.5, 영천 실측 4.85 ✓)</td></tr>
         <tr><td>혐기소화조</td><td style="text-align:left">메탄발효. 완전혼합 체류시간 분포 <code>g(τ)=(1/HRT)·e<sup>−τ/HRT</sup></code></td>
-          <td style="text-align:left"><b>HRT 12일</b> (이상적 조건 가정)<br>설계 용적 기준 40.5일과 별도</td></tr>
+          <td style="text-align:left"><b>SRT 12일 가정</b><br>물질수지 허용 구간 12~41일의 하단(§2.8.3)</td></tr>
       </tbody>
     </table></div>
     <p class="tblnote" style="margin-bottom:0">
@@ -359,18 +359,51 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   <div class="card" style="border-left:4px solid var(--goodtxt)" id="rtIntro"></div>
   <div class="card" style="padding:0;overflow-x:auto">
     <table id="weightTable">
-      <thead><tr><th>소화조 투입 후 경과일</th><th>SRT 8일</th><th>SRT 12일</th><th>SRT 20일</th><th>SRT 40.5일</th></tr></thead>
+      <thead><tr><th>소화조 투입 후 경과일</th><th>SRT 8일</th><th>SRT 12일 <span style="font-size:11px;font-weight:400">(채택)</span></th><th>SRT 20일</th><th>SRT 41일</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
   <p class="tblnote">순수 잔존율 exp(−τ/SRT). 오늘 투입분은 100%, τ일 전 투입분은 위 비율만큼 소화조에 남아 있다.
     실제 모델은 여기에 미분해 비율 exp(−kτ)를 곱한 <code>w(τ)=k·exp(−(1/SRT+k)τ)</code>를 쓴다.</p>
+  <div class="card" style="border-left:4px solid var(--crit)" id="srtRevision"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.8.1 전단 공정 지연 — 반입일은 투입일이 아니다</h4>
+  <div class="card" id="frontEndNote"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.8.2 SRT를 실측 데이터로 추정하려는 세 가지 시도</h4>
   <div class="card" style="padding:0;overflow-x:auto">
-    <table id="litScanTable">
-      <thead><tr><th>SRT</th><th>모델 총량</th><th>실측 대비</th><th>사고학습 R²</th><th>평가 R²</th><th>MAPE</th></tr></thead>
+    <table id="srtProbeTable">
+      <thead><tr><th>접근</th><th>원리</th><th>최적 시상수</th><th>설명력 R²</th><th>판정</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
+  <p class="tblnote">A·B는 시상수 격자 1~200일을 훑은 결과다. 최적값이 격자 상한(200일)에 붙었다는 것은
+    "긴 쪽이 조금 낫다"가 아니라 <b>어떤 시상수를 넣어도 설명력이 없다</b>는 뜻이다.</p>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="feScanTable">
+      <thead><tr><th>전단 지연 τ₀ (일)</th><th>전단 혼합 τ_mix (일)</th><th>알칼리도 R²</th><th>NH₃-N R²</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="tblnote">전처리 → 여액저장조 → 산생성조 구간을 순수 지연 τ₀ + 지수혼합 τ_mix 로 모사해 7개 조합을 모두 시험했다.
+    조합 간 R² 차이는 0.005 이하로, 전단 지연 설정을 어떻게 잡아도 추적자 신호는 살아나지 않는다.</p>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.8.3 고형물 물질수지 — 배출 유량은 닫히지만 유효 용적이 미지수</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="balTable"><thead><tr><th>항목</th><th>값</th><th>산출</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="note" id="balNote"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:15px">2.8.4 그래서 SRT는 예측에 얼마나 중요한가</h4>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="srtSensTable">
+      <thead><tr><th>가정 SRT</th><th>θ 음폐수</th><th>θ 분뇨</th><th>θ 음식물</th><th>사고학습 R²</th><th>평가 R²</th><th>MAPE</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="tblnote">이 표는 전단 지연을 τ₀=1일·τ_mix=3일로 고정한 독립 재적합 결과다(<code>src/srt_identify.py</code>).
+    본 모델(<code>src/retention_srt.py</code>, τ₀=0·τ_mix=3)의 SRT 12일 θ와 2~3% 차이가 나는 것은 그 때문이며,
+    여기서 읽어야 할 것은 절대값이 아니라 <b>SRT를 흔들었을 때의 변화 폭</b>이다.</p>
   <div class="note" id="srtNote"></div>
   <div class="grid2">
     <div class="card" style="padding:0;overflow-x:auto">
@@ -537,7 +570,7 @@ footer{border-top:1px solid var(--grid);margin-top:40px;padding-top:14px;font-si
   <div class="note">
     <b>판독.</b> 가축분뇨 비중 증가에 따라 TAN이 3,337→4,913 mg/L(+47%)로 축적되고, 중탄산암모늄 형성으로
     알칼리도·pH가 동반 상승하면서 유리암모니아(FAN)가 306→585 mg/L로 올랐다. 같은 기간 메탄생산은 −8.1%,
-    반입톤당 메탄은 −17%. 부하(OLR 1.14, 여유)·체류시간(40.5일, 충분)이 모두 정상이므로 소거법상 만성
+    반입톤당 메탄은 −17%. 부하(OLR 1.14, 여유)·체류시간(추정 구간 12~41일 전체에서 충분)이 모두 정상이므로 소거법상 만성
     암모니아 저해가 유력하다. 급성 붕괴가 아니라 수년 단위 완만한 저하이므로 <b>일별 경보가 아닌 분기 단위
     추세 관리 대상</b>이다.<sup>3</sup>
   </div>
@@ -701,6 +734,7 @@ const ID = __ID_JSON__;
 const BL = __BL_JSON__;
 const A2 = __A2_JSON__;
 const RT = __RT_JSON__;
+const SRTID = __SRT_JSON__;
 
 /* ---------- 공통 유틸 ---------- */
 const $ = s => document.querySelector(s);
@@ -1196,7 +1230,7 @@ const featTxt=f=>{ if(!f) return ''; const [v,t]=f.split('@'); return `${NAME[v]
       `<td><b>${h.cv.toFixed(3)}</b></td>`+
       `<td style="text-align:left;font-size:12.5px;color:var(--ink2)">`+
       `${isU?'<b>사용자 지정</b>':''}${isB?'<span class="badge ok">데이터 최적</span>':''}`+
-      `${h.hrt===40.5?'설계 용적 기준':''}</td></tr>`;
+      `${h.hrt===40.5?'설계 용적÷반입량 (§2.8에서 무효 판정)':''}</td></tr>`;
   }).join('');
 
   $('#timeNote').innerHTML=
@@ -1207,7 +1241,7 @@ const featTxt=f=>{ if(!f) return ''; const [v,t]=f.split('@'); return `${NAME[v]
      <b>이 데이터로는 전단 지연을 1일과 5일 사이에서 정밀하게 가릴 수 없다</b>는 뜻이며,
      저류조 완충이 반입 변동을 지워버리기 때문이다.
      <br><br><b>소화조 HRT는 짧을수록 잘 맞는다.</b> 사용자 지정 12일에서 CV R² ${SK.hrt_scan.find(h=>h.hrt===12).cv.toFixed(3)},
-     설계 용적 기준 40.5일에서 ${SK.hrt_scan.find(h=>h.hrt===40.5).cv.toFixed(3)}로 떨어지는 반면
+     40.5일에서 ${SK.hrt_scan.find(h=>h.hrt===40.5).cv.toFixed(3)}로 떨어지는 반면
      1~3일에서 ${F.cv.toFixed(3)}로 가장 높다. 즉 <b>가스 응답의 시간상수는 수리학적 체류시간보다 훨씬 짧다.</b>
      12일 가정은 40.5일보다는 실측에 훨씬 가깝지만, 데이터가 가리키는 반응 시간상수는 그보다도 짧다 —
      유기산화조에서 이미 VFA로 전환되어 넘어온다는 공정 이해와 부합하는 방향이다.
@@ -1334,7 +1368,7 @@ const featTxt=f=>{ if(!f) return ''; const [v,t]=f.split('@'); return `${NAME[v]
     `<b>판독.</b> 부하 계열은 <b>당일~7일</b>에서 최적인 반면(투입량 7일 이동평균, TS 부하 당일),
      소화조 내부 이화학 지표는 <b>14~30일</b> 구간이 대부분을 차지한다(상위 8개 중 ${longShare.toFixed(0)}%).
      알칼리도·암모니아 부하지수는 14일 시차, 소화액 VS·VS/TS는 30일 이동평균에서 최적이었다.
-     HRT 40.5일 반응조에서 내부 이화학이 축적성·완충성 지표라는 물리와 부합하는 결과로,
+     체류시간이 최소 12일 이상인 반응조에서 내부 이화학이 축적성·완충성 지표라는 물리와 부합하는 결과로,
      동시점 값만 쓰던 이전 판이 왜 내부 데이터의 기여를 제대로 잡지 못했는지도 이것으로 설명된다.
      한편 탈수 슬러지량(7일 이동평균)은 내부 블록에서 유일하게 단독 CV R²가 양수(+0.21)인 변수로,
      소화조에서 실제로 처리된 물질량을 반영하는 대리지표 역할을 한다.`;
@@ -1521,7 +1555,7 @@ $('#diagBtn').addEventListener('click',()=>{
     ['B2','생물공정','<b>암모니아 저해가 모델에 없음</b>','FAN 410 mg/L는 명확한 저해 구간인데 생분해도를 상수로 두었다. 실제로는 저해 수준에 따라 시변한다.','NH₃-N 측정 재개 후 ADM1형 저해항 I=1/(1+FAN/K_I) 도입'],
     ['B3','생물공정','<b>기질 조성의 근거가 약함</b>','탄수화물·단백질·지질 분율을 문헌 범위에서 선택했다. 영천 실측이 아니다. 산발효조 TN(5,247 mg/L)으로 단백질 분율을 역산할 수 있는데 하지 않았다.','TN 기반 단백질 분율 역산, 기질별 원소분석 의뢰'],
     ['B4','생물공정','<b>협잡물 제거의 기질별 차이 미반영</b>','반입 210 t/d → 투입 197 t/d에서 제거되는 13 t/d를 기질 공통 비율로 처리했다. 실제로는 음식물의 비닐·이물 제거율이 훨씬 높을 것이다.','전처리 단계별 물질수지 확보'],
-    ['B5','생물공정','<b>HRT 12일의 물리적 근거</b>','설계 용적 8,000㎥ / 투입 197 t/d = 40.5일이다. 12일이 되려면 유효 용적이 설계의 30%여야 하는데 이는 극단적이다. 다만 수정 모델에서 반응속도 k와 HRT를 분리했으므로, 빠른 응답이 짧은 체류시간 때문인지 빠른 반응속도 때문인지는 이제 구분 가능하다.','추적자 시험(tracer test)으로 실제 유효 용적·RTD 측정'],
+    ['B5','생물공정','<b>SRT가 데이터로 결정되지 않음 — 부분 해결</b>',`§2.8에서 세 방향(소화액 TS 동적 응답 / 비분해성 추적자 알칼리도·NH₃-N / 고형물 물질수지)으로 실측 추정을 시도했으나 <b>모두 실패</b>했다. 앞의 둘은 소화액 TS 변동계수가 ${SRTID.A_digTS.cv_pct}%뿐이라 응답 진폭이 없고(격자 상한 200일에 최적이 붙음), 물질수지는 배출 유량 ${SRTID.C_balance.Q_out_tpd} t/d까지만 주고 유효 용적이 미지수로 남는다. 결과적으로 SRT는 <b>${SRTID.C_balance.srt_by_V['2400(30%)']}~${SRTID.C_balance.srt_by_V['8000']}일 구간</b>으로만 좁혀졌다. 다만 민감도 분석에서 SRT를 이 구간 전체로 흔들어도 평가 R² 변동이 ${(SRTID.D_sensitivity.test_range[1]-SRTID.D_sensitivity.test_range[0]).toFixed(3)}에 그쳐, <b>예측에는 영향이 없고 θ→생분해도 환산 해석에서만 문제가 된다</b>는 점까지는 확정했다. 직전 판의 "설계 용적 ÷ 반입량 = 40.5일"은 차원이 맞지 않아 폐기했다.`,'추적자 시험(리튬·플루오레세인 펄스 주입 후 배출 농도 추적) 1회로 유효 용적·RTD 동시 확보'],
     ['B6','생물공정','<b>온도 의존성 미반영</b>','분해속도 k는 Arrhenius 온도 의존이다. 38℃로 안정 유지되어(변동계수 2.3%) 영향이 작지만 모델에 명시하지 않았다.','온도 보정항 추가 또는 적용 범위 명시'],
   ];
   $('#openTable tbody').innerHTML=open_.map(r=>
@@ -1819,43 +1853,139 @@ $('#diagBtn').addEventListener('click',()=>{
 /* ---------- §2.8 SRT 결정 근거 ---------- */
 (function(){
   if(!RT.lit_free_scan) return;
-  const NMK={foodww:'음폐수',manure:'가축분뇨',food:'음식물'};
   $('#weightTable tbody').innerHTML=[0,1,2,3,5,7,10,14,20,30,45].map(t=>
     `<tr${t===0?' class="hl"':''}><td>${t}일 전 투입분</td>`+
-    [8,12,20,40.5].map(s=>`<td>${(Math.exp(-t/s)*100).toFixed(1)}%</td>`).join('')+`</tr>`).join('');
+    [8,12,20,41].map(s=>`<td${s===12?' style="font-weight:600"':''}>${(Math.exp(-t/s)*100).toFixed(1)}%</td>`).join('')+`</tr>`).join('');
 
-  $('#litScanTable tbody').innerHTML=RT.lit_free_scan.map(x=>{
-    const ok=Math.abs(x.total_pct-100)<=3;
-    return `<tr${x.srt===40.5?' class="hl"':''}><td>${x.srt}일${x.srt===40.5?' <span style="font-size:11px;color:var(--muted)">설계 용적 기준</span>':''}</td>`+
-      `<td>${fmt(x.total)}</td><td${ok?' style="color:var(--goodtxt);font-weight:600"':''}>${x.total_pct}%</td>`+
-      `<td>${x.valid_R2.toFixed(3)}</td><td><b>${x.test_R2.toFixed(3)}</b></td><td>${x.test_MAPE.toFixed(2)}%</td></tr>`;
-  }).join('');
+  /* --- 정정 기록 --- */
+  $('#srtRevision').innerHTML=
+    `<h3 style="margin-top:0;color:var(--crit)">정정 — 직전 판의 SRT 40.5일 채택은 근거가 성립하지 않는다</h3>
+     <p style="font-size:13.5px;color:var(--ink2);line-height:1.75;margin:0">
+     직전 판은 SRT를 두 가지로 정당화했다. 둘 다 틀렸다.
+     <br><br><b>① "문헌 생분해도를 넣었더니 SRT 40.5일에서 총량이 맞더라" — 순환 논증이다.</b>
+     문헌값이 이 시설에 맞다는 보장이 없는 상태에서, 문헌값을 참으로 두고 SRT를 역산한 것이다.
+     기질별 COD 농도와 생분해도가 문헌보다 20% 낮기만 해도 총량을 맞추는 SRT는 완전히 달라진다.
+     <b>미지수 두 개(θ, SRT)를 방정식 하나(총량)로 풀 수 없다.</b>
+     <br><br><b>② "8,000㎥ ÷ 197 t/d = 40.5일" — 차원이 맞지 않는다.</b>
+     분자는 반응조 <b>액상 용적(㎥)</b>이고 분모는 반입 <b>찌꺼기 자체의 질량(t/d)</b>이다.
+     SRT는 반응조 내 고형물 재고를 <b>고형물 배출 속도</b>로 나눈 값이며,
+     체류시간을 구하려면 분모가 소화조로 실제 흘러드는 <b>소화액 유량(㎥/d)</b>이어야 한다.
+     찌꺼기 197 t/d는 전처리·여액저장조에서 희석·분리를 거치기 전의 원료 무게라 그 자리에 들어갈 수 없다.
+     <br><br>따라서 이번 판에서는 <b>문헌값과 설계값을 모두 배제하고</b>, 운전 데이터만으로 SRT를 추정할 수 있는지
+     세 방향에서 시험했다. 결과부터 말하면 <b>세 시도 모두 SRT를 결정하지 못했다.</b>
+     그 사실 자체를 결론으로 싣고, 대신 <b>SRT가 예측에 얼마나 영향을 주는지</b>를 정량화해 실무적 영향을 못박았다.</p>`;
 
-  const S=RT.srt_sensitivity, L=RT.lit_free_scan;
-  const g=v=>L.find(x=>x.srt===v);
+  /* --- 2.8.1 전단 공정 --- */
+  const feA=SRTID.B_tracer['알칼리도'].front_end_scan, feN=SRTID.B_tracer['NH3-N'].front_end_scan;
+  $('#frontEndNote').innerHTML=
+    `<p style="font-size:13.5px;color:var(--ink2);line-height:1.75;margin:0">
+     마스터 데이터의 날짜는 <b>찌꺼기가 영천 유기물처리장에 반입된 날</b>이지 혐기소화조에 투입된 날이 아니다.
+     반입물은 <b>전처리 → 여액저장조 → 산생성조</b>를 거친 뒤에야 소화조로 넘어간다.
+     이 구간을 두 개의 모수로 모사했다.
+     <br><br>· <b>τ₀ (순수 지연)</b> — 반입분이 소화조 유입에 나타나기까지의 최소 소요일. 저장조 체류 하한에 해당한다.
+     <br>· <b>τ_mix (전단 혼합 시상수)</b> — 여액저장조·산생성조가 완전혼합조로 작동하며 조성 변동을 뭉개는 정도.
+     지수 가중 <code>w(τ) ∝ exp(−τ/τ_mix)</code>를 정규화(Σw=1)해 적용하므로 <b>총량은 보존하고 시점만 이동·평활</b>한다.
+     <br><br>반입 조성비 <code>s(t)</code>는 소화조 유입 조성비로 <code>s_in(t) = Σ w(τ)·s(t−τ₀−τ)</code>가 되고,
+     기질별 투입 톤은 <code>feed(t) × s_in(t)</code>로 계산한다.
+     τ₀ 0~4일 × τ_mix 1~5일의 <b>7개 조합</b>을 모두 검정에 통과시켰다.
+     <br><br><b>결과: 전단 지연을 어떻게 설정해도 결론이 바뀌지 않는다.</b>
+     추적자 설명력은 최저 ${Math.min(...feA.map(x=>x.R2)).toFixed(4)} ~ 최고 ${Math.max(...feA.map(x=>x.R2)).toFixed(4)}(알칼리도),
+     ${Math.min(...feN.map(x=>x.R2)).toFixed(4)} ~ ${Math.max(...feN.map(x=>x.R2)).toFixed(4)}(NH₃-N)로,
+     <b>조합 간 차이가 0.005 이하</b>다. 전단 지연이 중요하지 않아서가 아니라,
+     뒤에서 보듯 <b>소화조 내부 응답 신호 자체가 관측되지 않아</b> 전단을 정교하게 해도 걸릴 것이 없기 때문이다.
+     본 모델이 실제로 쓰는 값은 τ₀=${RT.params.tau0}일, τ_mix=${RT.params.tmix}일이며,
+     이는 문헌 사전값이 아니라 §2.5의 학습구간 롤링 검증이 고른 값이다.</p>`;
+
+  const feRows=feA.map((a,i)=>{const n=feN[i];
+    return `<tr><td>${a.tau0}</td><td>${a.tmix}</td><td>${a.R2.toFixed(4)}</td><td>${n.R2.toFixed(4)}</td></tr>`;});
+  $('#feScanTable tbody').innerHTML=feRows.join('');
+
+  /* --- 2.8.2 세 가지 접근 --- */
+  const A=SRTID.A_digTS, BA=SRTID.B_tracer['알칼리도'].best, BN=SRTID.B_tracer['NH3-N'].best, C=SRTID.C_balance;
+  const bad=t=>`<span style="color:var(--crit);font-weight:600">${t}</span>`;
+  $('#srtProbeTable tbody').innerHTML=
+    `<tr><td><b>A. 소화액 TS 동적 응답</b></td>
+       <td>투입 고형물이 늘면 소화액 TS가 SRT의 시상수로 따라 오른다. 그 시상수가 SRT다.</td>
+       <td>${A.best.tau}일 <span style="font-size:11px;color:var(--muted)">(격자 상한)</span></td>
+       <td>${A.best.R2.toFixed(3)}</td>
+       <td>${bad('신호 없음')}</td></tr>
+     <tr><td><b>B. 비분해성 추적자 (알칼리도)</b></td>
+       <td>알칼리도는 분해로 사라지지 않아 순수 희석·축적만 겪는다. 그 응답 시상수가 곧 SRT다.</td>
+       <td>${BA.best_tau}일 <span style="font-size:11px;color:var(--muted)">(격자 상한)</span></td>
+       <td>${BA.R2.toFixed(3)}</td>
+       <td>${bad('신호 없음')}</td></tr>
+     <tr><td><b>B′. 비분해성 추적자 (NH₃-N)</b></td>
+       <td>암모니아성 질소도 분해되지 않고 축적된다. 분뇨 투입량 변동이 추적자 입력.</td>
+       <td>${BN.best_tau}일 <span style="font-size:11px;color:var(--muted)">(격자 상한)</span></td>
+       <td>${BN.R2.toFixed(3)}</td>
+       <td>${bad('신호 없음')}</td></tr>
+     <tr><td><b>C. 고형물 물질수지</b></td>
+       <td>SRT = 반응조 고형물 재고 ÷ 고형물 배출 속도. 유입 TS·제거율·소화액 TS로 배출 유량을 역산.</td>
+       <td>배출 유량 ${C.Q_out_tpd} t/d</td><td>—</td>
+       <td>${bad('유효 용적 미지')}</td></tr>`;
+
+  /* --- 2.8.3 물질수지 --- */
+  $('#balTable tbody').innerHTML=
+    `<tr><td>소화조 유입 TS</td><td><b>${C.TS_in_tpd} t/d</b></td><td>기질별 투입 톤 × 기질별 TS 함량</td></tr>
+     <tr><td>TS 제거율</td><td>${C.TS_removal_pct}%</td><td>유입 TS 대비 소화 중 분해·가스화</td></tr>
+     <tr><td>잔여 고형물</td><td>${C.TS_out_tpd} t/d</td><td>${C.TS_in_tpd} × (1 − ${C.TS_removal_pct}%)</td></tr>
+     <tr class="hl"><td>소화조 배출 유량</td><td><b>${C.Q_out_tpd} t/d</b></td>
+       <td>잔여 고형물 ÷ 소화액 TS 농도</td></tr>
+     <tr><td>비교: 반입 찌꺼기</td><td>${C.feed_tpd} t/d</td><td>배출/유입 = <b>${C.ratio_out_in.toFixed(2)}</b> — 수지가 닫힌다</td></tr>
+     <tr><td>비교: 탈수기 처리량</td><td>${C.dewater_tpd} t/d</td><td>배출 유량의 <b>${C.dewater_over_Qout.toFixed(2)}배</b> — 반송·희석수 포함</td></tr>
+     <tr><td>SRT (유효 용적 8,000㎥ 가정)</td><td>${C.srt_by_V['8000']}일</td><td rowspan="3" style="vertical-align:middle">
+       유효 용적이 설계 대비 몇 %인지 데이터에 없다.<br>이 한 개의 미지수가 SRT를 세 배 범위로 벌린다.</td></tr>
+     <tr><td>SRT (설계의 60% 가정)</td><td>${C.srt_by_V['4800(60%)']}일</td></tr>
+     <tr><td>SRT (설계의 30% 가정)</td><td>${C.srt_by_V['2400(30%)']}일</td></tr>`;
+
+  $('#balNote').innerHTML=
+    `<b>물질수지로 얻은 것과 얻지 못한 것.</b>
+     얻은 것은 <b>소화조 배출 유량 ${C.Q_out_tpd} t/d</b>다. 이것은 문헌이 아니라 이 시설의 유입 TS·소화액 TS 실측으로 역산한 값이며,
+     반입 ${C.feed_tpd} t/d와 <b>${C.ratio_out_in.toFixed(2)}배</b>로 닫힌다 — 유입·유출 수지가 일관되다는 독립 확인이다.
+     동시에 <b>탈수기 처리량 ${C.dewater_tpd} t/d는 소화조 배출 유량이 아니다</b>(${C.dewater_over_Qout.toFixed(2)}배).
+     반송수·희석수가 섞여 들어오므로 탈수기 유량을 SRT 분모로 쓰면 체류시간을 ${(1/C.dewater_over_Qout*100).toFixed(0)}% 수준으로 과소평가한다.
+     <br><br>얻지 못한 것은 <b>유효 용적</b>이다. 스컴층·침적 슬러지·데드존을 빼고 실제로 교반되는 용적이 얼마인지는
+     운전 데이터에 흔적이 남지 않는다. 설계 8,000㎥를 그대로 쓰면 ${C.srt_by_V['8000']}일, 60%면 ${C.srt_by_V['4800(60%)']}일,
+     30%면 ${C.srt_by_V['2400(30%)']}일이다. <b>SRT는 ${C.srt_by_V['2400(30%)']}~${C.srt_by_V['8000']}일 구간으로만 좁혀지고 그 안에서 결정되지 않는다.</b>
+     운영자의 8~12일 직관은 이 구간의 아래쪽 끝(유효 용적 30% 이하)에 해당하며, 데이터로 배제되지 않는다.
+     <br><br><b>왜 A·B가 실패했는가.</b> 소화액 TS의 변동계수가 ${A.cv_pct}%에 불과하다.
+     소화조는 이미 <b>거의 완벽한 완충기</b>로 작동해 유입 변동을 흡수해버리고,
+     출력 쪽에 시상수를 읽어낼 만한 진폭이 남지 않는다.
+     격자 최적이 200일 상한에 붙은 것은 "SRT가 200일"이라는 뜻이 아니라
+     <b>시상수를 무한대로 보내 응답을 평평하게 만드는 것이 최선</b>이라는 뜻 — 즉 신호가 없다는 뜻이다.
+     SRT를 실제로 확정하려면 <b>추적자 시험(리튬·플루오레세인 펄스 주입 후 배출 농도 추적)</b>이 필요하고,
+     이는 1회 시험으로 유효 용적과 RTD를 동시에 준다.`;
+
+  /* --- 2.8.4 민감도 --- */
+  const D=SRTID.D_sensitivity;
+  $('#srtSensTable tbody').innerHTML=D.scan.map(x=>
+    `<tr${x.srt===12?' class="hl"':''}><td>${x.srt}일${x.srt===12?' <span style="font-size:11px;color:var(--muted)">채택</span>':''}</td>`+
+    `<td>${x.theta.foodww.toFixed(1)}</td><td>${x.theta.manure.toFixed(1)}</td><td>${x.theta.food.toFixed(1)}</td>`+
+    `<td>${x.valid_R2.toFixed(3)}</td><td><b>${x.test_R2.toFixed(3)}</b></td><td>${x.MAPE.toFixed(2)}%</td></tr>`).join('');
+
+  const lo=D.scan[0], hi=D.scan[D.scan.length-1];
   $('#srtNote').innerHTML=
-    `<b>채택 SRT는 40.5일이다 — 근거는 문헌값 무보정 예측의 총량 정합.</b>
-     위 표는 <b>파라미터를 하나도 추정하지 않고</b> 문헌 생분해도·COD 농도만 넣어 예측한 결과다.
-     가장 엄격한 검정이며, 여기서 SRT가 결정된다.
-     SRT 8~12일에서는 총량이 실측의 ${g(8).total_pct}~${g(12).total_pct}%에 그쳐 메탄이 부족하고
-     평가 R²도 ${g(8).test_R2.toFixed(2)}~${g(12).test_R2.toFixed(2)}다. 반면
-     <b>SRT 40.5일에서 총량 ${g(40.5).total_pct}%, 평가 R² ${g(40.5).test_R2.toFixed(3)}, MAPE ${g(40.5).test_MAPE.toFixed(2)}%</b>로
-     정합한다. 40.5일은 설계 용적 8,000㎥ ÷ 투입 197 t/d 라는 <b>독립적 물리 근거</b>를 갖는다.
-     <br><br><b>왜 8~12일 직관과 어긋나는가 — 응답 속도와 체류시간은 다른 물리량이다.</b>
-     산발효조에서 이미 가수분해된 기질이 넘어오므로 <b>가스 응답이 빠른 것은 맞다</b>.
-     그러나 그 빠름은 체류시간이 짧아서가 아니라 <b>분해속도 k가 커서</b>다.
-     실제 유효 시상수 1/(1/SRT+k)를 보면 —
-     <br>· 음폐수(k=0.40): SRT 8일 ${S.foodww.tau_eff['8']}일 → SRT 60일 ${S.foodww.tau_eff['60']}일, 변동 <b>${S.foodww.range_pct}%</b>뿐
-     <br>· 음식물(k=0.30): ${S.food.tau_eff['8']}일 → ${S.food.tau_eff['60']}일, 변동 ${S.food.range_pct}%
-     <br>· 가축분뇨(k=0.08): ${S.manure.tau_eff['8']}일 → ${S.manure.tau_eff['60']}일, 변동 <b>${S.manure.range_pct}%</b>
-     <br><br>즉 <b>빠른 기질은 SRT가 8일이든 60일이든 응답이 2일 안팎으로 거의 같아 SRT를 드러내지 못한다.</b>
-     SRT를 관측 가능하게 하는 것은 느린 기질(가축분뇨)뿐이고, 분뇨의 물질수지가 긴 SRT를 요구한다.
-     현장에서 체감하는 "8~12일"은 <b>가용성 기질의 응답 시간</b>을 본 것이고,
-     고형물이 실제로 반응조에 머무는 시간은 설계값에 가깝다는 해석이 데이터와 맞는다.
-     이는 참조 문서의 "가스 응답 시간상수(반감기 2일)는 HRT 40.5일과 무관하다"는 관측과도 정확히 같은 이야기다.
-     <br><br><b>정정 기록.</b> 직전 판에서는 사고학습 R²가 최대인 SRT 5일을 채택했는데,
-     SRT 5일과 12일의 R² 차이는 0.007에 불과한 반면 가축분뇨 환산 생분해도는 5.13 대 2.98로 크게 달랐다.
-     성능이 평탄한 구간에서 미세한 R² 차이로 고른 것이 잘못이었고, 물리적 정합성을 기준으로 교체했다.`;
+    `<b>결론 — SRT는 데이터로 결정되지 않지만, 예측에는 사실상 영향이 없다.</b>
+     SRT를 ${lo.srt}일에서 ${hi.srt}일까지 <b>7.5배</b> 흔들어도
+     사고학습 R²는 ${D.valid_range[0].toFixed(3)}~${D.valid_range[1].toFixed(3)},
+     평가 R²는 ${D.test_range[0].toFixed(3)}~${D.test_range[1].toFixed(3)},
+     MAPE는 ${hi.MAPE.toFixed(2)}~${lo.MAPE.toFixed(2)}%다.
+     성능 차이가 <b>R² 0.02, MAPE 0.2%p</b> 안에 들어온다.
+     <br><br><b>왜 그런가 — θ와 SRT가 서로를 상쇄한다.</b>
+     정상상태에서 기질 i가 만드는 메탄 총량은 θᵢ × (가중치 합) × 투입량이고,
+     SRT를 늘리면 가중치 합이 커지므로 회귀는 θᵢ를 그만큼 줄여 <b>곱을 일정하게</b> 유지한다.
+     실제로 분뇨 θ는 SRT ${lo.srt}일 ${lo.theta.manure.toFixed(1)} → ${hi.srt}일 ${hi.theta.manure.toFixed(1)} ㎥CH₄/t로 ${(100*(1-hi.theta.manure/lo.theta.manure)).toFixed(0)}% 내려가고,
+     음폐수는 ${lo.theta.foodww.toFixed(1)} → ${hi.theta.foodww.toFixed(1)}로 ${(100*(1-hi.theta.foodww/lo.theta.foodww)).toFixed(0)}%만 움직인다.
+     느린 기질일수록 SRT에 민감한 것은 물리와 맞지만, <b>총량이 고정돼 있어 예측값은 거의 그대로다.</b>
+     <br><br><b>실무적 함의.</b> SRT 불확실성은 <b>예측 성능</b>에는 위험이 아니고,
+     <b>θ를 생분해도(BD)와 COD 농도로 분해하는 해석</b>에서만 문제가 된다.
+     같은 θ 26 ㎥CH₄/t도 SRT ${hi.srt}일 기준이냐 ${lo.srt}일 기준이냐에 따라 환산 BD가 배로 갈린다.
+     이 해석 층을 확정하려면 SRT 추정이 아니라 <b>기질 3종(음폐수·분뇨·음식물)의 COD·TS·VS 성상 분석</b>이 먼저다.
+     <br><br><b>채택값.</b> 본 모델은 <b>SRT 12일</b>을 기본값으로 쓴다.
+     문헌 권고나 총량 역산이 아니라 <b>① 물질수지가 허용한 ${C.srt_by_V['2400(30%)']}~${C.srt_by_V['8000']}일 구간 안에 있고,
+     ② 운영자가 현장에서 체감하는 8~12일과 일치하며, ③ 성능이 어차피 평탄하므로 더 강한 근거를 요구할 실익이 없다</b>는 세 가지 때문이다.
+     이 값은 <b>가정이지 추정치가 아니며</b>, 예측 결과를 해석할 때 그렇게 취급해야 한다.
+     ${lo.srt}~${hi.srt}일 전 범위의 결과를 위 표에 그대로 남겨 둔 이유가 그것이다.`;
 })();
 
 renderCharts();
