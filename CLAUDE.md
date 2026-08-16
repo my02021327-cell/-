@@ -107,8 +107,19 @@ test R²=0.776 (k=0.45), 0.772 (k=0.35). ADM1-R4 축약(0.778, 파라미터 6개
 
 ## 현행 코드 상태
 
-`src/` 는 위 규칙 이전(v1)에 작성되어 규칙 1·3·7·8·9·11을 위반한다
-(상세: `docs/INGESTION_REPORT.md` §5). 아직 개편하지 않았다.
+| 경로 | 상태 |
+|---|---|
+| `src/bioguard/` | **현행.** PROMPT(`docs/PROMPT_3트랙_통합앙상블.md`) 3트랙+앙상블 파이프라인. 위 규칙 준수 |
+| `src/*.py` (v1) | **레거시.** 규칙 1·3·7·8·9·11 위반 (상세: `docs/INGESTION_REPORT.md` §5). 미개편 |
+
+```bash
+python -m src.bioguard.run_pipeline   # → outputs/report_3track.html, results_3track.json,
+                                      #    health_program.json
+```
+
+V·SRT·k·체류시간은 전부 `src/bioguard/config.py` 최상단 상수다. **SRT 는 외생 입력이며
+데이터로 추정하지 않는다** — V 를 두 배 바꿔도 CV-RMSE 가 p=0.89~0.99 로 구별되지 않음을
+재확인했다(§12.2).
 
 **모델링 착수 전 반드시 `docs/INGESTION_REPORT.md` §8(문서 간 충돌 목록)을 확인할 것.**
 특히 예측 지평이 미해소다 — 검토서는 h=7·14일(운영 의사결정 단위), 명세서는 당일 기질기반

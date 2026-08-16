@@ -45,7 +45,29 @@ A/B 계열 분리 + DQ 플래그 반영. 수용 검증은 `python scripts/valida
 | `docs/reference/영천BGP_AI참조문서.md` | 스키마·DQ-01~12·정량 관계식의 1차 출처 |
 | `docs/reference/영천BGP_유기물처리계통설명서.md` | 공정 계통·설계 제원·설계 대비 실적 |
 | `docs/reference/literature/` | 1차 문헌 4종 (SAO 경로 리뷰, AD 리뷰 3종) |
-| `docs/INGESTION_REPORT.md` | 위 문서 전부의 재현 검증 결과 + 계산 규약 + **문서 간 충돌 목록** |
+| `docs/PROMPT_3트랙_통합앙상블.md` | 3트랙 + 앙상블 구축 명령서 (실행 완료) |
+| `docs/INGESTION_REPORT.md` | 위 문서 전부의 재현 검증 결과 + 계산 규약 + **문서 간 충돌 목록** + 실행 결과 |
+| `docs/prior_reports/` | 선행 리포트 2종(HTML) + 전단 커널 원본 스크립트 |
+
+## 3트랙 + 통합 앙상블 (현행 파이프라인)
+
+```bash
+python -m src.bioguard.run_pipeline
+```
+
+T1 기질 물량·화학양론 / T2 VS 물질수지 / T3 이화학 상태 → M1~M5 → 앙상블.
+확장창 rolling-origin 18폴드·90일 앞 예측, 폴드별 대응 t검정.
+
+| 항목 | 결과 |
+|------|------|
+| 기준선 (문헌전단+절편) | CV-RMSE 836.8 ㎥CH₄/d |
+| **앙상블 (단순평균)** | **724.2** — ΔRMSE −112.7, **p=0.006** |
+| 2023 홀드아웃 (1회 보고) | RMSE 536, MAPE 6.7%, R² 0.765 |
+| SRT 식별성 | V 2배 변경에도 p=0.89~0.99 — **비식별, 외생 입력 유지** |
+| 내부 이화학 11종 | 전부 p≥0.05 → 예측 모델 배제, 건강상태 지표로 재배치 |
+
+산출물: `outputs/report_3track.html` (단일 파일·라이트/다크·인터랙티브),
+`outputs/results_3track.json`, `outputs/health_program.json`.
 
 작업 규칙 요약은 `CLAUDE.md` 참조.
 
