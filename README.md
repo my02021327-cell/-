@@ -39,10 +39,13 @@ A/B 계열 분리 + DQ 플래그 반영. 수용 검증은 `python scripts/valida
 
 | 문서 | 역할 |
 |------|------|
-| `docs/EXPERT_REVIEW.md` | **최신 판정.** 설계 v2의 치명 결함(예측 지평·FAN 임계) + 신규 정량 기반 |
+| `docs/영천BGP_모델링최종명세_AI인계용.md` | **최신 모델링 결론.** 모델 비교 전수·채택 모델·3층 구조·미해결 항목 |
+| `docs/EXPERT_REVIEW.md` | 설계 v2에 대한 독립 검토 (치명 결함 + 신규 정량 기반) |
 | `docs/MODELING_OVERVIEW.md` | 설계 문서 v2 (공정 이해·데이터 진단·모델/관제 설계) |
 | `docs/reference/영천BGP_AI참조문서.md` | 스키마·DQ-01~12·정량 관계식의 1차 출처 |
-| `docs/INGESTION_REPORT.md` | 위 문서들의 재현 검증 결과 + 계산 규약 |
+| `docs/reference/영천BGP_유기물처리계통설명서.md` | 공정 계통·설계 제원·설계 대비 실적 |
+| `docs/reference/literature/` | 1차 문헌 4종 (SAO 경로 리뷰, AD 리뷰 3종) |
+| `docs/INGESTION_REPORT.md` | 위 문서 전부의 재현 검증 결과 + 계산 규약 + **문서 간 충돌 목록** |
 
 작업 규칙 요약은 `CLAUDE.md` 참조.
 
