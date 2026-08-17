@@ -392,7 +392,23 @@ CH₄% 가 주말 미측정 랩 항목이기 때문이다. <b>따라서 선행 �
    [dict(e, 수준={"crit": "위험", "warn": "주의"}.get(e["수준"], e["수준"])) for e in HP["이상구간"][:12]])}
 <div class="note">{"<br>".join("• " + x for x in HP["주의사항"])}</div>
 
-<h2>K. 현장 경험식과의 대조</h2>
+<h2>K. 개선안 검증 — 채택과 기각</h2>
+<p>{R['개선안_검증']['설명']}</p>
+{sec_tbl("채택",
+  [("안","개선안",False),("CV_RMSE","CV-RMSE",True),("ΔRMSE","Δ",True),("p","p",True),
+   ("판정","판정",False),("근거","채택 근거",False)],
+  [{**a["안" if False else "대조"], "안": a["안"], "CV_RMSE": a["CV_RMSE"], "근거": a["근거"]}
+   for a in R["개선안_검증"]["채택"]])}
+{sec_tbl("기각",
+  [("안","개선안",False),("CV_RMSE","CV-RMSE",True),("ΔRMSE","Δ",True),("p","p",True),
+   ("판정","판정",False),("근거","기각 근거",False)],
+  [{**a["대조"], "안": a["안"], "CV_RMSE": a["CV_RMSE"], "근거": a["근거"]}
+   for a in R["개선안_검증"]["기각"]],
+  note="<b>성능이 없으면 넣지 않는다.</b> 2풀 분리는 절편을 빼면 787→936 으로 악화되는데, "
+       "이는 미설명분이 추적 기질의 느린 분해 꼬리가 <b>아니라는</b> 뜻이다 — 동역학이 아니라 "
+       "계량의 문제라는 진단을 강화한다.")}
+
+<h2>L. 현장 경험식과의 대조</h2>
 <p>출처: <code>{R['경험식_대조']['출처']}</code>. 같은 폴드·같은 타깃에서 벤치마크했다.
 가중치표는 소수 셋째 자리까지 재현되어 <b>식 자체는 내부적으로 일관</b>하다.</p>
 {_tbl([("구분","구분",False),("값","값",False)],
@@ -407,7 +423,7 @@ CH₄% 가 주말 미측정 랩 항목이기 때문이다. <b>따라서 선행 �
 (표 C 참조). 상세 비교: <code>scripts/compare_empirical.py</code> →
 <code>outputs/compare_empirical.json</code>.</div>
 
-<h2>L. 한계와 다음 단계</h2>
+<h2>M. 한계와 다음 단계</h2>
 <ul>{"".join(f"<li>{x}</li>" for x in R["한계와_다음단계"])}</ul>
 
 <p class="sub" style="margin-top:36px">재현: <code>python -m src.bioguard.run_pipeline</code> ·

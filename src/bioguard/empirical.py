@@ -162,12 +162,39 @@ def feed_driven_design(F: pd.DataFrame, srt: float, k_hyd: dict,
     return np.column_stack(cols)
 
 
-def make_M1_feed(F, y, srt=SRT_REFERENCE_D, k_hyd=None, intercept=True):
+def yield_upper_bounds(k_hyd: dict, srt: float, intercept: bool = True) -> np.ndarray:
+    """
+    생분해도 상한 BD ≤ 1 을 계수 상한으로 옮긴다.
+
+    기질 s 의 무한지평 수율은 θ_s·G(k_s) [㎥CH₄/투입 t] 이고 이를 VSfrac 으로 나눈 값이
+    이론 메탄포텐셜 B_th 를 넘으면 BD>1 이 된다. 계수 하나에 대한 상한이므로 박스 제약이다.
+    절편은 제약하지 않는다 — 크기를 그대로 드러내 보고하는 것이 이 프로젝트의 규약이다.
+    """
+    from .kernels import gain
+    from .models import stoichiometry
+
+    st = stoichiometry()["기질"]
+    ub = [st[s]["B_th"] * st[s]["VSfrac"] * 1000.0 / gain(srt, k_hyd[s]) for s in SUBSTRATES]
+    if intercept:
+        ub.append(np.inf)
+    return np.array(ub, dtype=float)
+
+
+def make_M1_feed(F, y, srt=SRT_REFERENCE_D, k_hyd=None, intercept=True, cap=True):
+    """
+    cap=True (기본): 수율 물리 제약을 적합에 부과한다.
+    앙상블 비용은 +0.4 ㎥/d (0.06%, p=0.06) 로 측정 한계 안이고, 그 대가로 모든 계수가
+    물리적으로 허용 가능해진다(음폐수 BD 1.14 → 1.00). 사후 검사만 하던 것을 제약으로
+    옮긴 것이며, 남는 몫은 절편으로 정직하게 이동한다(34.2% → 37.6%).
+    """
     from .config import K_HYD
-    W = feed_driven_design(F, srt, k_hyd or K_HYD, intercept)
+    kh = k_hyd or K_HYD
+    W = feed_driven_design(F, srt, kh, intercept)
+    lo = np.zeros(W.shape[1])
+    hi = yield_upper_bounds(kh, srt, intercept) if cap else np.full(W.shape[1], np.inf)
 
     def fit_predict(tr, te):
-        b = lsq_linear(W[tr], y[tr], bounds=(0.0, np.inf)).x
+        b = lsq_linear(W[tr], y[tr], bounds=(lo, hi)).x
         fit_predict.last_beta = b
         return W[te] @ b
 

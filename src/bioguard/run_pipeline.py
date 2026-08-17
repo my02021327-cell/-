@@ -140,7 +140,7 @@ def main() -> int:
     _log("[5] 트랙별 구축 · 기준선 대비 검정")
     models = {
         "M1_기계론합성곱": make_M1(F, y, "표준", SRT_REFERENCE_D, K_HYD, True),
-        "M1F_실측투입구동": make_M1_feed(F, y),
+        "M1F_실측투입구동_수율제약": make_M1_feed(F, y, cap=True),
         "M2_ADL": make_M2(F, y, "표준", SRT_REFERENCE_D, K_HYD),
         "M3_VS물질수지": make_M3(F, y, True),
         "M4_트리_lag격자": make_M4(F, y, "forecast", True),
@@ -171,6 +171,40 @@ def main() -> int:
                    if k in ("ΔRMSE", "SE", "p", "판정")})}
               for (nm, v), t in zip(fr.items(),
                                     ["T1", "T1", "T1", "T2", "T1+T3", "T2+T3"])],
+    }
+
+    # 개선안 검증 — 채택한 것과 기각한 것을 모두 남긴다 (docs/EMPIRICAL_VS_MODEL.md §5.1)
+    _log("    개선안 검증 …")
+    from . import twopool as _tp
+    from . import tuned as _tuned
+    _uncapped = fold_rmse(make_M1_feed(F, y, cap=False), folds, y)
+    _capped = fr["M1F_실측투입구동_수율제약"]
+    _two = fold_rmse(_tp.make(F, y, k_slow=0.05, cap=True), folds, y)
+    _tune = fold_rmse(_tuned.make(F, y, cap=True), folds, y)
+    R["개선안_검증"] = {
+        "설명": "경험식 대조에서 도출한 개선 후보를 동일 폴드에서 검증했다. 성능이 아니라 "
+              "물리 타당성으로 채택한 것과, 성능이 없어 기각한 것을 함께 남긴다.",
+        "채택": [{
+            "안": "수율 물리 제약 (BD ≤ 1 을 적합 제약으로)",
+            "CV_RMSE": round(float(np.nanmean(_capped)), 1),
+            "대조": paired_test(_capped, _uncapped, "제약", "무제약"),
+            "근거": "비용이 측정 한계 안이고(단독 +2.6, 앙상블 +0.4 ㎥/d) 모든 계수가 "
+                  "물리적으로 허용 가능해진다. 사후 검사만 하던 것을 제약으로 옮겼다.",
+        }],
+        "기각": [
+            {"안": "속분해/난분해 2풀 분리",
+             "CV_RMSE": round(float(np.nanmean(_two)), 1),
+             "대조": paired_test(_two, _capped, "2풀", "단일풀"),
+             "근거": "튜닝된 단일 풀보다 유의하게 나빴다(p=0.024). 절편을 빼면 787→936 으로 "
+                   "악화돼, 미설명분이 추적 기질의 느린 꼬리가 아님이 드러났다 — 이는 "
+                   "계량 문제라는 진단을 강화한다. 근거는 src/bioguard/twopool.py 에 보존."},
+            {"안": "폴드 내부 k 선택",
+             "CV_RMSE": round(float(np.nanmean(_tune)), 1),
+             "대조": paired_test(_tune, _capped, "k선택", "고정k"),
+             "근거": "전 폴드로 k 를 고르면 749.7 이지만 그것은 선택 편향이다. 폴드 안에서 "
+                   "고르면 이득이 사라지고, 선택된 k 가 0.05~0.45 로 흔들려 안정 식별되지 "
+                   "않는다(명세서의 k 95% CI [0.15, 1.50] 과 일치)."},
+        ],
     }
 
     # 현장 경험식 벤치마크 + 구동 변수 진단 (docs/영천BGP_메탄발생량_예측경험식.md)
