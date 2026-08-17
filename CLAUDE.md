@@ -17,6 +17,12 @@
 | 6 | `docs/INGESTION_REPORT.md` | 위 문서 전부의 재현 검증 결과 + 문서에 없는 재현 규약 + **충돌 목록** |
 | 7 | `docs/reference/literature/` | 1차 문헌 4종 (SAO 경로, AD 리뷰 3종) |
 
+**현장 경험식 대조**: `docs/EMPIRICAL_VS_MODEL.md` — `docs/영천BGP_메탄발생량_예측경험식.md`와
+우리 모델을 동일 폴드에서 비교하고, 그 과정에서 드러난 우리 결함(D1 구동 변수, D2 가축분뇨
+계수 소실)의 수정 근거·필요 정보 목록·개선 방향을 정리했다.
+**수율 파라미터의 물리 타당성은 경험식이 낫다**(음폐수 BD 0.90 vs 우리 1.07) — 우리 계수를
+생분해도·수율로 해석하지 말 것.
+
 **문서 간 충돌이 미해소 상태다.** `y_lag1` 사용 여부, 예측 지평(당일 vs h=7·14), VFA/Alk·
 `acid_pH` 피처 채택 여부에서 문서들이 서로 반대를 지시한다. 전체 목록은
 `docs/INGESTION_REPORT.md` §8. **모델링 착수 시 이 표부터 확인하고 용도를 확정할 것.**
@@ -115,7 +121,13 @@ test R²=0.776 (k=0.45), 0.772 (k=0.35). ADM1-R4 축약(0.778, 파라미터 6개
 ```bash
 python -m src.bioguard.run_pipeline   # → outputs/report_3track.html, results_3track.json,
                                       #    health_program.json
+python scripts/compare_empirical.py   # → outputs/compare_empirical.json (경험식 대조)
 ```
+
+**구동 변수는 실측 투입(`feed_AB`)을 쓴다.** 반입에서 전단 커널로 투입을 재구성하면 실측과
+r=0.548 에 그친다 — 여액저장조는 수동 CSTR 이 아니라 투입을 일정하게 유지하도록 조작되는
+완충조(반입 CV 46% → 투입 CV 17%)라 지수 RTD 로 표현되지 않는다. 반입 구동에서는 NNLS 가
+가축분뇨 계수를 0 으로 밀어냈고, 투입 구동으로 바꾸자 11.79 로 복원됐다(`M1F`).
 
 V·SRT·k·체류시간은 전부 `src/bioguard/config.py` 최상단 상수다. **SRT 는 외생 입력이며
 데이터로 추정하지 않는다** — V 를 두 배 바꿔도 CV-RMSE 가 p=0.89~0.99 로 구별되지 않음을

@@ -392,7 +392,22 @@ CH₄% 가 주말 미측정 랩 항목이기 때문이다. <b>따라서 선행 �
    [dict(e, 수준={"crit": "위험", "warn": "주의"}.get(e["수준"], e["수준"])) for e in HP["이상구간"][:12]])}
 <div class="note">{"<br>".join("• " + x for x in HP["주의사항"])}</div>
 
-<h2>K. 한계와 다음 단계</h2>
+<h2>K. 현장 경험식과의 대조</h2>
+<p>출처: <code>{R['경험식_대조']['출처']}</code>. 같은 폴드·같은 타깃에서 벤치마크했다.
+가중치표는 소수 셋째 자리까지 재현되어 <b>식 자체는 내부적으로 일관</b>하다.</p>
+{_tbl([("구분","구분",False),("값","값",False)],
+  [{"구분":"경험식 Nowcast (MA30 에 실측 사용)","값":f"CV-RMSE {R['경험식_대조']['Nowcast_CV_RMSE']:,.1f} ㎥/d"},
+   {"구분":"경험식 Forecast (MA30 재귀 갱신)","값":f"CV-RMSE {R['경험식_대조']['Forecast_CV_RMSE']:,.1f} ㎥/d — 기준선 대비 {R['경험식_대조']['검정_forecast_vs_기준선']['판정']} (p={R['경험식_대조']['검정_forecast_vs_기준선']['p']})"},
+   {"구분":"반입 합계 vs 실측 투입 상관","값":f"r = {R['경험식_대조']['구동변수_진단']['반입합계_vs_실측투입_r']}"},
+   {"구분":"전단 커널 재구성 vs 실측 투입 상관","값":f"r = {R['경험식_대조']['구동변수_진단']['전단커널재구성_vs_실측투입_r']}"},
+   {"구분":"변동계수","값":f"반입 CV {R['경험식_대조']['구동변수_진단']['반입_CV_pct']}% → 투입 CV {R['경험식_대조']['구동변수_진단']['투입_CV_pct']}%"}])}
+<div class="note"><b>구동 변수 결함(D1) — 이번 대조로 드러났다.</b>
+{R['경험식_대조']['구동변수_진단']['판정']}
+그래서 실측 투입을 구동 변수로 쓰는 <code>M1F</code> 를 추가했고, 단독 성능이 M1 을 앞선다
+(표 C 참조). 상세 비교: <code>scripts/compare_empirical.py</code> →
+<code>outputs/compare_empirical.json</code>.</div>
+
+<h2>L. 한계와 다음 단계</h2>
 <ul>{"".join(f"<li>{x}</li>" for x in R["한계와_다음단계"])}</ul>
 
 <p class="sub" style="margin-top:36px">재현: <code>python -m src.bioguard.run_pipeline</code> ·

@@ -25,6 +25,7 @@ from .cv import (fold_rmse, make_folds, metrics, oof_predictions, paired_test, v
 from .data import build_frame, target_coverage
 from .gpu_backend import BK
 from .kernels import front_set, kernel_stats
+from .empirical import make_M1_feed, make_empirical, reconstruction_check
 from .models import (T3_VARS, combine, design_matrix, final_weights, m5_intercept_path,
                      make_M1, make_M2, make_M3, make_M4, make_M5, nnls_fit, stoichiometry,
                      t3_features)
@@ -139,6 +140,7 @@ def main() -> int:
     _log("[5] 트랙별 구축 · 기준선 대비 검정")
     models = {
         "M1_기계론합성곱": make_M1(F, y, "표준", SRT_REFERENCE_D, K_HYD, True),
+        "M1F_실측투입구동": make_M1_feed(F, y),
         "M2_ADL": make_M2(F, y, "표준", SRT_REFERENCE_D, K_HYD),
         "M3_VS물질수지": make_M3(F, y, True),
         "M4_트리_lag격자": make_M4(F, y, "forecast", True),
@@ -167,7 +169,20 @@ def main() -> int:
                   if nm == "M1_기계론합성곱" else
                   {k: v2 for k, v2 in paired_test(v, BASELINE, nm, "기준선").items()
                    if k in ("ΔRMSE", "SE", "p", "판정")})}
-              for (nm, v), t in zip(fr.items(), ["T1", "T1", "T2", "T1+T3", "T2+T3"])],
+              for (nm, v), t in zip(fr.items(),
+                                    ["T1", "T1", "T1", "T2", "T1+T3", "T2+T3"])],
+    }
+
+    # 현장 경험식 벤치마크 + 구동 변수 진단 (docs/영천BGP_메탄발생량_예측경험식.md)
+    emp_now = fold_rmse(make_empirical(F, y, "nowcast"), folds, y)
+    emp_fc = fold_rmse(make_empirical(F, y, "forecast"), folds, y)
+    R["경험식_대조"] = {
+        "출처": "docs/영천BGP_메탄발생량_예측경험식.md",
+        "Nowcast_CV_RMSE": round(float(np.nanmean(emp_now)), 1),
+        "Forecast_CV_RMSE": round(float(np.nanmean(emp_fc)), 1),
+        "검정_forecast_vs_기준선": paired_test(emp_fc, BASELINE, "경험식", "기준선"),
+        "구동변수_진단": reconstruction_check(F),
+        "상세": "scripts/compare_empirical.py → outputs/compare_empirical.json",
     }
 
     # T1 계수와 물리 검사
