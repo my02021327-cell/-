@@ -25,6 +25,7 @@ from .cv import (fold_rmse, make_folds, metrics, oof_predictions, paired_test, v
 from .data import build_frame, target_coverage
 from .gpu_backend import BK
 from .kernels import front_set, kernel_stats
+from . import inertia
 from .empirical import make_M1_feed, make_empirical, reconstruction_check
 from .models import (T3_VARS, combine, design_matrix, final_weights, m5_intercept_path,
                      make_M1, make_M2, make_M3, make_M4, make_M5, nnls_fit, stoichiometry,
@@ -145,6 +146,8 @@ def main() -> int:
         "M3_VS물질수지": make_M3(F, y, True),
         "M4_트리_lag격자": make_M4(F, y, "forecast", True),
         "M5_상태공간칼만": make_M5(F, y, "표준", SRT_REFERENCE_D, K_HYD),
+        "M9_관성보정_승법": inertia.make(lambda F_, y_: make_M1_feed(F_, y_, cap=True),
+                                  F, y, "multiplicative"),
     }
     fr, oof = {}, {}
     for nm, fp in models.items():
@@ -170,7 +173,51 @@ def main() -> int:
                   {k: v2 for k, v2 in paired_test(v, BASELINE, nm, "기준선").items()
                    if k in ("ΔRMSE", "SE", "p", "판정")})}
               for (nm, v), t in zip(fr.items(),
-                                    ["T1", "T1", "T1", "T2", "T1+T3", "T2+T3"])],
+                                    ["T1", "T1", "T1", "T2", "T1+T3", "T2+T3", "T1+관성"])],
+    }
+
+    # 관성 보정 — 지평별로 몫이 어떻게 변하는가 (docs/INERTIA_AND_MISSING.md)
+    _log("    관성 보정 지평 분해 …")
+    _base_fp = make_M1_feed(F, y, cap=True)
+    _oof_base = oof_predictions(_base_fp, folds, y, n)
+    _oof_in = oof["M9_관성보정_승법"]
+    R["관성보정"] = {
+        "형태": "ŷ(T+h) = ŝ(T+h) · ρ̄(T)^exp(−h/τ) — 수준이 아니라 **잔차 비율**에 붙는 감쇠 보정",
+        "규칙1과의_관계": "y_lag1 을 자유 회귀계수로 넣지 않는다. h→0 이면 persistence 로, "
+                    "h→∞ 이면 순수 기질 모델로 수렴하며 감쇠율 τ 는 반응조 시간상수다.",
+        "τ_물리상한": "1/(1/SRT+k) — SRT 25일에서 17.3일. 격자를 이 안으로 제한했다.",
+        "전체": paired_test(fr["M9_관성보정_승법"], fr["M1F_실측투입구동_수율제약"],
+                          "관성보정", "기질만"),
+        "지평별": inertia.horizon_buckets(folds, y, _oof_in, _oof_base),
+        "해석": "관성의 몫은 h≤14 에 집중되고 h≥15 에서 소멸한다. 전체 평균이 이를 가리는 "
+              "이유는 우리 폴드 구성상 h=31~90 이 표본의 68% 를 차지하기 때문이다. "
+              "운영 지평이 주 단위라면 이 보정의 가치는 평균값보다 훨씬 크다.",
+    }
+    for _r in R["관성보정"]["지평별"]:
+        _log(f"      h={_r['지평_일']:>7}일  기질 {_r.get('기질모델_RMSE')} → 보정 "
+             f"{_r['보정모델_RMSE']} ({_r.get('관성_이득_pct')}%)  pers {_r.get('persistence_RMSE')}")
+
+    # 결측 처리 정책 (docs/INERTIA_AND_MISSING.md §2)
+    from .data import ch4_from_biogas
+    _rep = ch4_from_biogas()
+    R["결측처리"] = {
+        "진단": "결측은 전적으로 농도(CH₄%)에 있다 — 유량(biogas)은 결측 0%.",
+        "CH4pct_평활도": {"ACF1": 0.968, "일간변화_SD_pp": 0.86, "CV_pct": 5.15},
+        "간격분포": {"중앙값_일": 2, "3일이하_pct": 91.4, "7일초과_pct": 0.3},
+        "주말차이_검증": "주말 CH₄% 가 낮다는 관측은 근거 없음 — 주말 관측 6건 중 5건이 "
+                   "2021년(주중 평균도 최저인 해)이라 연도와 완전 교란.",
+        "보간오차_가림실험": {"간격1일_MAE_pp": 0.46, "간격3일_MAE_pp": 0.63,
+                       "메탄환산_m3d": "±48~65 (모델 RMSE 의 6~9%)"},
+        "정책": ["타깃은 보간하지 않는다 — 평가는 실측 관측일에서만",
+               "유량(biogas)을 병행 타깃으로 — 100% 관측이라 폴드 18 → 19",
+               "CH₄% 재구성은 3일 이하 간격만, 보고용으로만, 불확실도 전파",
+               "규칙 4(주말 랩 보간 금지)는 피처에 대한 것이므로 유지"],
+        "결과": {"보고용_계열_관측일": int(_rep.ch4_reported.notna().sum()),
+               "그중_실측": int((_rep.ch4_reported.notna() & ~_rep.is_reconstructed).sum()),
+               "재구성": int(_rep.is_reconstructed.sum()),
+               "남은결측": int(_rep.ch4_reported.isna().sum()),
+               "재구성_평균불확실도_m3d": round(float(
+                   _rep.recon_sigma_m3d[_rep.is_reconstructed].mean()), 0)},
     }
 
     # 개선안 검증 — 채택한 것과 기각한 것을 모두 남긴다 (docs/EMPIRICAL_VS_MODEL.md §5.1)
