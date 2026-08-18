@@ -84,6 +84,15 @@
           "CV_RMSE": 467.9,
           "p_vs_naive": 0.0527
         },
+        "Stack": {
+          "pooled_R2": 0.8253,
+          "pooled_RMSE": 507.9,
+          "pooled_MAE": 368.1,
+          "pooled_MAPE": 5.87,
+          "RMSSE_pct": 95.2,
+          "CV_RMSE": 473.5,
+          "p_vs_naive": 0.0878
+        },
         "HistGBM": {
           "pooled_R2": 0.8219,
           "pooled_RMSE": 512.9,
@@ -92,15 +101,6 @@
           "RMSSE_pct": 96.1,
           "CV_RMSE": 504.8,
           "p_vs_naive": 0.4952
-        },
-        "Stack": {
-          "pooled_R2": 0.8176,
-          "pooled_RMSE": 519.1,
-          "pooled_MAE": 381.2,
-          "pooled_MAPE": 6.13,
-          "RMSSE_pct": 97.3,
-          "CV_RMSE": 484.4,
-          "p_vs_naive": 0.1998
         },
         "RandomForest": {
           "pooled_R2": 0.8047,
@@ -176,6 +176,18 @@
         "kNN#2/delta": 7,
         "HistGBM#1/level": 1
       },
+      "stack_weights_mean": {
+        "kNN": 0.1846,
+        "ExtraTrees": 0.1598,
+        "FlowAnchor": 0.1131,
+        "RandomForest": 0.1106,
+        "BayesianRidge": 0.1078,
+        "HistGBM": 0.0975,
+        "Naive": 0.0892,
+        "FlowConc": 0.0561,
+        "ElasticNet": 0.0452,
+        "SeasonalNaive": 0.036
+      },
       "naive": {
         "pooled_R2": 0.8074,
         "pooled_RMSE": 533.5,
@@ -210,13 +222,13 @@
           "p_vs_naive": 0.9083
         },
         "Stack": {
-          "pooled_R2": 0.6178,
-          "pooled_RMSE": 749.9,
-          "pooled_MAE": 566.2,
-          "pooled_MAPE": 9.19,
-          "RMSSE_pct": 106.4,
-          "CV_RMSE": 706.4,
-          "p_vs_naive": 0.2984
+          "pooled_R2": 0.6399,
+          "pooled_RMSE": 727.9,
+          "pooled_MAE": 541.9,
+          "pooled_MAPE": 8.71,
+          "RMSSE_pct": 103.2,
+          "CV_RMSE": 683.5,
+          "p_vs_naive": 0.7672
         },
         "kNN": {
           "pooled_R2": 0.6006,
@@ -302,6 +314,18 @@
         "ElasticNet#1/level": 1,
         "ElasticNet#2/level": 1
       },
+      "stack_weights_mean": {
+        "HistGBM": 0.1935,
+        "BayesianRidge": 0.1894,
+        "ExtraTrees": 0.1577,
+        "FlowAnchor": 0.1009,
+        "kNN": 0.0994,
+        "ElasticNet": 0.0714,
+        "RandomForest": 0.0558,
+        "SeasonalNaive": 0.0541,
+        "FlowConc": 0.0448,
+        "Naive": 0.0329
+      },
       "naive": {
         "pooled_R2": 0.6622,
         "pooled_RMSE": 705.0,
@@ -335,6 +359,15 @@
           "CV_RMSE": 810.3,
           "p_vs_naive": 0.3267
         },
+        "Stack": {
+          "pooled_R2": 0.4526,
+          "pooled_RMSE": 895.8,
+          "pooled_MAE": 673.5,
+          "pooled_MAPE": 10.89,
+          "RMSSE_pct": 109.5,
+          "CV_RMSE": 862.3,
+          "p_vs_naive": 0.0649
+        },
         "RandomForest": {
           "pooled_R2": 0.4357,
           "pooled_RMSE": 909.5,
@@ -352,15 +385,6 @@
           "RMSSE_pct": 111.4,
           "CV_RMSE": 841.8,
           "p_vs_naive": 0.2662
-        },
-        "Stack": {
-          "pooled_R2": 0.4307,
-          "pooled_RMSE": 913.5,
-          "pooled_MAE": 696.9,
-          "pooled_MAPE": 11.44,
-          "RMSSE_pct": 111.7,
-          "CV_RMSE": 866.3,
-          "p_vs_naive": 0.0807
         },
         "ElasticNet": {
           "pooled_R2": 0.3988,
@@ -426,6 +450,18 @@
         "kNN#1/delta": 1,
         "ElasticNet#5/level": 1,
         "kNN#0/level": 1
+      },
+      "stack_weights_mean": {
+        "BayesianRidge": 0.2035,
+        "kNN": 0.152,
+        "HistGBM": 0.1423,
+        "ExtraTrees": 0.1148,
+        "FlowAnchor": 0.1009,
+        "SeasonalNaive": 0.0976,
+        "ElasticNet": 0.0681,
+        "FlowConc": 0.056,
+        "Naive": 0.0428,
+        "RandomForest": 0.0221
       },
       "naive": {
         "pooled_R2": 0.5433,
@@ -497,13 +533,13 @@
           "p_vs_naive": 0.0716
         },
         "Stack": {
-          "pooled_R2": -0.0039,
-          "pooled_RMSE": 1205.2,
-          "pooled_MAE": 955.8,
-          "pooled_MAPE": 15.59,
-          "RMSSE_pct": 116.8,
-          "CV_RMSE": 1117.8,
-          "p_vs_naive": 0.239
+          "pooled_R2": 0.0131,
+          "pooled_RMSE": 1194.9,
+          "pooled_MAE": 930.2,
+          "pooled_MAPE": 15.13,
+          "RMSSE_pct": 115.8,
+          "CV_RMSE": 1110.4,
+          "p_vs_naive": 0.2388
         },
         "HistGBM": {
           "pooled_R2": -0.059,
@@ -553,6 +589,18 @@
         "ElasticNet#3/level": 1,
         "kNN#0/level": 1,
         "ElasticNet#1/level": 1
+      },
+      "stack_weights_mean": {
+        "ElasticNet": 0.2315,
+        "RandomForest": 0.1899,
+        "ExtraTrees": 0.1417,
+        "SeasonalNaive": 0.1389,
+        "kNN": 0.0762,
+        "BayesianRidge": 0.0703,
+        "HistGBM": 0.0556,
+        "FlowAnchor": 0.0452,
+        "Naive": 0.0433,
+        "FlowConc": 0.0073
       },
       "naive": {
         "pooled_R2": 0.264,
@@ -642,13 +690,13 @@
           "p_vs_naive": 0.3857
         },
         "Stack": {
-          "pooled_R2": -0.8126,
-          "pooled_RMSE": 1607.7,
-          "pooled_MAE": 1266.5,
-          "pooled_MAPE": 20.43,
-          "RMSSE_pct": 121.5,
-          "CV_RMSE": 1498.6,
-          "p_vs_naive": 0.1529
+          "pooled_R2": -0.8075,
+          "pooled_RMSE": 1605.5,
+          "pooled_MAE": 1258.4,
+          "pooled_MAPE": 20.25,
+          "RMSSE_pct": 121.3,
+          "CV_RMSE": 1528.3,
+          "p_vs_naive": 0.0717
         },
         "BayesianRidge": {
           "pooled_R2": -2.9327,
@@ -680,6 +728,18 @@
         "ElasticNet#2/level": 1,
         "kNN#2/delta": 2,
         "kNN#1/delta": 1
+      },
+      "stack_weights_mean": {
+        "FlowConc": 0.1905,
+        "ElasticNet": 0.1549,
+        "HistGBM": 0.1452,
+        "SeasonalNaive": 0.1436,
+        "kNN": 0.1059,
+        "Naive": 0.0888,
+        "BayesianRidge": 0.0631,
+        "ExtraTrees": 0.0625,
+        "RandomForest": 0.0244,
+        "FlowAnchor": 0.0211
       },
       "naive": {
         "pooled_R2": -0.2281,
@@ -759,6 +819,15 @@
           "CV_RMSE": 1750.9,
           "p_vs_naive": 0.0936
         },
+        "Stack": {
+          "pooled_R2": -1.2914,
+          "pooled_RMSE": 1799.3,
+          "pooled_MAE": 1483.3,
+          "pooled_MAPE": 23.99,
+          "RMSSE_pct": 113.5,
+          "CV_RMSE": 1730.2,
+          "p_vs_naive": 0.1526
+        },
         "ElasticNet": {
           "pooled_R2": -1.5059,
           "pooled_RMSE": 1881.7,
@@ -767,15 +836,6 @@
           "RMSSE_pct": 118.7,
           "CV_RMSE": 1835.5,
           "p_vs_naive": 0.1108
-        },
-        "Stack": {
-          "pooled_R2": -1.6027,
-          "pooled_RMSE": 1917.6,
-          "pooled_MAE": 1577.0,
-          "pooled_MAPE": 25.49,
-          "RMSSE_pct": 121.0,
-          "CV_RMSE": 1824.4,
-          "p_vs_naive": 0.052
         },
         "BayesianRidge": {
           "pooled_R2": -3.0182,
@@ -805,6 +865,18 @@
         "kNN#2/delta": 1,
         "ElasticNet#3/level": 1,
         "kNN#1/delta": 1
+      },
+      "stack_weights_mean": {
+        "ExtraTrees": 0.1689,
+        "ElasticNet": 0.1489,
+        "RandomForest": 0.14,
+        "FlowConc": 0.125,
+        "SeasonalNaive": 0.1098,
+        "kNN": 0.0871,
+        "HistGBM": 0.0757,
+        "FlowAnchor": 0.0594,
+        "BayesianRidge": 0.0455,
+        "Naive": 0.0396
       },
       "naive": {
         "pooled_R2": -0.7786,
@@ -885,13 +957,13 @@
           "p_vs_naive": 0.6695
         },
         "Stack": {
-          "pooled_R2": -1.6432,
-          "pooled_RMSE": 1919.4,
-          "pooled_MAE": 1591.5,
-          "pooled_MAPE": 26.67,
-          "RMSSE_pct": 104.7,
-          "CV_RMSE": 1765.4,
-          "p_vs_naive": 0.9304
+          "pooled_R2": -1.661,
+          "pooled_RMSE": 1925.8,
+          "pooled_MAE": 1615.5,
+          "pooled_MAPE": 27.11,
+          "RMSSE_pct": 105.0,
+          "CV_RMSE": 1811.3,
+          "p_vs_naive": 0.9005
         },
         "ElasticNet": {
           "pooled_R2": -2.0298,
@@ -932,6 +1004,18 @@
         "ElasticNet#1/level": 2,
         "kNN#0/level": 1,
         "ElasticNet#5/level": 1
+      },
+      "stack_weights_mean": {
+        "FlowConc": 0.2305,
+        "SeasonalNaive": 0.1577,
+        "BayesianRidge": 0.1433,
+        "ExtraTrees": 0.1177,
+        "ElasticNet": 0.1073,
+        "RandomForest": 0.079,
+        "HistGBM": 0.0652,
+        "kNN": 0.054,
+        "FlowAnchor": 0.0453,
+        "Naive": 0.0
       },
       "naive": {
         "pooled_R2": -1.4134,

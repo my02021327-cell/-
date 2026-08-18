@@ -296,18 +296,29 @@ def run_band(df: pd.DataFrame, X: pd.DataFrame, y_train_label: pd.Series,
             per_fold[mname].append(_rmse(yte, p_te))
             oof[mname].append(p_te)
 
-        # NNLS 스태킹 — 가중치는 검증블록의 폴드밖 예측으로만 학습
+        # ── NNLS 스태킹 — 수준이 아니라 '앵커 위의 잔차'에서 결합한다 ──────────
+        # 수준에서 결합하면 멤버들이 거의 같은 값을 내므로 설계행렬이 사실상 계수부족이
+        # 되고, NNLS 는 최선해가 아니라 '아무 해'를 찾아 가중을 고르게 퍼뜨린다.
+        # 실제로 그렇게 나왔다 — 가중이 0.05~0.23 으로 흩어지고 Stack 이 최선 단일
+        # 멤버보다 나빴다(h1_3 에서 0.825 vs FlowAnchor 0.864).
+        #
+        #   y − anchor  ≈  Σ wᵢ (predᵢ − anchor),   wᵢ ≥ 0
+        #
+        # 잔차 공간에서는 멤버끼리 실제로 다르므로 결합이 의미를 갖고, w=0 이면 정확히
+        # FlowAnchor 로 돌아가므로 **하한이 보장된다.**
+        # (LESSONS_LEARNED §B1 「관성은 수준이 아니라 잔차에 붙여야 한다」의 스태킹판)
         if len(val_preds) >= 2:
-            names = list(val_preds)
-            Pv = np.column_stack([val_preds[k] for k in names])
-            w = nnls_stack(Pv, yva)
-            Pt = np.column_stack([test_preds[k] for k in names])
-            p_stack = Pt @ w
+            names = [k for k in val_preds if k != "FlowAnchor"]
+            base_va, base_te = a_va, p_fa
+            Rv = np.column_stack([val_preds[k] - base_va for k in names])
+            Rt = np.column_stack([test_preds[k] - base_te for k in names])
+            w = nnls_stack(Rv, yva - base_va)
+            p_stack = base_te + Rt @ w
             per_fold["Stack"].append(_rmse(yte, p_stack))
             oof["Stack"].append(p_stack)
-            tot = float(w.sum()) or 1.0
             for k, wi in zip(names, w):
-                stack_w.setdefault(k, []).append(float(wi) / tot)
+                stack_w.setdefault(k, []).append(float(wi))
+            stack_w.setdefault("_sum", []).append(float(w.sum()))
 
         oof_y.append(yte)
         oof_t.append(o_all[te])
@@ -326,9 +337,11 @@ def run_band(df: pd.DataFrame, X: pd.DataFrame, y_train_label: pd.Series,
     res = {"band": name, "lo": lo, "hi": hi, "n_folds": len(oof_y),
            "n_test": int(len(Y)), "y_mean": round(float(Y.mean()), 1),
            "y_sd": round(float(Y.std()), 1), "models": {}, "selected_candidates": sel_hist,
+           # 앵커(FlowAnchor) 위의 보정 가중. 합이 0 이면 앵커 그대로라는 뜻이다.
            "stack_weights_mean": {k: round(float(np.mean(v)), 4)
                                   for k, v in sorted(stack_w.items(),
-                                                     key=lambda kv: -np.mean(kv[1]))}}
+                                                     key=lambda kv: -np.mean(kv[1]))},
+           "stack_base": "FlowAnchor"}
 
     naive_pool = np.concatenate(oof["Naive"])
     naive_rmse_pool = _rmse(Y, naive_pool)
