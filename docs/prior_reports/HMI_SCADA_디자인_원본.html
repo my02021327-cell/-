@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioGuard-HMI Industrial SCADA Console</title>
+<style>
+  :root {
+    /* 정통 산업용 무채색 베젤 시스템 */
+    --hmi-chassis: #C0C0C0;
+    --hmi-panel-bg: #D4D0C8;
+    --hmi-dark-bg: #000000;
+    --hmi-border-light: #FFFFFF;
+    --hmi-border-gray: #808080;
+    --hmi-border-black: #000000;
+
+    /* 고대비 100% 채도 하드웨어 신호등 원색 */
+    --lamp-red-on: #FF0000;
+    --lamp-red-off: #330000;
+    --lamp-amber-on: #FFCC00;
+    --lamp-amber-off: #332600;
+    --lamp-green-on: #00FF00;
+    --lamp-green-off: #003300;
+
+    --font-sys: "Malgun Gothic", "맑은 고딕", Dotum, "돋움", Tahoma, sans-serif;
+    --font-led: Consolas, "Courier New", monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-sys); border-radius: 0 !important; }
+
+  body {
+    background-color: #606870;
+    color: #000000;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    font-size: 13.5px;
+    padding: 10px;
+    user-select: none;
+  }
+
+  /* 3D WIN32 / HMI FRAMEWORK */
+  .hmi-window-frame {
+    background: var(--hmi-panel-bg);
+    border: 3px solid;
+    border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    box-shadow: 2px 2px 0px #000000;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1280px;
+  }
+
+  /* 1. TITLEBAR */
+  .hmi-titlebar {
+    background: #000080;
+    color: #FFFFFF;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: bold;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+  }
+  .hmi-win-btns { display: flex; gap: 2px; }
+  .hmi-win-btn {
+    width: 18px;
+    height: 16px;
+    background: #D4D0C8;
+    border: 1px solid;
+    border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    font-size: 11px;
+    line-height: 14px;
+    text-align: center;
+    color: #000000;
+    font-weight: bold;
+    cursor: default;
+  }
+
+  .hmi-subbar {
+    background: #D4D0C8;
+    border-bottom: 2px groove #FFFFFF;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+  }
+  .hmi-menu-items span { padding: 2px 8px; cursor: default; }
+  .hmi-menu-items span:hover { background: #000080; color: #FFFFFF; }
+
+  /* 2. MAIN ANNUNCIATOR (고대비 블랙 랙) */
+  .annunciator-panel {
+    background: #000000;
+    border: 2px inset #808080;
+    margin: 8px;
+    padding: 8px 14px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 16px;
+    color: #FFFFFF;
+  }
+
+  .signal-tower-3d {
+    background: #202020;
+    border: 2px outset #808080;
+    padding: 6px 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .lamp-socket {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .lamp-bulb {
+    width: 22px;
+    height: 22px;
+    border: 2px solid #000000;
+  }
+  .lamp-bulb.red { background: var(--lamp-red-on); box-shadow: 0 0 10px #FF0000; }
+  .lamp-bulb.amber { background: var(--lamp-amber-off); }
+  .lamp-bulb.green { background: var(--lamp-green-off); }
+  .lamp-lbl { font-size: 10.5px; font-weight: bold; font-family: var(--font-led); }
+
+  .annunciator-msg { display: flex; flex-direction: column; gap: 3px; }
+  .annunciator-title { font-size: 15px; font-weight: bold; color: #FF0000; letter-spacing: 0.5px; }
+  .annunciator-detail { font-size: 12.5px; color: #FFFFFF; font-family: var(--font-led); }
+
+  .hmi-btn-ack {
+    background: #D4D0C8;
+    color: #FF0000;
+    font-weight: bold;
+    font-size: 13px;
+    border: 2px solid;
+    border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    padding: 8px 18px;
+    cursor: pointer;
+  }
+  .hmi-btn-ack:active { border-color: #404040 #FFFFFF #FFFFFF #404040; padding: 9px 17px 7px 19px; }
+
+  /* 3. 4-BAY GAUGES (무채색 베젤 + 칠흑 LED) */
+  .gauge-rack {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 0 8px 8px;
+  }
+  .gauge-bay {
+    background: #D4D0C8;
+    border: 2px solid;
+    border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .gauge-bay-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    font-size: 13px;
+    border-bottom: 1px solid #808080;
+    padding-bottom: 4px;
+    margin-bottom: 6px;
+  }
+  .hmi-led-display {
+    background: #000000;
+    border: 2px inset #808080;
+    padding: 6px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .led-number {
+    font-family: var(--font-led);
+    font-size: 30px;
+    font-weight: bold;
+    color: #00FF00;
+    letter-spacing: 1px;
+  }
+  .led-danger { color: #FF0000; }
+  .led-warn { color: #FFCC00; }
+  .led-unit { font-family: var(--font-led); font-size: 13px; color: #808080; font-weight: bold; }
+  
+  .led-status-tag {
+    font-family: var(--font-led);
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+
+  /* 4. WORK SECTION */
+  .work-grid {
+    display: grid;
+    grid-template-columns: 1.8fr 1fr;
+    gap: 8px;
+    padding: 0 8px 8px;
+  }
+
+  .hmi-box {
+    background: #D4D0C8;
+    border: 2px solid;
+    border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    display: flex;
+    flex-direction: column;
+  }
+  .hmi-box-header {
+    background: #808080;
+    color: #FFFFFF;
+    padding: 5px 8px;
+    font-size: 13px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* RECORDER CHART */
+  .chart-black-box {
+    background: #000000;
+    border: 2px inset #808080;
+    margin: 6px;
+    padding: 8px;
+  }
+  .chart-top-readout {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-led);
+    color: #00FF00;
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+
+  /* DATA TABLE */
+  .table-container {
+    padding: 6px;
+    background: #D4D0C8;
+  }
+  .hmi-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: #FFFFFF;
+    border: 2px inset #808080;
+  }
+  .hmi-table th {
+    background: #C0C0C0;
+    border: 1px solid #808080;
+    padding: 6px 8px;
+    text-align: left;
+    font-weight: bold;
+  }
+  .hmi-table td {
+    border: 1px solid #808080;
+    padding: 7px 8px;
+    color: #000000;
+  }
+  .hmi-table tr:nth-child(even) td { background: #EBEBEB; }
+
+  /* 3색 신호등 인디케이터 셀 */
+  .table-lamp {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 1px solid #000000;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  .t-red { background: #FF0000; }
+  .t-amber { background: #FFCC00; }
+  .t-green { background: #00FF00; }
+
+  /* 5. CONTROL BAR */
+  .control-rack {
+    background: #D4D0C8;
+    border-top: 2px groove #FFFFFF;
+    padding: 6px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .hmi-btn {
+    background: #D4D0C8;
+    border: 2px solid;
+    border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    color: #000000;
+    font-weight: bold;
+    font-size: 13px;
+    padding: 5px 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .hmi-btn:active { border-color: #404040 #FFFFFF #FFFFFF #404040; padding: 6px 13px 4px 15px; }
+
+  /* 6. STATUSBAR */
+  .hmi-statusbar {
+    background: #D4D0C8;
+    border-top: 2px groove #FFFFFF;
+    padding: 3px 6px;
+    display: flex;
+    gap: 6px;
+    font-family: var(--font-led);
+    font-size: 12px;
+  }
+  .sb-pane {
+    background: #D4D0C8;
+    border: 1px inset #808080;
+    padding: 2px 8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="hmi-window-frame">
+
+  <!-- WINDOW TITLEBAR -->
+  <div class="hmi-titlebar">
+    <span>[CONSOLE-01] BIOGUARD SCADA SUPERVISORY CONTROL SYSTEM (YONGCHEON BGP)</span>
+    <div class="hmi-win-btns">
+      <div class="hmi-win-btn">_</div>
+      <div class="hmi-win-btn">□</div>
+      <div class="hmi-win-btn">×</div>
+    </div>
+  </div>
+
+  <!-- SUB MENUBAR -->
+  <div class="hmi-subbar">
+    <div class="hmi-menu-items">
+      <span>공정계통도</span>
+      <span>신호등관제</span>
+      <span>시계열트렌드</span>
+      <span>경보이력</span>
+      <span>운영일지</span>
+      <span>파라미터설정</span>
+    </div>
+    <div style="font-family:var(--font-led); font-weight:bold; color:#000080;">
+      PLC_NODE: ONLINE (COM3: 9600-8-N-1)
+    </div>
+  </div>
+
+  <!-- MAIN ANNUNCIATOR: 3-LIGHT INDUSTRIAL TOWER -->
+  <div class="annunciator-panel">
+    <div class="signal-tower-3d">
+      <div class="lamp-socket">
+        <div class="lamp-bulb red"></div>
+        <span class="lamp-lbl" style="color:#FF0000;">RED</span>
+      </div>
+      <div class="lamp-socket">
+        <div class="lamp-bulb amber"></div>
+        <span class="lamp-lbl" style="color:#808080;">AMB</span>
+      </div>
+      <div class="lamp-socket">
+        <div class="lamp-bulb green"></div>
+        <span class="lamp-lbl" style="color:#808080;">GRN</span>
+      </div>
+    </div>
+
+    <div class="annunciator-msg">
+      <div class="annunciator-title">ALARM 104-D: 소화조 하부 저온 및 산화 전조 발생 [조치필요]</div>
+      <div class="annunciator-detail">SENSOR_T_BOT: 27.5 ℃ (LIMIT &lt; 35.0 ℃) | RATIO_VFA_ALK: 0.186 (CAUTION &gt; 0.150)</div>
+    </div>
+
+    <button class="hmi-btn-ack">ALARM ACK (경보확인)</button>
+  </div>
+
+  <!-- 4-BAY GAUGES -->
+  <div class="gauge-rack">
+    
+    <div class="gauge-bay">
+      <div class="gauge-bay-top">
+        <span>내일 메탄생산 예측</span>
+      </div>
+      <div class="hmi-led-display">
+        <div style="display:flex; align-items:baseline; gap:5px;">
+          <span class="led-number">3050</span>
+          <span class="led-unit">m³</span>
+        </div>
+        <span class="led-status-tag" style="color:#00FF00;">[NORMAL]</span>
+      </div>
+    </div>
+
+    <div class="gauge-bay">
+      <div class="gauge-bay-top">
+        <span>소화조 하부 온도</span>
+      </div>
+      <div class="hmi-led-display">
+        <div style="display:flex; align-items:baseline; gap:5px;">
+          <span class="led-number led-danger">27.5</span>
+          <span class="led-unit">℃</span>
+        </div>
+        <span class="led-status-tag" style="color:#FF0000;">[ACTION]</span>
+      </div>
+    </div>
+
+    <div class="gauge-bay">
+      <div class="gauge-bay-top">
+        <span>VFA / Alk 비율</span>
+      </div>
+      <div class="hmi-led-display">
+        <div style="display:flex; align-items:baseline; gap:5px;">
+          <span class="led-number led-warn">0.186</span>
+          <span class="led-unit">RATIO</span>
+        </div>
+        <span class="led-status-tag" style="color:#FFCC00;">[CAUTION]</span>
+      </div>
+    </div>
+
+    <div class="gauge-bay">
+      <div class="gauge-bay-top">
+        <span>메탄 가스 순도</span>
+      </div>
+      <div class="hmi-led-display">
+        <div style="display:flex; align-items:baseline; gap:5px;">
+          <span class="led-number">61.8</span>
+          <span class="led-unit">%</span>
+        </div>
+        <span class="led-status-tag" style="color:#00FF00;">[NORMAL]</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- WORK SECTION -->
+  <div class="work-grid">
+    
+    <!-- LEFT: INDUSTRIAL STRIP CHART RECORDER -->
+    <div class="hmi-box">
+      <div class="hmi-box-header">
+        <span>TREND RECORDER : CH-01 CH4 PRODUCTION (1-DAY INTERVAL)</span>
+        <div style="font-family:var(--font-led);">SAMPLING: 24HR AVG</div>
+      </div>
+
+      <div class="chart-black-box">
+        <div class="chart-top-readout">
+          <span>CURR: 3,131 m³</span>
+          <span style="color:#00FFFF;">FORECAST (T+1): 3,050 m³</span>
+          <span style="color:#FFFFFF;">95% CONF BOUND</span>
+        </div>
+
+        <svg viewBox="0 0 740 185" style="width:100%; height:185px; display:block;" preserveAspectRatio="none">
+          <!-- Oscilloscope Grid Lines -->
+          <g stroke="#1A331A" stroke-width="1">
+            <line x1="35" y1="15" x2="720" y2="15"/><line x1="35" y1="48" x2="720" y2="48"/>
+            <line x1="35" y1="81" x2="720" y2="81"/><line x1="35" y1="114" x2="720" y2="114"/>
+            <line x1="35" y1="140" x2="720" y2="140"/>
+          </g>
+          <g stroke="#1A331A" stroke-width="1" stroke-dasharray="2 2">
+            <line x1="88" y1="10" x2="88" y2="150"/><line x1="148" y1="10" x2="148" y2="150"/>
+            <line x1="208" y1="10" x2="208" y2="150"/><line x1="268" y1="10" x2="268" y2="150"/>
+            <line x1="328" y1="10" x2="328" y2="150"/><line x1="388" y1="10" x2="388" y2="150"/>
+            <line x1="448" y1="10" x2="448" y2="150"/><line x1="508" y1="10" x2="508" y2="150"/>
+            <line x1="568" y1="10" x2="568" y2="150"/><line x1="623" y1="10" x2="623" y2="150"/>
+            <line x1="678" y1="10" x2="678" y2="150"/>
+          </g>
+
+          <!-- Frame -->
+          <rect x="35" y="10" width="685" height="140" fill="none" stroke="#008000" stroke-width="1.5"/>
+
+          <!-- Y Ticks (Phosphor Green) -->
+          <g fill="#00FF00" font-size="10" font-family="Consolas, monospace">
+            <text x="2" y="19">3450</text><text x="2" y="52">3250</text><text x="2" y="85">3050</text><text x="2" y="118">2850</text>
+          </g>
+
+          <!-- Forecast Error Bound Lines (Wireframe) -->
+          <polyline fill="none" stroke="#00FFFF" stroke-width="1" stroke-dasharray="2 2" points="508,79 568,88 623,96 678,103"/>
+          <polyline fill="none" stroke="#00FFFF" stroke-width="1" stroke-dasharray="2 2" points="508,79 568,103 623,124 678,140"/>
+
+          <!-- Actual Trace -->
+          <polyline fill="none" stroke="#00FF00" stroke-width="2" stroke-linejoin="miter" points="35,26 88,38 148,44 208,52 268,59 328,38 388,16 448,40 508,79"/>
+
+          <!-- Actual Point Markers -->
+          <g fill="#00FF00">
+            <rect x="33" y="24" width="4.5" height="4.5"/><rect x="86" y="36" width="4.5" height="4.5"/>
+            <rect x="146" y="42" width="4.5" height="4.5"/><rect x="206" y="50" width="4.5" height="4.5"/>
+            <rect x="266" y="57" width="4.5" height="4.5"/><rect x="326" y="36" width="4.5" height="4.5"/>
+            <rect x="386" y="14" width="4.5" height="4.5"/><rect x="446" y="38" width="4.5" height="4.5"/>
+            <rect x="505" y="76" width="6" height="6" fill="#FF0000"/>
+          </g>
+
+          <!-- Forecast Trace -->
+          <polyline fill="none" stroke="#00FFFF" stroke-width="2" stroke-dasharray="4 2" points="508,79 568,96 623,111 678,124"/>
+          <g fill="#00FFFF">
+            <rect x="566" y="94" width="4.5" height="4.5"/><rect x="621" y="109" width="4.5" height="4.5"/><rect x="676" y="122" width="4.5" height="4.5"/>
+          </g>
+
+          <!-- T-0 Marker Line -->
+          <line x1="508" y1="10" x2="508" y2="150" stroke="#FF0000" stroke-width="1.5" stroke-dasharray="3 3"/>
+
+          <!-- X Scale (White Text) -->
+          <g fill="#FFFFFF" font-size="10.5" font-family="Consolas, monospace" text-anchor="middle">
+            <text x="35" y="170">12/22</text><text x="88" y="170">12/23</text><text x="148" y="170">12/24</text>
+            <text x="208" y="170">12/25</text><text x="268" y="170">12/26</text><text x="328" y="170">12/27</text>
+            <text x="388" y="170">12/28</text><text x="448" y="170">12/29</text>
+            <text x="508" y="170" fill="#FF0000" font-weight="bold">12/30[T0]</text>
+            <text x="568" y="170" fill="#00FFFF">12/31</text><text x="623" y="170" fill="#00FFFF">01/01</text><text x="678" y="170" fill="#00FFFF">01/02</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- RIGHT: SCADA PROCESS TABLE -->
+    <div class="hmi-box">
+      <div class="hmi-box-header">
+        <span>PROCESS TELEMETRY MATRIX</span>
+        <div style="font-family:var(--font-led);">UPDATE: 1 SEC</div>
+      </div>
+
+      <div class="table-container">
+        <table class="hmi-table">
+          <thead>
+            <tr>
+              <th>계측 변수명</th>
+              <th style="text-align:right;">현재 지시값</th>
+              <th style="text-align:center;">신호등</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>소화조 하부 온도</b></td>
+              <td style="font-family:var(--font-led); font-weight:bold; color:#FF0000; text-align:right;">27.5 ℃</td>
+              <td style="text-align:center;"><span class="table-lamp t-red"></span><b style="color:#FF0000;">조치필요</b></td>
+            </tr>
+            <tr>
+              <td><b>VFA / Alk 비율</b></td>
+              <td style="font-family:var(--font-led); font-weight:bold; color:#804000; text-align:right;">0.186</td>
+              <td style="text-align:center;"><span class="table-lamp t-amber"></span><b style="color:#804000;">주의</b></td>
+            </tr>
+            <tr>
+              <td>메탄 가스 순도</td>
+              <td style="font-family:var(--font-led); font-weight:bold; color:#008000; text-align:right;">61.8 %</td>
+              <td style="text-align:center;"><span class="table-lamp t-green"></span>정상</td>
+            </tr>
+            <tr>
+              <td>소화조 내부 pH</td>
+              <td style="font-family:var(--font-led); font-weight:bold; color:#008000; text-align:right;">8.12</td>
+              <td style="text-align:center;"><span class="table-lamp t-green"></span>정상</td>
+            </tr>
+            <tr>
+              <td>총 바이오가스 발생량</td>
+              <td style="font-family:var(--font-led); font-weight:bold; color:#008000; text-align:right;">5,067 m³/d</td>
+              <td style="text-align:center;"><span class="table-lamp t-green"></span>정상</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- HARDWARE PUSH BUTTONS DOCK -->
+  <div class="control-rack">
+    <div style="font-weight:bold; font-size:12.5px;">[MANUAL OVERRIDE CONTROL]</div>
+    <div style="display:flex; gap:8px;">
+      <button class="hmi-btn" style="color:#FF0000;"><span style="color:#FF0000;">■</span> 소화조 가온 루프 강제 기동</button>
+      <button class="hmi-btn"><span>■</span> 약품(알칼리도) 투입 연산</button>
+      <button class="hmi-btn"><span>■</span> 공정 일지 데이터 내보내기</button>
+    </div>
+  </div>
+
+  <!-- STATUSBAR -->
+  <div class="hmi-statusbar">
+    <div class="sb-pane" style="flex:1.2;">PLC ADDR: 192.168.1.101</div>
+    <div class="sb-pane" style="flex:2;">PROTOCOL: MODBUS-TCP / SLAVE_ID: 1</div>
+    <div class="sb-pane" style="flex:1.5;">SCAN RATE: 500ms (ERR: 0)</div>
+    <div class="sb-pane" style="flex:1;">MODE: REMOTE-AUTO</div>
+  </div>
+
+</div>
+
+</body>
+</html>

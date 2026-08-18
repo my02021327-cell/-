@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioGuard-HMI 최적 모델 선정 콘솔</title>
+<style>
+  :root {
+    --hmi-chassis: #C0C0C0;
+    --hmi-panel-bg: #D4D0C8;
+    --hmi-dark-bg: #000000;
+    --hmi-border-light: #FFFFFF;
+    --hmi-border-gray: #808080;
+    --hmi-border-black: #000000;
+    --lamp-red-on: #FF0000;
+    --lamp-red-off: #330000;
+    --lamp-amber-on: #FFCC00;
+    --lamp-amber-off: #332600;
+    --lamp-green-on: #00FF00;
+    --lamp-green-off: #003300;
+    --font-sys: "Malgun Gothic", "맑은 고딕", Dotum, "돋움", Tahoma, sans-serif;
+    --font-led: Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-sys); border-radius: 0 !important; }
+  body {
+    background-color: #606870; color: #000000;
+    display: flex; justify-content: center; align-items: flex-start;
+    font-size: 13.5px; padding: 10px;
+  }
+  .hmi-window-frame {
+    background: var(--hmi-panel-bg);
+    border: 3px solid; border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    box-shadow: 2px 2px 0px #000000;
+    display: flex; flex-direction: column; width: 100%; max-width: 1280px;
+  }
+  .hmi-titlebar {
+    background: #000080; color: #FFFFFF; padding: 4px 8px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-weight: bold; font-size: 14px; letter-spacing: 0.5px;
+  }
+  .hmi-win-btns { display: flex; gap: 2px; }
+  .hmi-win-btn {
+    width: 18px; height: 16px; background: #D4D0C8;
+    border: 1px solid; border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    font-size: 11px; line-height: 14px; text-align: center;
+    color: #000000; font-weight: bold; cursor: default;
+  }
+  .hmi-subbar {
+    background: #D4D0C8; border-bottom: 2px groove #FFFFFF; padding: 4px 8px;
+    display: flex; align-items: center; justify-content: space-between; font-size: 13px;
+  }
+  .hmi-menu-items span { padding: 2px 8px; cursor: default; }
+  .hmi-menu-items span:hover { background: #000080; color: #FFFFFF; }
+
+  .annunciator-panel {
+    background: #000000; border: 2px inset #808080; margin: 8px; padding: 8px 14px;
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center;
+    gap: 16px; color: #FFFFFF;
+  }
+  .signal-tower-3d {
+    background: #202020; border: 2px outset #808080; padding: 6px 10px;
+    display: flex; gap: 10px; align-items: center;
+  }
+  .lamp-socket { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .lamp-bulb { width: 22px; height: 22px; border: 2px solid #000000; }
+  .lamp-bulb.red { background: var(--lamp-red-off); }
+  .lamp-bulb.amber { background: var(--lamp-amber-on); box-shadow: 0 0 10px #FFCC00; }
+  .lamp-bulb.green { background: var(--lamp-green-on); box-shadow: 0 0 10px #00FF00; }
+  .lamp-lbl { font-size: 10.5px; font-weight: bold; font-family: var(--font-led); }
+  .annunciator-msg { display: flex; flex-direction: column; gap: 3px; }
+  .annunciator-title { font-size: 15px; font-weight: bold; color: #00FF00; letter-spacing: 0.5px; }
+  .annunciator-detail { font-size: 12.5px; color: #FFFFFF; font-family: var(--font-led); }
+  .hmi-btn-ack {
+    background: #D4D0C8; color: #000080; font-weight: bold; font-size: 13px;
+    border: 2px solid; border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    padding: 8px 18px; cursor: pointer;
+  }
+  .hmi-btn-ack:active { border-color: #404040 #FFFFFF #FFFFFF #404040; padding: 9px 17px 7px 19px; }
+
+  .gauge-rack { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 0 8px 8px; }
+  .gauge-bay {
+    background: #D4D0C8; border: 2px solid; border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    padding: 8px 10px; display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .gauge-bay-top {
+    display: flex; justify-content: space-between; align-items: center;
+    font-weight: bold; font-size: 13px; border-bottom: 1px solid #808080;
+    padding-bottom: 4px; margin-bottom: 6px;
+  }
+  .hmi-led-display {
+    background: #000000; border: 2px inset #808080; padding: 6px 10px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .led-number { font-family: var(--font-led); font-size: 30px; font-weight: bold; color: #00FF00; letter-spacing: 1px; }
+  .led-danger { color: #FF0000; }
+  .led-warn { color: #FFCC00; }
+  .led-cyan { color: #00FFFF; }
+  .led-unit { font-family: var(--font-led); font-size: 13px; color: #808080; font-weight: bold; }
+  .led-status-tag { font-family: var(--font-led); font-size: 13px; font-weight: bold; letter-spacing: 0.5px; }
+  .gauge-note { font-size: 11px; color: #404040; margin-top: 5px; font-family: var(--font-led); }
+
+  .work-grid { display: grid; grid-template-columns: 1.8fr 1fr; gap: 8px; padding: 0 8px 8px; }
+  .work-grid-full { display: grid; grid-template-columns: 1fr; gap: 8px; padding: 0 8px 8px; }
+  .hmi-box {
+    background: #D4D0C8; border: 2px solid; border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    display: flex; flex-direction: column;
+  }
+  .hmi-box-header {
+    background: #808080; color: #FFFFFF; padding: 5px 8px; font-size: 13px; font-weight: bold;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .chart-black-box { background: #000000; border: 2px inset #808080; margin: 6px; padding: 8px; }
+  .chart-top-readout {
+    display: flex; justify-content: space-between; font-family: var(--font-led);
+    color: #00FF00; font-size: 13px; margin-bottom: 6px;
+  }
+  .table-container { padding: 6px; background: #D4D0C8; }
+  .hmi-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    background: #FFFFFF; border: 2px inset #808080;
+  }
+  .hmi-table th {
+    background: #C0C0C0; border: 1px solid #808080; padding: 6px 8px;
+    text-align: left; font-weight: bold;
+  }
+  .hmi-table td { border: 1px solid #808080; padding: 7px 8px; color: #000000; }
+  .hmi-table tr:nth-child(even) td { background: #EBEBEB; }
+  .hmi-table td.num { font-family: var(--font-led); font-weight: bold; text-align: right; }
+  .row-adopt td { background: #FFFFC0 !important; }
+  .table-lamp {
+    display: inline-block; width: 12px; height: 12px; border: 1px solid #000000;
+    vertical-align: middle; margin-right: 6px;
+  }
+  .t-red { background: #FF0000; } .t-amber { background: #FFCC00; } .t-green { background: #00FF00; }
+
+  .spec-body { padding: 8px 10px; font-size: 13px; line-height: 1.65; }
+  .spec-body b { color: #000080; }
+  .spec-body ul { margin: 6px 0 6px 18px; }
+  .spec-body li { margin: 3px 0; }
+  .formula-box {
+    background: #000000; border: 2px inset #808080; margin: 6px; padding: 10px 12px;
+    font-family: var(--font-led); font-size: 13px; color: #00FF00; line-height: 1.8;
+    overflow-x: auto; white-space: pre;
+  }
+  .formula-box .cy { color: #00FFFF; } .formula-box .am { color: #FFCC00; } .formula-box .gy { color: #808080; }
+  .warnbar {
+    background: #000000; border: 2px inset #808080; margin: 0 8px 8px; padding: 8px 12px;
+    color: #FFCC00; font-family: var(--font-led); font-size: 12.5px; line-height: 1.7;
+  }
+  .warnbar b { color: #FF0000; }
+  .control-rack {
+    background: #D4D0C8; border-top: 2px groove #FFFFFF; padding: 6px 8px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .hmi-btn {
+    background: #D4D0C8; border: 2px solid; border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    color: #000000; font-weight: bold; font-size: 13px; padding: 5px 14px;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .hmi-btn:active { border-color: #404040 #FFFFFF #FFFFFF #404040; padding: 6px 13px 4px 15px; }
+  .hmi-statusbar {
+    background: #D4D0C8; border-top: 2px groove #FFFFFF; padding: 3px 6px;
+    display: flex; gap: 6px; font-family: var(--font-led); font-size: 12px;
+  }
+  .sb-pane { background: #D4D0C8; border: 1px inset #808080; padding: 2px 8px; }
+  svg { display: block; }
+  @media (max-width: 900px) { .work-grid { grid-template-columns: 1fr; } .gauge-rack { grid-template-columns: repeat(2,1fr); } }
+</style>
+</head>
+<body>
+
+<div class="hmi-window-frame">
+
+  <div class="hmi-titlebar">
+    <span>[CONSOLE-02] BIOGUARD MODEL SELECTION &amp; VALIDATION CONSOLE (YEONGCHEON BGP)</span>
+    <div class="hmi-win-btns">
+      <div class="hmi-win-btn">_</div><div class="hmi-win-btn">□</div><div class="hmi-win-btn">×</div>
+    </div>
+  </div>
+
+  <div class="hmi-subbar">
+    <div class="hmi-menu-items">
+      <span>모델구성</span><span>지평별성능</span><span>교차검증</span>
+      <span>물리검사</span><span>결측처리</span><span>한계및권고</span>
+    </div>
+    <div style="font-family:var(--font-led); font-weight:bold; color:#000080;">
+      VALIDATION: ROLLING-ORIGIN 18-FOLD / H+90D
+    </div>
+  </div>
+
+  <!-- 채택 선언 -->
+  <div class="annunciator-panel">
+    <div class="signal-tower-3d">
+      <div class="lamp-socket"><div class="lamp-bulb red"></div><span class="lamp-lbl" style="color:#808080;">RED</span></div>
+      <div class="lamp-socket"><div class="lamp-bulb amber"></div><span class="lamp-lbl" style="color:#FFCC00;">AMB</span></div>
+      <div class="lamp-socket"><div class="lamp-bulb green"></div><span class="lamp-lbl" style="color:#00FF00;">GRN</span></div>
+    </div>
+    <div class="annunciator-msg">
+      <div class="annunciator-title">채택: NNLS 스태킹 앙상블 (관성보정 M9 + 트리 M4 + 칼만 M5 + VS수지 M3)</div>
+      <div class="annunciator-detail">
+        LEVEL_R2: <span style="color:#00FF00;">0.6737</span> (n=1,013) |
+        HOLDOUT_2023_R2: <span style="color:#00FF00;">0.7700</span> (n=149) |
+        SKILL vs PERSISTENCE: <span style="color:#00FF00;">0.8154</span> |
+        <span style="color:#FFCC00;">DIFF_R2: −0.1572 [한계 명시]</span>
+      </div>
+    </div>
+    <button class="hmi-btn-ack">MODEL ACK (채택확인)</button>
+  </div>
+
+  <!-- R² 게이지 -->
+  <div class="gauge-rack">
+    <div class="gauge-bay">
+      <div class="gauge-bay-top"><span>원계열 R² (OOF 전체)</span></div>
+      <div class="hmi-led-display">
+        <div style="display:flex; align-items:baseline; gap:5px;">
+          <span class="led-number">0.674</span><span class="led-unit">R2</span>
+        </div>
+        <span class="led-status-tag" style="color:#00FF00;">[채택]</span>
+      </div>
+      <div class="gauge-note">RMSE 724.1 ㎥/d · n=1,013</div>
+    </div>
+
+    <div class="gauge-bay">
+      <div class="gauge-bay-top"><span>2023 홀드아웃 R²</span></div>
+      <div class="hmi-led-display">
+        <div style="display:flex; align-items:baseline; gap:5px;">
+          <span class="led-number">0.770</span><span class="led-unit">R2</span>
+        </div>
+        <span class="led-status-tag" style="color:#00FF00;">[1회보고]</span>
+      </div>
+      <div class="gauge-note">RMSE 529.7 · 모델선택 미사용</div>
+    </div>
+
+    <div class="gauge-bay">
+      <div class="gauge-bay-top"><span>SKILL SCORE</span></div>
+      <div class="hmi-led-display">
+        <div style="display:flex; align-items:baseline; gap:5px;">
+          <span class="led-number led-cyan">0.815</span><span class="led-unit">SKILL</span>
+        </div>
+        <span class="led-status-tag" style="color:#00FFFF;">[우세]</span>
+      </div>
+      <div class="gauge-note">1 − MSE_ens / MSE_pers</div>
+    </div>
+
+    <div class="gauge-bay">
+      <div class="gauge-bay-top"><span>차분계열 R² (정직성)</span></div>
+      <div class="hmi-led-display">
+        <div style="display:flex; align-items:baseline; gap:5px;">
+          <span class="led-number led-warn">-0.157</span><span class="led-unit">R2</span>
+        </div>
+        <span class="led-status-tag" style="color:#FFCC00;">[한계]</span>
+      </div>
+      <div class="gauge-note">일변화는 예측 못 함 — 하단 참조</div>
+    </div>
+  </div>
+
+  <!-- 정직성 경고 -->
+  <div class="warnbar">
+    <b>[정직성 고지 — 규칙 2]</b> 원계열 R² 0.674 만 제시하면 오해를 부른다. 같은 예측을 차분계열로 채점하면
+    <b>R² = −0.157</b> 로, 「내일은 오늘과 같다」는 무변화 모델에 진다.<br>
+    해석: 이 모델은 <span style="color:#00FF00;">「주어진 부하에서 반응조가 어느 수준에 있어야 하는가」</span>를 맞히고,
+    <span style="color:#FF0000;">「내일의 일변동」</span>은 맞히지 못한다. 주 단위 계획(가스홀더·발전·정비)에는 유효하고,
+    일 단위 미세 조정에는 부적합하다. 전체평균 모델 R²=0.000 · persistence R²=−0.767 이 하한 기준선이다.
+  </div>
+
+  <!-- 차트 2종 -->
+  <div class="work-grid">
+    <div class="hmi-box">
+      <div class="hmi-box-header">
+        <span>TREND RECORDER : CH-01 CH4 실측 vs 앙상블 예측 (2023 홀드아웃)</span>
+        <div style="font-family:var(--font-led);">OOF / 1-DAY</div>
+      </div>
+      <div class="chart-black-box">
+        <div class="chart-top-readout">
+          <span>ACTUAL (실측)</span>
+          <span style="color:#00FFFF;">ENSEMBLE FORECAST</span>
+          <span style="color:#FFFFFF;">R² = 0.7700 | RMSE 529.7 ㎥/d</span>
+        </div>
+        <div id="strip"></div>
+      </div>
+    </div>
+
+    <div class="hmi-box">
+      <div class="hmi-box-header">
+        <span>STACKING WEIGHT MATRIX</span>
+        <div style="font-family:var(--font-led);">NNLS ≥ 0</div>
+      </div>
+      <div class="table-container">
+        <table class="hmi-table">
+          <thead><tr><th>구성 모델</th><th style="text-align:right;">가중치</th><th style="text-align:center;">채택</th></tr></thead>
+          <tbody id="wtbody"></tbody>
+        </table>
+      </div>
+      <div class="spec-body" style="padding-top:0;">
+        <b>가중 0 은 자동 배제다.</b> M1F·M2 는 다른 계열과 잔차가 겹쳐 스태킹이 스스로 뺐다.
+        억지로 넣지 않았다.
+      </div>
+    </div>
+  </div>
+
+  <!-- 지평별 R² -->
+  <div class="work-grid-full">
+    <div class="hmi-box">
+      <div class="hmi-box-header">
+        <span>HORIZON RESPONSE : 예측 지평별 R² (반응조 관성의 수명)</span>
+        <div style="font-family:var(--font-led);">BANDS: 1-3 / 4-7 / 8-14 / 15-30 / 31-60 / 61-90 D</div>
+      </div>
+      <div class="chart-black-box">
+        <div class="chart-top-readout">
+          <span>ENSEMBLE (채택)</span>
+          <span style="color:#00FFFF;">M9 관성보정</span>
+          <span style="color:#FF0000;">PERSISTENCE (관성 단독)</span>
+          <span style="color:#FFCC00;">M1F 기질 단독</span>
+        </div>
+        <div id="hzchart"></div>
+      </div>
+      <div class="table-container">
+        <table class="hmi-table">
+          <thead><tr>
+            <th>예측 지평 (일)</th><th style="text-align:right;">n</th>
+            <th style="text-align:right;">앙상블 R²</th><th style="text-align:right;">M9 관성보정</th>
+            <th style="text-align:right;">M1F 기질</th><th style="text-align:right;">persistence</th>
+            <th>운영 용도</th>
+          </tr></thead>
+          <tbody id="hzbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 모델 구조 -->
+  <div class="work-grid">
+    <div class="hmi-box">
+      <div class="hmi-box-header"><span>ADOPTED MODEL STRUCTURE (채택 모델 구조)</span></div>
+      <div class="formula-box">[1] 기질 채널 — 실측 투입 구동 · 수율 물리제약
+    <span class="cy">ŝ(t) = Σ_j θ_j · ( Q_j ⊛ h_j )(t) + c</span>
+    <span class="gy">h_j(τ) = k_j·exp(−(1/SRT + k_j)·τ)      SRT = 25 d (외생)</span>
+    <span class="gy">제약  θ_j·G(k_j) / VSfrac_j ≤ B_th,j   →  BD ≤ 1</span>
+
+[2] 관성 채널 — 잔차에 붙는 감쇠 되먹임 <span class="am">(M9)</span>
+    <span class="cy">ŷ(T+h) = ŝ(T+h) · ρ̄(T)^exp(−h/τ)</span>
+    <span class="gy">ρ̄ = 최근 관측 실측/예측 비 ,  τ ≤ 17.3 d = 1/(1/SRT)</span>
+    <span class="gy">h→0 ⇒ persistence  |  h→∞ ⇒ 순수 기질 모델</span>
+
+[3] 앙상블 — 폴드별 out-of-fold NNLS 스태킹
+    <span class="cy">ŷ_ENS = Σ w_m · ŷ_m ,  w_m ≥ 0 , 폴드 i 의 w 는 폴드 &lt;i 만으로 적합</span></div>
+    </div>
+
+    <div class="hmi-box">
+      <div class="hmi-box-header"><span>PAIRED T-TEST : 앙상블 vs 단일 모델</span></div>
+      <div class="table-container">
+        <table class="hmi-table">
+          <thead><tr><th>대조</th><th style="text-align:right;">ΔRMSE</th><th style="text-align:right;">p</th><th style="text-align:center;">판정</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="spec-body" style="padding-top:0;">
+        18개 폴드에서 <b>모든 단일 모델을 유의하게 이긴다</b>. 평균만 비교하지 않고 폴드별 대응검정을 병기했다.
+      </div>
+    </div>
+  </div>
+
+  <!-- 연도별 + 물리검사 -->
+  <div class="work-grid">
+    <div class="hmi-box">
+      <div class="hmi-box-header"><span>ANNUAL R² BREAKDOWN (연도별 안정성)</span></div>
+      <div class="table-container">
+        <table class="hmi-table">
+          <thead><tr><th>연도</th><th style="text-align:right;">R²</th><th style="text-align:right;">RMSE</th><th style="text-align:center;">비고</th></tr></thead>
+          <tbody id="ybody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="hmi-box">
+      <div class="hmi-box-header"><span>PHYSICAL CONSISTENCY (물리 정합성)</span></div>
+      <div class="table-container">
+        <table class="hmi-table">
+          <thead><tr><th>검사 항목</th><th style="text-align:right;">값</th><th style="text-align:center;">판정</th></tr></thead>
+          <tbody>
+            <tr><td>음폐수 생분해도 BD</td><td class="num">1.000</td>
+                <td style="text-align:center;"><span class="table-lamp t-green"></span>제약 충족</td></tr>
+            <tr><td>가축분뇨 생분해도 BD</td><td class="num">0.588</td>
+                <td style="text-align:center;"><span class="table-lamp t-green"></span>정상</td></tr>
+            <tr><td>계수 부호 (전 기질)</td><td class="num">≥ 0</td>
+                <td style="text-align:center;"><span class="table-lamp t-green"></span>정상</td></tr>
+            <tr><td>커널 총량 보존 Σw</td><td class="num">1.000</td>
+                <td style="text-align:center;"><span class="table-lamp t-green"></span>정상</td></tr>
+            <tr><td><b>절편 비중 (미설명 메탄)</b></td><td class="num" style="color:#FF0000;">37.6 %</td>
+                <td style="text-align:center;"><span class="table-lamp t-red"></span><b style="color:#FF0000;">미통과</b></td></tr>
+            <tr><td>VS 수지 함축수율</td><td class="num" style="color:#FF0000;">0.99</td>
+                <td style="text-align:center;"><span class="table-lamp t-red"></span><b style="color:#FF0000;">이론 0.50 초과</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="spec-body" style="padding-top:0;">
+        <b>예측 전용 모델이다.</b> 절편 37.6% 와 VS 수지 2배 이탈이 남아 있어
+        <b>계수를 생분해도·수율로 해석해서는 안 된다.</b> 2풀 분리 검증에서 절편을 빼면
+        787→936 으로 악화돼, 미설명분이 느린 분해 꼬리가 <b>아님</b>이 확인됐다 — 계량 감사 대상이다.
+      </div>
+    </div>
+  </div>
+
+  <!-- 권고 -->
+  <div class="work-grid-full">
+    <div class="hmi-box">
+      <div class="hmi-box-header"><span>OPERATING RECOMMENDATION &amp; LIMITS (운영 권고 · 한계)</span></div>
+      <div class="spec-body">
+        <b>[1] 지평별 사용 지침</b>
+        <ul>
+          <li><b>h = 1–3일 (운전 조정)</b> — 앙상블 R² 0.867. 단 표본 n=30 으로 작다.
+              biogas 타깃으로 보면 이 구간은 여전히 persistence 가 최강이므로, 일 단위 미세 조정은 실측 추종을 병행할 것.</li>
+          <li><b>h = 4–14일 (가스홀더·발전 계획)</b> — 앙상블 R² 0.837 / 0.686.
+              관성 보정이 실질 기여를 하는 유일한 구간이다(M9 단독으로도 0.755 / 0.713).</li>
+          <li><b>h = 15–90일 (정비·기질 수급)</b> — 앙상블 R² 0.650~0.658.
+              persistence 는 이 구간에서 R² −0.66 ~ −1.15 로 완전히 무효다. <b>기질 부하가 전부를 책임진다.</b></li>
+        </ul>
+        <b>[2] 이 모델이 하지 못하는 것</b>
+        <ul>
+          <li><b>일변동 예측 불가</b> — 차분계열 R² = −0.157.</li>
+          <li><b>수율 해석 불가</b> — 절편 37.6%, VS 수지 2배 이탈.</li>
+          <li><b>SRT 추정 불가</b> — V 를 2배(4,000→8,000㎥) 바꿔도 CV-RMSE 차이가 p=0.89~0.99. 외생 입력으로 고정.</li>
+        </ul>
+        <b>[3] 성능 상한을 여는 정보 (우선순위)</b>
+        <ul>
+          <li>★ 가스 유량계 단위·보정 이력 (Nm³ vs ㎥) / 미기록 유입 유기물 — VS 2배 이탈의 남은 두 후보</li>
+          <li>★ 기질별 소화조 투입 직접 계량 — 현재 총투입 × <i>반입</i> 조성비 근사가 기질 분리 식별의 상한</li>
+          <li>★ CH₄% 주말 측정 또는 연속 가스분석 — 타깃 결측 39.4% 의 직접 원인</li>
+          <li>NH₃-N 주 1회 재개 / 개별 VFA 도입 / 유기산화조 유효용적</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="control-rack">
+    <div style="font-weight:bold; font-size:12.5px;">[MODEL DEPLOY CONTROL]</div>
+    <div style="display:flex; gap:8px;">
+      <button class="hmi-btn"><span style="color:#008000;">■</span> 앙상블 예측 실행</button>
+      <button class="hmi-btn"><span>■</span> 지평별 성능 재검증</button>
+      <button class="hmi-btn"><span>■</span> 계수·물리검사 내보내기</button>
+    </div>
+  </div>
+
+  <div class="hmi-statusbar">
+    <div class="sb-pane" style="flex:1.6;">DATA: 영천BGP_MASTER 2018-01-01~2023-09-17 (2,086 D)</div>
+    <div class="sb-pane" style="flex:1.4;">TARGET OBS: 1,265 D (결측 39.4% 미보간)</div>
+    <div class="sb-pane" style="flex:1.2;">FOLDS: 18 (EXPANDING)</div>
+    <div class="sb-pane" style="flex:1;">MODE: OUT-OF-FOLD</div>
+  </div>
+
+</div>
+
+<script>
+const D = {"overall": {"M1F": {"R2": 0.5974, "RMSE": 804.3, "n": 1013}, "M9": {"R2": 0.6261, "RMSE": 775.1, "n": 1013}, "M2": {"R2": 0.4919, "RMSE": 903.5, "n": 1013}, "M3": {"R2": 0.2396, "RMSE": 1101.9, "n": 1001}, "M4": {"R2": 0.4112, "RMSE": 972.7, "n": 1013}, "M5": {"R2": 0.3979, "RMSE": 983.6, "n": 1013}, "ENS": {"R2": 0.6737, "RMSE": 724.1, "n": 1013}, "PERS": {"R2": -0.7674, "RMSE": 1685.2, "n": 1013}}, "diff_R2": -0.1572, "mean_R2": 0.0, "skill": 0.8154, "horizon": [{"band": "1–3", "n": 30, "M1F": 0.5956, "M9": 0.8625, "M2": 0.7472, "M3": 0.5197, "M4": 0.8362, "M5": 0.7689, "ENS": 0.8668, "PERS": 0.7293}, {"band": "4–7", "n": 37, "M1F": 0.5137, "M9": 0.7547, "M2": 0.7793, "M3": 0.6122, "M4": 0.8063, "M5": 0.6019, "ENS": 0.8367, "PERS": 0.7056}, {"band": "8–14", "n": 79, "M1F": 0.5965, "M9": 0.7126, "M2": 0.6026, "M3": 0.4858, "M4": 0.6313, "M5": 0.3786, "ENS": 0.6861, "PERS": 0.4323}, {"band": "15–30", "n": 186, "M1F": 0.5749, "M9": 0.5805, "M2": 0.4448, "M3": 0.5017, "M4": 0.3959, "M5": 0.5153, "ENS": 0.655, "PERS": -0.6608}, {"band": "31–60", "n": 337, "M1F": 0.6099, "M9": 0.5995, "M2": 0.3592, "M3": 0.4047, "M4": 0.3795, "M5": 0.175, "ENS": 0.6584, "PERS": -1.123}, {"band": "61–90", "n": 344, "M1F": 0.6052, "M9": 0.6038, "M2": 0.5201, "M3": -0.1198, "M4": 0.3003, "M5": 0.4508, "ENS": 0.6502, "PERS": -1.1524}], "weights": {"M1F": 0.0, "M9": 0.41, "M2": 0.0, "M3": 0.1442, "M4": 0.2505, "M5": 0.19}, "holdout": {"ENS": {"R2": 0.77, "RMSE": 529.7}, "M9": {"R2": 0.6516, "RMSE": 652.0}, "M1F": {"R2": 0.6381, "RMSE": 664.6}}, "yearly": {"2018": {"R2": null, "RMSE": NaN}, "2019": {"R2": 0.434, "RMSE": 690.5}, "2020": {"R2": 0.6146, "RMSE": 751.7}, "2021": {"R2": 0.6453, "RMSE": 832.5}, "2022": {"R2": 0.5218, "RMSE": 716.7}, "2023": {"R2": 0.77, "RMSE": 529.7}}, "tests": {"M1F": {"d": -82.94, "se": 30.52, "p": 0.0146, "verdict": "개선(유의)"}, "M9": {"d": -52.74, "se": 24.1, "p": 0.0429, "verdict": "개선(유의)"}, "M2": {"d": -168.96, "se": 39.96, "p": 0.0006, "verdict": "개선(유의)"}, "M3": {"d": -268.39, "se": 106.31, "p": 0.0218, "verdict": "개선(유의)"}, "M4": {"d": -181.82, "se": 79.42, "p": 0.0351, "verdict": "개선(유의)"}, "M5": {"d": -219.07, "se": 64.68, "p": 0.0035, "verdict": "개선(유의)"}}, "n_folds": 18, "n_obs": 1265, "n_days": 2086, "strip": {"dates": ["2023-01-01", "2023-01-02", "2023-01-03", "2023-01-04", "2023-01-05", "2023-01-06", "2023-01-07", "2023-01-08", "2023-01-09", "2023-01-10", "2023-01-11", "2023-01-12", "2023-01-13", "2023-01-14", "2023-01-15", "2023-01-16", "2023-01-17", "2023-01-18", "2023-01-19", "2023-01-20", "2023-01-21", "2023-01-22", "2023-01-23", "2023-01-24", "2023-01-25", "2023-01-26", "2023-01-27", "2023-01-28", "2023-01-29", "2023-01-30", "2023-01-31", "2023-02-01", "2023-02-02", "2023-02-03", "2023-02-04", "2023-02-05", "2023-02-06", "2023-02-07", "2023-02-08", "2023-02-09", "2023-02-10", "2023-02-11", "2023-02-12", "2023-02-13", "2023-02-14", "2023-02-15", "2023-02-16", "2023-02-17", "2023-02-18", "2023-02-19", "2023-02-20", "2023-02-21", "2023-02-22", "2023-02-23", "2023-02-24", "2023-02-25", "2023-02-26", "2023-02-27", "2023-02-28", "2023-03-01", "2023-03-02", "2023-03-03", "2023-03-04", "2023-03-05", "2023-03-06", "2023-03-07", "2023-03-08", "2023-03-09", "2023-03-10", "2023-03-11", "2023-03-12", "2023-03-13", "2023-03-14", "2023-03-15", "2023-03-16", "2023-03-17", "2023-03-18", "2023-03-19", "2023-03-20", "2023-03-21", "2023-03-22", "2023-03-23", "2023-03-24", "2023-03-25", "2023-03-26", "2023-03-27", "2023-03-28", "2023-03-29", "2023-03-30", "2023-03-31", "2023-04-01", "2023-04-02", "2023-04-03", "2023-04-04", "2023-04-05", "2023-04-06", "2023-04-07", "2023-04-08", "2023-04-09", "2023-04-10", "2023-04-11", "2023-04-12", "2023-04-13", "2023-04-14", "2023-04-15", "2023-04-16", "2023-04-17", "2023-04-18", "2023-04-19", "2023-04-20", "2023-04-21", "2023-04-22", "2023-04-23", "2023-04-24", "2023-04-25", "2023-04-26", "2023-04-27", "2023-04-28", "2023-04-29", "2023-04-30", "2023-05-01", "2023-05-02", "2023-05-03", "2023-05-04", "2023-05-05", "2023-05-06", "2023-05-07", "2023-05-08", "2023-05-09", "2023-05-10", "2023-05-11", "2023-05-12", "2023-05-13", "2023-05-14", "2023-05-15", "2023-05-16", "2023-05-17", "2023-05-18", "2023-05-19", "2023-05-20", "2023-05-21", "2023-05-22", "2023-05-23", "2023-05-24", "2023-05-25", "2023-05-26", "2023-05-27", "2023-05-28", "2023-05-29", "2023-05-30", "2023-05-31", "2023-06-01", "2023-06-02", "2023-06-03", "2023-06-04", "2023-06-05", "2023-06-06", "2023-06-07", "2023-06-08", "2023-06-09", "2023-06-10", "2023-06-11", "2023-06-12", "2023-06-13", "2023-06-14", "2023-06-15", "2023-06-16", "2023-06-17", "2023-06-18", "2023-06-19", "2023-06-20", "2023-06-21", "2023-06-22", "2023-06-23", "2023-06-24", "2023-06-25", "2023-06-26", "2023-06-27", "2023-06-28", "2023-06-29", "2023-06-30", "2023-07-01", "2023-07-02", "2023-07-03", "2023-07-04", "2023-07-05", "2023-07-06", "2023-07-07", "2023-07-08", "2023-07-09", "2023-07-10", "2023-07-11", "2023-07-12", "2023-07-13", "2023-07-14", "2023-07-15", "2023-07-16", "2023-07-17", "2023-07-18", "2023-07-19", "2023-07-20", "2023-07-21", "2023-07-22", "2023-07-23", "2023-07-24", "2023-07-25", "2023-07-26", "2023-07-27", "2023-07-28", "2023-07-29", "2023-07-30", "2023-07-31", "2023-08-01", "2023-08-02", "2023-08-03", "2023-08-04", "2023-08-05", "2023-08-06", "2023-08-07", "2023-08-08", "2023-08-09", "2023-08-10", "2023-08-11", "2023-08-12", "2023-08-13", "2023-08-14", "2023-08-15", "2023-08-16", "2023-08-17", "2023-08-18", "2023-08-19", "2023-08-20", "2023-08-21", "2023-08-22", "2023-08-23", "2023-08-24", "2023-08-25", "2023-08-26", "2023-08-27", "2023-08-28", "2023-08-29", "2023-08-30", "2023-08-31", "2023-09-01", "2023-09-02", "2023-09-03", "2023-09-04", "2023-09-05", "2023-09-06", "2023-09-07", "2023-09-08", "2023-09-09", "2023-09-10", "2023-09-11", "2023-09-12", "2023-09-13", "2023-09-14", "2023-09-15", "2023-09-16", "2023-09-17"], "obs": [null, 6891, 7236, 7460, 7535, null, null, null, 7597, 7334, 7280, 7444, 7500, null, null, 7284, 7353, 7438, 7479, 7403, null, null, null, null, 6531, null, 7334, null, null, 8036, 8032, 8040, 7968, 7854, null, null, 7392, null, 7299, 7597, null, null, null, 6932, 6956, 7150, 6895, 7138, null, null, 7321, 6772, null, 6874, 6550, null, null, 4976, 5058, null, 3828, 4498, null, null, 5257, 5986, null, 6445, 5065, null, null, 5431, null, 5969, null, 5408, null, null, 5240, 5025, 4991, null, null, null, null, 5193, 5510, 5545, 5623, null, null, null, 5175, 5086, null, 4901, 4938, null, null, 5097, 4986, 4750, null, null, null, null, 4966, 4972, 4970, 5251, null, null, null, 5690, 5471, 5489, 5535, null, null, null, 5823, 5609, 5588, 5691, null, null, null, 5195, 5287, 5413, 5479, null, null, null, 5738, 5531, 5630, null, 5491, null, null, 5659, 5414, 5387, 5204, 5097, null, null, 5084, 5135, 5026, 4974, 4717, null, null, 4623, 4626, 4965, 5152, 5378, null, null, null, 5379, 5430, 5344, 5602, null, null, 5626, 5872, 6401, 6388, null, null, null, 6132, 6188, 6495, 6731, 6931, null, null, 6764, 7109, 7570, 7557, 7785, null, null, 7405, 7385, null, 7258, 7370, null, null, 7319, 7144, 7140, 7148, 7276, null, null, 7659, 7535, null, 7810, 7992, null, null, 8402, 8515, 8503, 8398, 8209, null, null, 7441, 7123, 7392, null, 8137, null, null, 7351, null, 7296, 7523, 7482, null, null, 7096, 7384, 7197, 7439, 7449, null, null, null, 6353, 6631, 6767, 6680, null, null, 5853, 6775, 6410, null, 6406, null, null, null, 5409, 5606, 5791, 5749, null, null], "pred": [null, 6616, 6897, 7028, 7028, null, null, null, 6979, 7038, 6988, 6907, 7048, null, null, 6647, 6714, 7120, 6994, 7023, null, null, null, null, 6892, null, 6968, null, null, 6623, 6996, 7060, 7096, 7135, null, null, 6694, null, 6644, 6774, null, null, null, 6671, 6774, 7115, 7056, 6817, null, null, 6885, 6637, null, 6468, 6508, null, null, 5768, 5765, null, 5488, 5754, null, null, 5604, 5840, null, 5459, 5783, null, null, 5422, null, 5604, null, 5383, null, null, 5435, 5367, 5165, null, null, null, null, 5302, 5401, 5451, 5435, null, null, null, 5361, 5353, null, 5394, 5619, null, null, 5313, 5354, 5479, null, null, null, null, 5384, 5506, 5511, 5394, null, null, null, 5370, 5476, 5743, 5354, null, null, null, 5909, 5826, 5648, 5497, null, null, null, 5455, 5537, 5813, 5855, null, null, null, 5632, 5708, 5745, null, 5787, null, null, 5556, 5580, 5939, 5751, 5763, null, null, 5692, 5775, 5977, 5845, 5995, null, null, 5849, 6017, 5955, 5849, 5290, null, null, null, 5497, 5434, 5569, 5803, null, null, 5718, 6040, 6025, 5859, null, null, null, 5892, 5942, 6341, 6527, 6945, null, null, 6804, 6816, 8186, 7448, 7373, null, null, 7278, 7333, null, 7425, 7652, null, null, 7527, 7672, 7758, 7615, 7513, null, null, 6958, 7255, null, 7398, 7421, null, null, 7548, 7507, 7571, 7776, 7842, null, null, 7781, 7885, 7707, null, 7967, null, null, 7611, null, 7477, 7593, 7570, null, null, 7615, 7539, 7459, 7406, 7287, null, null, null, 6804, 7191, 7161, 6828, null, null, 6460, 7028, 7499, null, null, null, null, null, null, null, null, null, null, null]}};
+
+const NAME = {M1F:"M1F 기질(투입구동)", M9:"M9 관성보정(승법)", M2:"M2 ADL",
+              M3:"M3 VS물질수지", M4:"M4 트리 lag격자", M5:"M5 상태공간 칼만"};
+const USE = {"1–3":"운전 조정", "4–7":"가스홀더 운용", "8–14":"발전 계획",
+             "15–30":"정비 계획", "31–60":"기질 수급", "61–90":"장기 계획"};
+
+/* 스태킹 가중치 표 */
+document.getElementById('wtbody').innerHTML = Object.entries(D.weights)
+  .sort((a,b)=>b[1]-a[1]).map(([k,v])=>{
+    const on = v > 0.001;
+    return `<tr><td><b>${NAME[k]||k}</b></td>`+
+      `<td class="num" style="color:${on?'#008000':'#808080'};">${v.toFixed(4)}</td>`+
+      `<td style="text-align:center;"><span class="table-lamp ${on?'t-green':'t-red'}"></span>`+
+      `${on?'채택':'<span style="color:#808080;">배제</span>'}</td></tr>`;
+  }).join('');
+
+/* 지평별 표 */
+document.getElementById('hzbody').innerHTML = D.horizon.map(r=>{
+  const f=v=>v==null?'—':v.toFixed(4);
+  const pc = r.PERS < 0 ? '#FF0000' : '#804000';
+  return `<tr><td><b>h = ${r.band}</b></td><td class="num">${r.n}</td>`+
+    `<td class="num" style="color:#008000;">${f(r.ENS)}</td>`+
+    `<td class="num">${f(r.M9)}</td><td class="num">${f(r.M1F)}</td>`+
+    `<td class="num" style="color:${pc};">${f(r.PERS)}</td>`+
+    `<td>${USE[r.band]||''}</td></tr>`;
+}).join('');
+
+/* 대응검정 표 */
+document.getElementById('tbody').innerHTML = Object.entries(D.tests).map(([k,t])=>
+  `<tr><td>앙상블 vs <b>${NAME[k]||k}</b></td>`+
+  `<td class="num" style="color:#008000;">${t.d.toFixed(1)}</td>`+
+  `<td class="num">${t.p.toFixed(4)}</td>`+
+  `<td style="text-align:center;"><span class="table-lamp t-green"></span>${t.verdict}</td></tr>`).join('');
+
+/* 연도별 표 */
+document.getElementById('ybody').innerHTML = Object.entries(D.yearly).map(([yr,v])=>{
+  if(v.R2==null) return `<tr><td><b>${yr}</b></td><td class="num" style="color:#808080;">—</td>`+
+    `<td class="num" style="color:#808080;">—</td><td style="text-align:center; color:#808080;">초기 학습창</td></tr>`;
+  const c = v.R2>=0.6?'#008000':(v.R2>=0.45?'#804000':'#FF0000');
+  const lamp = v.R2>=0.6?'t-green':(v.R2>=0.45?'t-amber':'t-red');
+  return `<tr><td><b>${yr}</b></td><td class="num" style="color:${c};">${v.R2.toFixed(4)}</td>`+
+    `<td class="num">${v.RMSE.toFixed(1)}</td>`+
+    `<td style="text-align:center;"><span class="table-lamp ${lamp}"></span>${yr==='2023'?'홀드아웃':'OOF'}</td></tr>`;
+}).join('');
+
+/* ---- 오실로스코프 스타일 차트 ---- */
+function osc(el, opt){
+  const W=740,H=opt.h||200, ml=44,mr=14,mt=12,mb=30;
+  const px=i=>ml+(W-ml-mr)*(opt.n<2?0:i/(opt.n-1));
+  const py=v=>mt+(H-mt-mb)*(1-(v-opt.lo)/(opt.hi-opt.lo));
+  let g='';
+  // 그리드
+  for(const t of opt.yticks){
+    g+=`<line x1="${ml}" y1="${py(t)}" x2="${W-mr}" y2="${py(t)}" stroke="${t===0?'#00A000':'#1A331A'}" stroke-width="1"/>`;
+    g+=`<text x="${ml-6}" y="${py(t)+4}" fill="#00FF00" font-size="10" font-family="Consolas, monospace" text-anchor="end">${t.toFixed(1)}</text>`;
+  }
+  for(let i=0;i<opt.n;i+=opt.xstep||1){
+    g+=`<line x1="${px(i)}" y1="${mt}" x2="${px(i)}" y2="${H-mb}" stroke="#1A331A" stroke-width="1" stroke-dasharray="2 2"/>`;
+  }
+  g+=`<rect x="${ml}" y="${mt}" width="${W-ml-mr}" height="${H-mt-mb}" fill="none" stroke="#008000" stroke-width="1.5"/>`;
+  // 트레이스
+  for(const s of opt.series){
+    let d='',open=false;
+    for(let i=0;i<opt.n;i++){
+      const v=s.v[i];
+      if(v==null||!isFinite(v)){open=false;continue;}
+      d+=`${open?'L':'M'}${px(i).toFixed(1)},${py(v).toFixed(1)}`;open=true;
+    }
+    g+=`<path d="${d}" fill="none" stroke="${s.c}" stroke-width="${s.w||2}" stroke-linejoin="miter"${s.dash?` stroke-dasharray="${s.dash}"`:''}/>`;
+    if(s.mark) for(let i=0;i<opt.n;i++){
+      const v=s.v[i]; if(v==null||!isFinite(v))continue;
+      g+=`<rect x="${(px(i)-2.5).toFixed(1)}" y="${(py(v)-2.5).toFixed(1)}" width="5" height="5" fill="${s.c}"/>`;
+    }
+  }
+  // X 라벨
+  for(const [i,lab] of opt.xlabels){
+    // 양 끝 라벨은 프레임 밖으로 잘리므로 앵커를 바꾼다
+    const anc = i===0 ? 'start' : (i>=opt.n-1 ? 'end' : 'middle');
+    g+=`<text x="${px(i)}" y="${H-10}" fill="#FFFFFF" font-size="10.5" font-family="Consolas, monospace" text-anchor="${anc}">${lab}</text>`;
+  }
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;" preserveAspectRatio="none" role="img" aria-label="${opt.aria||''}">${g}</svg>`;
+}
+
+/* 지평별 R² */
+const hz=D.horizon;
+osc(document.getElementById('hzchart'), {
+  n:hz.length, lo:-1.3, hi:1.0, h:220, xstep:1,
+  yticks:[1.0,0.5,0.0,-0.5,-1.0],
+  series:[
+    {v:hz.map(r=>r.PERS), c:'#FF0000', w:2, mark:true},
+    {v:hz.map(r=>r.M1F),  c:'#FFCC00', w:1.5, dash:'4 2'},
+    {v:hz.map(r=>r.M9),   c:'#00FFFF', w:1.5, dash:'4 2'},
+    {v:hz.map(r=>r.ENS),  c:'#00FF00', w:2.5, mark:true}
+  ],
+  xlabels:hz.map((r,i)=>[i, r.band+'d']),
+  aria:'예측 지평별 결정계수'
+});
+
+/* 2023 스트립 차트 */
+const S=D.strip, N=S.dates.length;
+const vals=S.obs.concat(S.pred).filter(v=>v!=null);
+const lo=Math.min(...vals)*0.94, hi=Math.max(...vals)*1.04;
+const step=Math.round(1000*(hi-lo)/4)/1000;
+const yt=[0,1,2,3,4].map(i=>Math.round((lo+i*(hi-lo)/4)/100)*100);
+const marks=[]; 
+for(let i=0;i<N;i+=Math.floor(N/7)) marks.push([i, S.dates[i].slice(5)]);
+osc(document.getElementById('strip'), {
+  n:N, lo:lo, hi:hi, h:210, xstep:Math.floor(N/12),
+  yticks:yt,
+  series:[
+    {v:S.obs,  c:'#00FF00', w:2},
+    {v:S.pred, c:'#00FFFF', w:1.8, dash:'4 2'}
+  ],
+  xlabels:marks,
+  aria:'2023 홀드아웃 실측 대비 앙상블 예측'
+});
+</script>
+
+</body>
+</html>
