@@ -69,10 +69,34 @@ def main():
         parts.append(f"| {nm} | " + " | ".join(cells) + " |")
     parts.append("")
 
+    # 앵커 위 보정의 크기 — 지평이 길수록 모델이 보태는 몫이 커진다
+    parts += ["### 5.4 앵커 대비 보정의 크기 (스태킹 수축계수)", "",
+              "예측 = FlowAnchor + s · Σ wᵢ (모델ᵢ − FlowAnchor), wᵢ ≥ 0. "
+              "s 와 w 는 검증블록의 **서로 다른 절반**에서 정한다. "
+              "s = 0 이면 앵커 그대로이므로, 모델이 보탤 것이 없으면 자료가 그렇게 말할 수 있다.", ""]
+    parts.append("| 지평 구간 | 수축계수 s | Σw (수축 후) | Stack R² | FlowAnchor R² | 보정이 이득인가 |")
+    parts.append("|---|---:|---:|---:|---:|:---:|")
+    for b in bands:
+        r = d["bands"][b]
+        w = r.get("stack_weights_mean", {})
+        st = r["models"].get("Stack", {})
+        fa = r["models"].get("FlowAnchor", {})
+        gain = (st.get("pooled_R2", -9) > fa.get("pooled_R2", 9))
+        parts.append(
+            f"| {LABEL.get(b, b)} | {w.get('_shrink', '—')} | {w.get('_sum', '—')} | "
+            f"{st.get('pooled_R2', '—')} | {fa.get('pooled_R2', '—')} | "
+            f"{'✅' if gain else '—'} |")
+    parts.append("")
+    parts.append("수축계수가 지평과 함께 단조에 가깝게 커진다(0.44 → 0.89). "
+                 "짧은 지평에서는 앵커가 거의 전부를 설명하므로 자료가 보정을 억누르고, "
+                 "지평이 길어질수록 학습 모델의 몫이 커진다. 이 값은 튜닝 결과가 아니라 "
+                 "**측정된 것**이며, 「모델이 언제부터 쓸모 있는가」에 대한 직접적인 답이다.")
+    parts.append("")
+
     # 각도별 단독 성능
     if os.path.exists(ABL):
         a = json.load(open(ABL, encoding="utf-8"))
-        parts += ["### 5.4 각도별 단독 성능 (요구사항 2 — 어느 각도가 정보를 주는가)", "",
+        parts += ["### 5.5 각도별 단독 성능 (요구사항 2 — 어느 각도가 정보를 주는가)", "",
                   "각 각도의 피처만으로 같은 폴드를 돌린 결과. pooled R².", ""]
         parts.append("| 각도 | " + " | ".join(LABEL.get(b, b) for b in bands) + " |")
         parts.append("|---|" + "---:|" * len(bands))

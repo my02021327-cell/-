@@ -91,7 +91,20 @@ persistence 성능이 지평에 따라 완전히 갈리므로 하나의 모델�
 라인업 — HistGBM · RandomForest · ExtraTrees · ElasticNet · BayesianRidge · kNN ·
 **FlowConc**(유량×농도 분해) · **GRU** · SARIMAX · NNLS 스태킹, 그리고 기준선 naive·SeasonalNaive.
 
-<!--README_RESULTS-->
+## 결과 — 구간별 폴드밖 성적
+
+| 지평 구간 | 채택 모델 | **pooled R²** | naive R² | RMSSE % | R²≥0.85 |
+|---|---|---:|---:|---:|:---:|
+| **1–3일** | FlowAnchor | 0.8639 | 0.8074 | 84.1 | ✅ |
+| **3–5일** | FlowAnchor | 0.7198 | 0.6622 | 91.1 | ❌ |
+| **5–7일** | FlowAnchor | 0.5694 | 0.5433 | 97.1 | ❌ |
+| **7–14일** | Stack | 0.3513 | 0.2640 | 93.9 | ❌ |
+| **14–30일** | ExtraTrees | -0.2030 | -0.2281 | 99.0 | ❌ |
+| **30–60일** | Stack | -0.5121 | -0.7786 | 92.2 | ❌ |
+| **60–90일** | RandomForest | -0.8617 | -1.4134 | 87.8 | ❌ |
+
+R² ≥ 0.85 달성 **1/7 구간**. RMSSE 는 naive(원점값 유지) 대비 정규화 오차로, 100 미만이어야 채택 가능하다. 전체 표와 각도별 단독 성능은 [`docs/METHANE_FORECAST_SYSTEM.md`](docs/METHANE_FORECAST_SYSTEM.md) §5.
+
 
 ## 운전 제어 권고
 

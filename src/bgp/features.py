@@ -98,6 +98,10 @@ def build_features(df: pd.DataFrame, angles: tuple[str, ...] | None = None,
             tb[f"tmp__y_lag{lg}"] = y.shift(lg)
         tb["tmp__y_tr7"] = y - y.rolling(7, min_periods=1).mean()
         tb["tmp__y_tr30"] = y - y.rolling(30, min_periods=1).mean()
+        # naive 앵커 : 마지막 '실측' 메탄. 재구성값을 섞지 않는다.
+        # 교차검증의 Naive 기준선이 쓰는 값과 동일해야 스태킹 멤버로 서빙할 수 있다.
+        tb["tmp__y_last_obs"] = df[C.TARGET].ffill()
+
         # 관측 신선도 — 마지막 실측이 며칠 전인지(재구성 라벨과 실측을 구분하는 신호)
         obs_pos = pd.Series(np.where(df[C.TARGET].notna(), np.arange(len(df)), np.nan),
                             index=df.index).ffill()

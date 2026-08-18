@@ -21,9 +21,9 @@
     "beats_naive": true
   },
   "h7_14": {
-    "model": "FlowAnchor",
-    "pooled_R2": 0.2813,
-    "RMSSE_pct": 98.8,
+    "model": "Stack",
+    "pooled_R2": 0.3513,
+    "RMSSE_pct": 93.9,
     "meets_r2_goal": false,
     "beats_naive": true
   },
@@ -35,9 +35,9 @@
     "beats_naive": true
   },
   "h30_60": {
-    "model": "ExtraTrees",
-    "pooled_R2": -0.6398,
-    "RMSSE_pct": 96.0,
+    "model": "Stack",
+    "pooled_R2": -0.5121,
+    "RMSSE_pct": 92.2,
     "meets_r2_goal": false,
     "beats_naive": true
   },

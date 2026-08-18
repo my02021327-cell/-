@@ -1,0 +1,181 @@
+{
+  "info": {
+    "quality": {
+      "n_days": 2086,
+      "date_range": [
+        "2018-01-01",
+        "2023-09-17"
+      ],
+      "target_observed": 1265,
+      "target_missing_pct": 39.4,
+      "flow_missing_pct": 0.0,
+      "conc_missing_pct": 39.4,
+      "thermo_violation_pct": 15.1,
+      "missing_by_angle": {
+        "substrate": 21.3,
+        "chemistry": 47.6,
+        "vsbalance": 32.4,
+        "temporal": 26.2
+      },
+      "thermo_violation_by_year": {
+        "2018": 72.0,
+        "2019": 12.6,
+        "2020": 12.1,
+        "2021": 0.9,
+        "2022": 13.2,
+        "2023": 27.8
+      }
+    },
+    "imputation": {
+      "selected_method_labels": "linear",
+      "selected_method_features": "ffill",
+      "candidate_MAE_pp": {
+        "linear": 0.536,
+        "ffill": 0.768,
+        "softsensor": 1.499,
+        "soft_neigh": 0.64
+      },
+      "candidate_MAE_pp_causal": {
+        "ffill": 0.768,
+        "softsensor": 1.499,
+        "soft_neigh": 0.768
+      },
+      "fit_end": "2021-12-30",
+      "causal_only": false,
+      "labels_observed": 1265,
+      "labels_after_fill": 2086
+    },
+    "features": {
+      "n_total": 547,
+      "by_angle": {
+        "substrate": 198,
+        "chemistry": 165,
+        "vsbalance": 143,
+        "temporal": 41
+      }
+    },
+    "outliers_flagged": 42
+  },
+  "bands": {
+    "h1_3": {
+      "model": "FlowAnchor",
+      "n_features": 120,
+      "n_train": 6072,
+      "path": "outputs/models/band_h1_3.joblib",
+      "stack_members": {},
+      "responds_to_actuators": false,
+      "cv": {
+        "model": "FlowAnchor",
+        "pooled_R2": 0.8639,
+        "RMSSE_pct": 84.1,
+        "meets_r2_goal": true,
+        "beats_naive": true
+      }
+    },
+    "h3_5": {
+      "model": "FlowAnchor",
+      "n_features": 120,
+      "n_train": 6066,
+      "path": "outputs/models/band_h3_5.joblib",
+      "stack_members": {},
+      "responds_to_actuators": false,
+      "cv": {
+        "model": "FlowAnchor",
+        "pooled_R2": 0.7198,
+        "RMSSE_pct": 91.1,
+        "meets_r2_goal": false,
+        "beats_naive": true
+      }
+    },
+    "h5_7": {
+      "model": "FlowAnchor",
+      "n_features": 120,
+      "n_train": 6060,
+      "path": "outputs/models/band_h5_7.joblib",
+      "stack_members": {},
+      "responds_to_actuators": false,
+      "cv": {
+        "model": "FlowAnchor",
+        "pooled_R2": 0.5694,
+        "RMSSE_pct": 97.1,
+        "meets_r2_goal": false,
+        "beats_naive": true
+      }
+    },
+    "h7_14": {
+      "model": "Stack",
+      "n_features": 120,
+      "n_train": 16124,
+      "path": "outputs/models/band_h7_14.joblib",
+      "stack_members": {
+        "RandomForest": 0.1706,
+        "ExtraTrees": 0.1014,
+        "ElasticNet": 0.0366,
+        "kNN": 0.0366,
+        "HistGBM": 0.0316,
+        "BayesianRidge": 0.0283
+      },
+      "responds_to_actuators": true,
+      "cv": {
+        "model": "Stack",
+        "pooled_R2": 0.3513,
+        "RMSSE_pct": 93.9,
+        "meets_r2_goal": false,
+        "beats_naive": true
+      }
+    },
+    "h14_30": {
+      "model": "ExtraTrees",
+      "n_features": 120,
+      "n_train": 30000,
+      "path": "outputs/models/band_h14_30.joblib",
+      "stack_members": {},
+      "responds_to_actuators": true,
+      "cv": {
+        "model": "ExtraTrees",
+        "pooled_R2": -0.203,
+        "RMSSE_pct": 99.0,
+        "meets_r2_goal": false,
+        "beats_naive": true
+      }
+    },
+    "h30_60": {
+      "model": "Stack",
+      "n_features": 120,
+      "n_train": 30000,
+      "path": "outputs/models/band_h30_60.joblib",
+      "stack_members": {
+        "ExtraTrees": 0.2488,
+        "kNN": 0.1057,
+        "ElasticNet": 0.0658,
+        "BayesianRidge": 0.0583,
+        "HistGBM": 0.047,
+        "RandomForest": 0.0037
+      },
+      "responds_to_actuators": true,
+      "cv": {
+        "model": "Stack",
+        "pooled_R2": -0.5121,
+        "RMSSE_pct": 92.2,
+        "meets_r2_goal": false,
+        "beats_naive": true
+      }
+    },
+    "h60_90": {
+      "model": "RandomForest",
+      "n_features": 120,
+      "n_train": 30000,
+      "path": "outputs/models/band_h60_90.joblib",
+      "stack_members": {},
+      "responds_to_actuators": true,
+      "cv": {
+        "model": "RandomForest",
+        "pooled_R2": -0.8617,
+        "RMSSE_pct": 87.8,
+        "meets_r2_goal": false,
+        "beats_naive": true
+      }
+    }
+  },
+  "panel": "outputs/models/panel.joblib"
+}

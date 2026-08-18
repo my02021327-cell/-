@@ -307,3 +307,110 @@ def nnls_stack(pred_matrix: np.ndarray, y: np.ndarray) -> np.ndarray:
 
     w, _ = nnls(pred_matrix, y)
     return w
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 서빙용 래퍼 — 기준선과 스태킹도 '모델'처럼 predict 할 수 있어야 한다
+# ══════════════════════════════════════════════════════════════════════════════
+class AnchorModel(BaseEstimator, RegressorMixin):
+    """
+    FlowAnchor 서빙 래퍼 — 학습 파라미터가 없다.
+
+    예측 = 원점의 인과 재구성 메탄 = 당일 실측 유량 × 최근 관측 농도.
+    설계행렬에서는 `tmp__y_last` 열이 정확히 그 값이다(features.py 에서
+    `CH4_m3d_causal` 로 만들어진다).
+
+    짧은 지평에서 이 기준선이 학습 모델 전부를 이겼으므로 서빙 대상이 된다.
+    지평 h 에 대해 상수라는 점은 결함이 아니라 이 모델의 정의다 —
+    「지금 수준이 유지된다」가 곧 예측이다.
+    """
+
+    def __init__(self, anchor_col: str = "tmp__y_last"):
+        self.anchor_col = anchor_col
+
+    def fit(self, X, y=None):
+        self.fallback_ = float(np.nanmedian(np.asarray(y, float))) if y is not None else 0.0
+        return self
+
+    def predict(self, X):
+        v = np.asarray(X[self.anchor_col], float)
+        return np.where(np.isfinite(v), v, getattr(self, "fallback_", 0.0))
+
+
+class ColumnModel(BaseEstimator, RegressorMixin):
+    """
+    설계행렬의 한 열을 그대로 예측으로 내보내는 래퍼.
+
+    기준선(Naive = `tmp__y_last_obs`, SeasonalNaive = `tmp__y_ma30`)을 스태킹 멤버로
+    서빙하기 위한 것이다. 교차검증에서 가중을 받은 멤버는 서빙에서도 같은 값을 내야 한다.
+    """
+
+    def __init__(self, col: str):
+        self.col = col
+
+    def fit(self, X, y=None):
+        self.fallback_ = float(np.nanmedian(np.asarray(y, float))) if y is not None else 0.0
+        return self
+
+    def predict(self, X):
+        v = np.asarray(X[self.col], float)
+        return np.where(np.isfinite(v), v, getattr(self, "fallback_", 0.0))
+
+
+class FlowConcModel(BaseEstimator, RegressorMixin):
+    """
+    CH₄ = 유량 × 농도 / 100 을 두 성분으로 나눠 맞히는 모델의 서빙 래퍼.
+
+    유량 라벨은 2,086일 전부 있고(타깃은 1,265일) 재구성 잡음이 섞이지 않는다.
+    합성 타깃을 직접 맞히는 것과 다른 귀납 편향이라 앙상블에서 값을 한다.
+    """
+
+    def __init__(self, conc_range=(30.0, 80.0)):
+        self.conc_range = conc_range
+
+    def fit(self, X, y_flow, y_conc):
+        from sklearn.ensemble import HistGradientBoostingRegressor
+
+        def mk():
+            return HistGradientBoostingRegressor(
+                max_iter=400, learning_rate=0.06, max_leaf_nodes=31,
+                l2_regularization=1.0, early_stopping=True, random_state=RS)
+
+        self.flow_ = mk().fit(X, y_flow)
+        self.conc_ = mk().fit(X, y_conc)
+        return self
+
+    def predict(self, X):
+        f = np.asarray(self.flow_.predict(X), float)
+        c = np.clip(np.asarray(self.conc_.predict(X), float), *self.conc_range)
+        return f * c / 100.0
+
+
+class ShrunkStack(BaseEstimator, RegressorMixin):
+    """
+    스태킹 서빙 래퍼.
+
+        예측 = anchor + s · Σ wᵢ (멤버ᵢ − anchor),   wᵢ ≥ 0
+
+    가중 w 와 수축계수 s 는 교차검증에서 **폴드 학습셋 안의 서로 다른 절반**으로 정한
+    값을 그대로 가져온다. 서빙 단계에서 다시 고르지 않는다 — 그러면 시험 자료를 보게 된다.
+    s·w 가 0 이면 정확히 앵커로 돌아가므로 하한이 보장된다.
+    """
+
+    def __init__(self, members: dict, weights: dict, anchor_col: str = "tmp__y_last"):
+        self.members = members          # 이름 → 적합된 추정기
+        self.weights = weights          # 이름 → 수축 반영된 가중
+        self.anchor_col = anchor_col
+
+    def fit(self, X, y=None):
+        return self
+
+    def predict(self, X):
+        anchor = np.asarray(X[self.anchor_col], float)
+        out = anchor.copy()
+        for name, w in self.weights.items():
+            if w <= 0 or name not in self.members:
+                continue
+            p = np.asarray(self.members[name].predict(X), float).ravel()
+            out = out + w * (p - anchor)
+        return out
