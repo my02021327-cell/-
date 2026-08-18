@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioGuard-HMI Industrial SCADA Console</title>
+<style>
+  :root {
+    /* 정통 산업용 무채색 베젤 시스템 */
+    --hmi-chassis: #C0C0C0;
+    --hmi-panel-bg: #D4D0C8;
+    --hmi-dark-bg: #000000;
+    --hmi-border-light: #FFFFFF;
+    --hmi-border-gray: #808080;
+    --hmi-border-black: #000000;
+
+    /* 고대비 100% 채도 하드웨어 신호등 원색 */
+    --lamp-red-on: #FF0000;
+    --lamp-red-off: #330000;
+    --lamp-amber-on: #FFCC00;
+    --lamp-amber-off: #332600;
+    --lamp-green-on: #00FF00;
+    --lamp-green-off: #003300;
+
+    --font-sys: "Malgun Gothic", "맑은 고딕", Dotum, "돋움", Tahoma, sans-serif;
+    --font-led: Consolas, "Courier New", monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-sys); border-radius: 0 !important; }
+
+  body {
+    background-color: #606870;
+    color: #000000;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    font-size: 13.5px;
+    padding: 10px;
+    user-select: none;
+  }
+
+  /* 3D WIN32 / HMI FRAMEWORK */
+  .hmi-window-frame {
+    background: var(--hmi-panel-bg);
+    border: 3px solid;
+    border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    box-shadow: 2px 2px 0px #000000;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1280px;
+  }
+
+  /* 1. TITLEBAR */
+  .hmi-titlebar {
+    background: #000080;
+    color: #FFFFFF;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: bold;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+  }
+  .hmi-win-btns { display: flex; gap: 2px; }
+  .hmi-win-btn {
+    width: 18px;
+    height: 16px;
+    background: #D4D0C8;
+    border: 1px solid;
+    border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    font-size: 11px;
+    line-height: 14px;
+    text-align: center;
+    color: #000000;
+    font-weight: bold;
+    cursor: default;
+  }
+
+  .hmi-subbar {
+    background: #D4D0C8;
+    border-bottom: 2px groove #FFFFFF;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+  }
+  .hmi-menu-items span { padding: 2px 8px; cursor: default; }
+  .hmi-menu-items span:hover { background: #000080; color: #FFFFFF; }
+
+  /* 2. MAIN ANNUNCIATOR (고대비 블랙 랙) */
+  .annunciator-panel {
+    background: #000000;
+    border: 2px inset #808080;
+    margin: 8px;
+    padding: 8px 14px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 16px;
+    color: #FFFFFF;
+  }
+
+  .signal-tower-3d {
+    background: #202020;
+    border: 2px outset #808080;
+    padding: 6px 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .lamp-socket {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .lamp-bulb {
+    width: 22px;
+    height: 22px;
+    border: 2px solid #000000;
+  }
+  .lamp-bulb.red { background: var(--lamp-red-on); box-shadow: 0 0 10px #FF0000; }
+  .lamp-bulb.amber { background: var(--lamp-amber-off); }
+  .lamp-bulb.green { background: var(--lamp-green-off); }
+  .lamp-lbl { font-size: 10.5px; font-weight: bold; font-family: var(--font-led); }
+
+  .annunciator-msg { display: flex; flex-direction: column; gap: 3px; }
+  .annunciator-title { font-size: 15px; font-weight: bold; color: #FF0000; letter-spacing: 0.5px; }
+  .annunciator-detail { font-size: 12.5px; color: #FFFFFF; font-family: var(--font-led); }
+
+  .hmi-btn-ack {
+    background: #D4D0C8;
+    color: #FF0000;
+    font-weight: bold;
+    font-size: 13px;
+    border: 2px solid;
+    border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    padding: 8px 18px;
+    cursor: pointer;
+  }
+  .hmi-btn-ack:active { border-color: #404040 #FFFFFF #FFFFFF #404040; padding: 9px 17px 7px 19px; }
+
+  /* 3. 4-BAY GAUGES (무채색 베젤 + 칠흑 LED) */
+  .gauge-rack {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 0 8px 8px;
+  }
+  .gauge-bay {
+    background: #D4D0C8;
+    border: 2px solid;
+    border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .gauge-bay-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    font-size: 13px;
+    border-bottom: 1px solid #808080;
+    padding-bottom: 4px;
+    margin-bottom: 6px;
+  }
+  .hmi-led-display {
+    background: #000000;
+    border: 2px inset #808080;
+    padding: 6px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .led-number {
+    font-family: var(--font-led);
+    font-size: 30px;
+    font-weight: bold;
+    color: #00FF00;
+    letter-spacing: 1px;
+  }
+  .led-danger { color: #FF0000; }
+  .led-warn { color: #FFCC00; }
+  .led-unit { font-family: var(--font-led); font-size: 13px; color: #808080; font-weight: bold; }
+  
+  .led-status-tag {
+    font-family: var(--font-led);
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+
+  /* 4. WORK SECTION */
+  .work-grid {
+    display: grid;
+    grid-template-columns: 1.8fr 1fr;
+    gap: 8px;
+    padding: 0 8px 8px;
+  }
+
+  .hmi-box {
+    background: #D4D0C8;
+    border: 2px solid;
+    border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    display: flex;
+    flex-direction: column;
+  }
+  .hmi-box-header {
+    background: #808080;
+    color: #FFFFFF;
+    padding: 5px 8px;
+    font-size: 13px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* RECORDER CHART */
+  .chart-black-box {
+    background: #000000;
+    border: 2px inset #808080;
+    margin: 6px;
+    padding: 8px;
+  }
+  .chart-top-readout {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-led);
+    color: #00FF00;
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+
+  /* DATA TABLE */
+  .table-container {
+    padding: 6px;
+    background: #D4D0C8;
+  }
+  .hmi-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: #FFFFFF;
+    border: 2px inset #808080;
+  }
+  .hmi-table th {
+    background: #C0C0C0;
+    border: 1px solid #808080;
+    padding: 6px 8px;
+    text-align: left;
+    font-weight: bold;
+  }
+  .hmi-table td {
+    border: 1px solid #808080;
+    padding: 7px 8px;
+    color: #000000;
+  }
+  .hmi-table tr:nth-child(even) td { background: #EBEBEB; }
+
+  /* 3색 신호등 인디케이터 셀 */
+  .table-lamp {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 1px solid #000000;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  .t-red { background: #FF0000; }
+  .t-amber { background: #FFCC00; }
+  .t-green { background: #00FF00; }
+
+  /* 5. CONTROL BAR */
+  .control-rack {
+    background: #D4D0C8;
+    border-top: 2px groove #FFFFFF;
+    padding: 6px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .hmi-btn {
+    background: #D4D0C8;
+    border: 2px solid;
+    border-color: #FFFFFF #404040 #404040 #FFFFFF;
+    color: #000000;
+    font-weight: bold;
+    font-size: 13px;
+    padding: 5px 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .hmi-btn:active { border-color: #404040 #FFFFFF #FFFFFF #404040; padding: 6px 13px 4px 15px; }
+
+  /* 6. STATUSBAR */
+  .hmi-statusbar {
+    background: #D4D0C8;
+    border-top: 2px groove #FFFFFF;
+    padding: 3px 6px;
+    display: flex;
+    gap: 6px;
+    font-family: var(--font-led);
+    font-size: 12px;
+  }
+  .sb-pane {
+    background: #D4D0C8;
+    border: 1px inset #808080;
+    padding: 2px 8px;
+  }
+
+  /* ── 백엔드 연동을 위해 추가한 최소 스타일 (원 디자인 언어 유지) ───────── */
+  .hmi-menu-items span.active { background:#000080; color:#FFFFFF; }
+  .view { display:none; }
+  .view.on { display:block; }
+  .sel-hmi {
+    background:#FFFFFF; border:2px inset #808080; font-family:var(--font-led);
+    font-size:12px; padding:2px 4px; color:#000000;
+  }
+  .kv { font-family:var(--font-led); font-weight:bold; }
+  .adv-card {
+    border:2px outset #808080; background:#D4D0C8; padding:8px 10px; margin:6px 0;
+  }
+  .adv-card .hd { font-weight:bold; border-bottom:1px solid #808080; margin-bottom:4px; }
+  .adv-delta-up { color:#006000; font-weight:bold; }
+  .adv-delta-dn { color:#B00000; font-weight:bold; }
+  .gate { background:#330000; color:#FF6060; border:2px inset #808080;
+          padding:6px 8px; font-family:var(--font-led); font-size:12px; margin:4px 0; }
+  .trust-bad { background:#4A0000; color:#FFC0C0; }
+  .trust-ok  { background:#002200; color:#90FF90; }
+  .trust { border:2px inset #808080; padding:4px 8px; font-family:var(--font-led);
+           font-size:12px; }
+  .band-table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .band-table th, .band-table td { border:1px solid #808080; padding:3px 6px; }
+  .band-table th { background:#B8B4AC; }
+  .band-table td.num { font-family:var(--font-led); text-align:right; }
+  .ok  { color:#006000; font-weight:bold; }
+  .bad { color:#B00000; font-weight:bold; }
+  .offline { background:#4A0000; color:#FFD0D0; padding:6px 10px;
+             font-family:var(--font-led); border:2px inset #808080; margin:8px; }
+</style>
+</head>
+<body>
+
+<div class="hmi-window-frame">
+
+  <div class="hmi-titlebar">
+    <span>[CONSOLE-01] BIOGUARD SCADA SUPERVISORY CONTROL SYSTEM (YONGCHEON BGP)</span>
+    <div class="hmi-win-btns">
+      <div class="hmi-win-btn">_</div><div class="hmi-win-btn">□</div><div class="hmi-win-btn">×</div>
+    </div>
+  </div>
+
+  <div class="hmi-subbar">
+    <div class="hmi-menu-items" id="menu">
+      <span data-view="scada" class="active">신호등관제</span>
+      <span data-view="trend">시계열트렌드</span>
+      <span data-view="advisory">운전권고</span>
+      <span data-view="alarms">경보이력</span>
+      <span data-view="bands">모델성적</span>
+      <span data-view="sim">파라미터설정</span>
+    </div>
+    <div style="font-family:var(--font-led); font-weight:bold; color:#000080;" id="conn">
+      API: CONNECTING…
+    </div>
+  </div>
+
+  <div id="offline" class="offline" style="display:none;"></div>
+
+  <!-- ANNUNCIATOR -->
+  <div class="annunciator-panel">
+    <div class="signal-tower-3d">
+      <div class="lamp-socket"><div class="lamp-bulb red" id="lampR"></div><span class="lamp-lbl" id="lblR">RED</span></div>
+      <div class="lamp-socket"><div class="lamp-bulb amber" id="lampA"></div><span class="lamp-lbl" id="lblA">AMB</span></div>
+      <div class="lamp-socket"><div class="lamp-bulb green" id="lampG"></div><span class="lamp-lbl" id="lblG">GRN</span></div>
+    </div>
+    <div class="annunciator-msg">
+      <div class="annunciator-title" id="almTitle">— 자료 적재 중 —</div>
+      <div class="annunciator-detail" id="almDetail"></div>
+    </div>
+    <button class="hmi-btn-ack" id="ackBtn">ALARM ACK (경보확인)</button>
+  </div>
+
+  <!-- GAUGES -->
+  <div class="gauge-rack" id="gaugeRack"></div>
+
+  <!-- ══════════ VIEW: SCADA ══════════ -->
+  <div class="view on" id="view-scada">
+    <div class="work-grid">
+      <div class="hmi-box">
+        <div class="hmi-box-header">
+          <span>TREND RECORDER : CH-01 CH4 PRODUCTION (1-DAY INTERVAL)</span>
+          <div style="font-family:var(--font-led);">
+            BAND <select class="sel-hmi" id="bandSel"></select>
+          </div>
+        </div>
+        <div class="chart-black-box">
+          <div class="chart-top-readout" id="chartReadout">
+            <span>CURR: — m³</span><span style="color:#00FFFF;">FORECAST: —</span>
+            <span style="color:#FFFFFF;">95% CONF BOUND</span>
+          </div>
+          <svg id="chart" viewBox="0 0 740 185" style="width:100%; height:185px; display:block;" preserveAspectRatio="none"></svg>
+        </div>
+        <div style="padding:6px 8px;"><span class="trust" id="trustTag">MODEL TRUST: —</span></div>
+      </div>
+
+      <div class="hmi-box">
+        <div class="hmi-box-header">
+          <span>PROCESS TELEMETRY MATRIX</span>
+          <div style="font-family:var(--font-led);" id="asofTag">ASOF: —</div>
+        </div>
+        <div class="table-container">
+          <table class="hmi-table">
+            <thead><tr>
+              <th>계측 변수명</th><th style="text-align:right;">현재 지시값</th>
+              <th style="text-align:right;">90일 기준선</th><th style="text-align:center;">신호등</th>
+            </tr></thead>
+            <tbody id="telBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ VIEW: TREND ══════════ -->
+  <div class="view" id="view-trend">
+    <div class="hmi-box" style="margin:8px;">
+      <div class="hmi-box-header">
+        <span>MULTI-BAND FORECAST TABLE</span>
+        <div style="font-family:var(--font-led);">ORIGIN <input class="sel-hmi" id="asofInput" type="date" style="width:130px;"></div>
+      </div>
+      <div class="table-container" style="max-height:420px;">
+        <table class="band-table" id="fcTable"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ VIEW: ADVISORY ══════════ -->
+  <div class="view" id="view-advisory">
+    <div class="hmi-box" style="margin:8px;">
+      <div class="hmi-box-header">
+        <span>OPERATOR CONTROL ADVISORY (근거기반 운전 권고)</span>
+        <div style="font-family:var(--font-led);">BAND <select class="sel-hmi" id="advBandSel"></select></div>
+      </div>
+      <div style="padding:10px;" id="advBody">— 로딩 —</div>
+    </div>
+  </div>
+
+  <!-- ══════════ VIEW: ALARMS ══════════ -->
+  <div class="view" id="view-alarms">
+    <div class="hmi-box" style="margin:8px;">
+      <div class="hmi-box-header"><span>ALARM HISTORY (시설 90일 기준선 대비 상대편차)</span>
+        <div style="font-family:var(--font-led);" id="almMeta"></div></div>
+      <div class="table-container" style="max-height:460px;">
+        <table class="band-table" id="almTable"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ VIEW: BANDS ══════════ -->
+  <div class="view" id="view-bands">
+    <div class="hmi-box" style="margin:8px;">
+      <div class="hmi-box-header"><span>MODEL VALIDATION SCORECARD (rolling-origin, 폴드밖)</span>
+        <div style="font-family:var(--font-led);">TARGET R² ≥ 0.85</div></div>
+      <div class="table-container" style="max-height:460px;">
+        <table class="band-table" id="bandTable"></table>
+      </div>
+      <div style="padding:8px 10px; font-size:12px;">
+        RMSSE = 모델 RMSE ÷ naive(원점값 유지) RMSE. <b>100 % 이상이면 채택 불가</b>이며,
+        그런 구간에서는 운전권고를 생성하지 않는다.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ VIEW: SIM ══════════ -->
+  <div class="view" id="view-sim">
+    <div class="hmi-box" style="margin:8px;">
+      <div class="hmi-box-header"><span>WHAT-IF SIMULATOR (조작단 변경 → 예측 재계산)</span>
+        <div style="font-family:var(--font-led);">BAND <select class="sel-hmi" id="simBandSel"></select></div></div>
+      <div style="padding:10px; display:grid; grid-template-columns:repeat(3,1fr); gap:10px;" id="simControls"></div>
+      <div style="padding:0 10px 10px;">
+        <button class="hmi-btn" id="simRun"><span>■</span> 시뮬레이션 실행</button>
+        <span id="simOut" class="kv" style="margin-left:12px;"></span>
+      </div>
+      <div class="table-container" style="max-height:300px;">
+        <table class="band-table" id="simTable"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROL DOCK -->
+  <div class="control-rack">
+    <div style="font-weight:bold; font-size:12.5px;">[MANUAL OVERRIDE CONTROL]</div>
+    <div style="display:flex; gap:8px;">
+      <button class="hmi-btn" id="btnRefresh"><span>■</span> 화면 갱신</button>
+      <button class="hmi-btn" id="btnExport"><span>■</span> 공정 일지 데이터 내보내기</button>
+      <button class="hmi-btn" id="btnAdvisory"><span>■</span> 운전권고 재계산</button>
+    </div>
+  </div>
+
+  <div class="hmi-statusbar">
+    <div class="sb-pane" style="flex:1.4;" id="sbData">DATA: —</div>
+    <div class="sb-pane" style="flex:1.6;" id="sbModel">MODEL: —</div>
+    <div class="sb-pane" style="flex:1.4;" id="sbImp">IMPUTE: —</div>
+    <div class="sb-pane" style="flex:1;">MODE: REMOTE-AUTO</div>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   BioGuard HMI — 백엔드 연동
+   화면은 값을 만들어내지 않는다. 전부 /api 응답을 그대로 표시한다.
+   모델이 기준선을 못 이기는 구간은 붉게 표시하고 권고를 띄우지 않는다.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const API = location.origin;
+let ASOF = null, BANDS = {}, LATEST = {};
+
+const $ = (id) => document.getElementById(id);
+const fmt = (v, d = 0) => (v === null || v === undefined || Number.isNaN(v))
+  ? '—' : Number(v).toLocaleString('ko-KR', {minimumFractionDigits: d, maximumFractionDigits: d});
+
+async function get(path) {
+  const r = await fetch(API + path);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function post(path, body) {
+  const r = await fetch(API + path, {method: 'POST', headers: {'Content-Type': 'application/json'},
+                                     body: JSON.stringify(body)});
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+/* ── 신호등 ─────────────────────────────────────────────────────────────── */
+function setLamp(level) {
+  const on = {red: level === '위험', amb: level === '주의', grn: level === '정상'};
+  $('lampR').style.background = on.red ? 'var(--lamp-red-on)' : 'var(--lamp-red-off)';
+  $('lampA').style.background = on.amb ? 'var(--lamp-amber-on)' : 'var(--lamp-amber-off)';
+  $('lampG').style.background = on.grn ? 'var(--lamp-green-on)' : 'var(--lamp-green-off)';
+  $('lblR').style.color = on.red ? '#FF0000' : '#808080';
+  $('lblA').style.color = on.amb ? '#FFCC00' : '#808080';
+  $('lblG').style.color = on.grn ? '#00FF00' : '#808080';
+}
+
+/* ── 게이지 ─────────────────────────────────────────────────────────────── */
+function renderGauges(gauges) {
+  const color = {NORMAL: '#00FF00', CAUTION: '#FFCC00', ACTION: '#FF0000', 'NO-MODEL': '#FF8000'};
+  const cls = {NORMAL: '', CAUTION: 'led-warn', ACTION: 'led-danger', 'NO-MODEL': 'led-warn'};
+  $('gaugeRack').innerHTML = gauges.map(g => `
+    <div class="gauge-bay">
+      <div class="gauge-bay-top"><span>${g.label}</span></div>
+      <div class="hmi-led-display">
+        <div style="display:flex; align-items:baseline; gap:5px;">
+          <span class="led-number ${cls[g.status] || ''}">${fmt(g.value, g.unit === 'RATIO' ? 3 : (g.unit === '%' || g.unit === '℃' ? 1 : 0))}</span>
+          <span class="led-unit">${g.unit}</span>
+        </div>
+        <span class="led-status-tag" style="color:${color[g.status] || '#FFFFFF'};">[${g.status}]</span>
+      </div>
+    </div>`).join('');
+}
+
+/* ── 트렌드 차트 (SVG 직접 생성 — 외부 라이브러리 없음) ──────────────────── */
+function renderChart(data) {
+  const W = 740, H = 185, L = 40, R = 20, T = 10, B = 35;
+  const hist = data.history.map(d => ({d: d.date, v: d.ch4_filled, obs: d.observed}))
+                           .filter(d => d.v !== null);
+  const fc = data.forecast;
+  const pts = hist.map(d => d.v).concat(fc.map(f => f.ch4_m3d),
+                fc.map(f => f.lo95).filter(v => v !== null),
+                fc.map(f => f.hi95).filter(v => v !== null));
+  if (!pts.length) { $('chart').innerHTML = ''; return; }
+  let lo = Math.min(...pts), hi = Math.max(...pts);
+  const pad = (hi - lo) * 0.12 || 100; lo -= pad; hi += pad;
+  const n = hist.length + fc.length;
+  const x = i => L + (W - L - R) * (n === 1 ? 0.5 : i / (n - 1));
+  const y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+
+  const grid = [0, .25, .5, .75, 1].map(f => {
+    const yy = T + (H - T - B) * f;
+    return `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="#1A331A"/>` +
+           `<text x="2" y="${yy + 3}" fill="#00FF00" font-size="9" font-family="Consolas">${fmt(hi - (hi - lo) * f)}</text>`;
+  }).join('');
+
+  const histLine = hist.map((d, i) => `${x(i)},${y(d.v)}`).join(' ');
+  const t0 = hist.length - 1;
+  const fcLine = [t0 >= 0 ? `${x(t0)},${y(hist[t0].v)}` : null]
+      .concat(fc.map((f, i) => `${x(hist.length + i)},${y(f.ch4_m3d)}`)).filter(Boolean).join(' ');
+  const band = fc.filter(f => f.lo95 !== null);
+  const bandPath = band.length
+    ? band.map((f, i) => `${x(hist.length + i)},${y(f.hi95)}`).join(' ') + ' ' +
+      band.slice().reverse().map((f, i) => `${x(n - 1 - i)},${y(f.lo95)}`).join(' ')
+    : '';
+
+  const marks = hist.map((d, i) =>
+    `<rect x="${x(i) - 2}" y="${y(d.v) - 2}" width="4" height="4" fill="${d.obs ? '#00FF00' : '#008000'}"/>`).join('');
+  const labelEvery = Math.max(1, Math.round(n / 9));
+  const xlab = hist.map((d, i) => [i, d.d]).concat(fc.map((f, i) => [hist.length + i, f.date]))
+    .filter(([i]) => i % labelEvery === 0)
+    .map(([i, d]) => `<text x="${x(i)}" y="${H - 12}" fill="${i >= hist.length ? '#00FFFF' : '#FFFFFF'}" font-size="9.5" font-family="Consolas" text-anchor="middle">${d.slice(5)}</text>`).join('');
+
+  $('chart').innerHTML = `
+    <g>${grid}</g>
+    <rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="none" stroke="#008000" stroke-width="1.5"/>
+    ${bandPath ? `<polygon points="${bandPath}" fill="#00FFFF" opacity="0.14"/>` : ''}
+    <polyline fill="none" stroke="#00FF00" stroke-width="2" points="${histLine}"/>
+    ${marks}
+    <polyline fill="none" stroke="#00FFFF" stroke-width="2" stroke-dasharray="4 2" points="${fcLine}"/>
+    <line x1="${x(t0)}" y1="${T}" x2="${x(t0)}" y2="${H - B}" stroke="#FF0000" stroke-width="1.5" stroke-dasharray="3 3"/>
+    <text x="${x(t0)}" y="${H - 24}" fill="#FF0000" font-size="9" font-family="Consolas" text-anchor="middle">T0</text>
+    ${xlab}`;
+
+  const last = hist.length ? hist[hist.length - 1].v : null;
+  $('chartReadout').innerHTML =
+    `<span>CURR: ${fmt(last)} m³</span>` +
+    `<span style="color:#00FFFF;">FORECAST T+${fc[0].h}~${fc[fc.length - 1].h}: ` +
+    `${fmt(fc[0].ch4_m3d)} → ${fmt(fc[fc.length - 1].ch4_m3d)} m³</span>` +
+    `<span style="color:#FFFFFF;">95% CONF BOUND</span>`;
+
+  const t = data.trust || {};
+  const ok = t.beats_naive;
+  $('trustTag').className = 'trust ' + (ok ? 'trust-ok' : 'trust-bad');
+  $('trustTag').textContent = ok
+    ? `MODEL TRUST: OK — pooled R²=${t.pooled_R2} · naive 대비 우세`
+    : `MODEL TRUST: FAIL — 이 구간 모델은 naive 기준선을 이기지 못한다 (권고 생성 안 함)`;
+}
+
+/* ── 계측 매트릭스 ──────────────────────────────────────────────────────── */
+function renderTelemetry(d) {
+  const lamp = {정상: ['t-green', '#008000', '정상'],
+                주의: ['t-amber', '#804000', '주의'],
+                위험: ['t-red', '#FF0000', '조치필요']};
+  $('telBody').innerHTML = d.rows.map(r => {
+    const [c, col, txt] = lamp[r.level] || lamp['정상'];
+    return `<tr>
+      <td><b title="${r.guideline_note || ''}">${r.label}</b></td>
+      <td style="font-family:var(--font-led); font-weight:bold; color:${col}; text-align:right;">
+        ${fmt(r.value, Math.abs(r.value) < 10 ? 2 : 1)} ${r.unit}</td>
+      <td style="font-family:var(--font-led); text-align:right;">${fmt(r.baseline_90d, Math.abs(r.baseline_90d||0) < 10 ? 2 : 1)}
+        <span style="font-size:11px; color:#404040;">(${r.deviation_pct > 0 ? '+' : ''}${fmt(r.deviation_pct, 1)}%)</span></td>
+      <td style="text-align:center;"><span class="table-lamp ${c}"></span><b style="color:${col};">${txt}</b></td>
+    </tr>`;
+  }).join('');
+  $('asofTag').textContent = 'ASOF: ' + d.asof;
+}
+
+/* ── 구간 성적표 ────────────────────────────────────────────────────────── */
+function renderBands(b) {
+  const rows = Object.entries(b).map(([k, v]) => `
+    <tr>
+      <td><b>${k}</b> <span style="color:#404040;">(h ${v.range_days[0]}–${v.range_days[1]}일)</span></td>
+      <td>${v.model}</td>
+      <td class="num ${v.meets_r2_goal ? 'ok' : 'bad'}">${v.pooled_R2 ?? '—'}</td>
+      <td class="num">${v.naive_R2 ?? '—'}</td>
+      <td class="num ${v.beats_naive ? 'ok' : 'bad'}">${v.RMSSE_pct ?? '—'}</td>
+      <td style="text-align:center;">${v.meets_r2_goal ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>'}</td>
+      <td class="num">${v.n_test ?? '—'} / ${v.n_folds ?? '—'}</td>
+    </tr>`).join('');
+  $('bandTable').innerHTML =
+    `<thead><tr><th>지평 구간</th><th>채택 모델</th><th>pooled R²</th><th>naive R²</th>
+     <th>RMSSE %</th><th>R²≥0.85</th><th>n / folds</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+/* ── 다구간 예측표 ──────────────────────────────────────────────────────── */
+async function renderForecastTable() {
+  const parts = [];
+  for (const k of Object.keys(BANDS)) {
+    const f = await get(`/api/forecast?band=${k}` + (ASOF ? `&asof=${ASOF}` : ''));
+    const rows = f.points.map(p => `<tr><td>${p.date}</td><td class="num">T+${p.h}</td>
+      <td class="num"><b>${fmt(p.ch4_m3d)}</b></td>
+      <td class="num" style="color:#404040;">${fmt(p.lo95)} ~ ${fmt(p.hi95)}</td></tr>`).join('');
+    parts.push(`<tbody><tr><th colspan="4" style="background:#000080; color:#FFF; text-align:left;">
+      ${k} (h ${BANDS[k].range_days[0]}–${BANDS[k].range_days[1]}일) · ${BANDS[k].model}
+      · R²=${BANDS[k].pooled_R2} · RMSSE=${BANDS[k].RMSSE_pct}%
+      ${f.trust ? '' : ' · <span style="color:#FF8080;">기준선 미달</span>'}</th></tr>${rows}</tbody>`);
+  }
+  $('fcTable').innerHTML =
+    `<thead><tr><th>일자</th><th>리드타임</th><th>예측 CH₄ (m³/d)</th><th>95% 예측구간</th></tr></thead>` +
+    parts.join('');
+}
+
+/* ── 운전 권고 ──────────────────────────────────────────────────────────── */
+async function renderAdvisory() {
+  const band = $('advBandSel').value;
+  const a = await get(`/api/advisory?band=${band}` + (ASOF ? `&asof=${ASOF}` : ''));
+  let h = `<div class="kv" style="font-size:14px;">
+      예측 CH₄ <b>${fmt(a.predicted_ch4_m3d)}</b> m³/d ·
+      90일 기준선 ${fmt(a.baseline_ch4_m3d)} m³/d ·
+      <span class="${a.delta_vs_baseline_pct >= 0 ? 'adv-delta-up' : 'adv-delta-dn'}">
+      ${a.delta_vs_baseline_pct > 0 ? '+' : ''}${fmt(a.delta_vs_baseline_pct, 1)}%</span></div>`;
+
+  if (a.safety_gates.length) {
+    h += a.safety_gates.map(g => `<div class="gate">⛔ SAFETY GATE — ${g.message}</div>`).join('');
+  }
+  if (!a.model_trustworthy) {
+    h += `<div class="gate">⛔ ${a.note}</div>`;
+  } else if (!a.actions.length) {
+    h += `<div class="adv-card">현 상태에서 유의한 개선을 주는 조작이 없다. 현 운전 유지.</div>`;
+  } else {
+    h += a.actions.map((x, i) => `
+      <div class="adv-card">
+        <div class="hd">${i + 1}. ${x.label} 조정</div>
+        <div class="kv">현재 ${fmt(x.current, 3)} ${x.unit} → 목표 <b>${fmt(x.target, 3)} ${x.unit}</b>
+          (${x.change_pct > 0 ? '+' : ''}${fmt(x.change_pct, 1)}%)</div>
+        <div>예상 메탄 변화
+          <span class="${x.expected_delta_ch4_m3d >= 0 ? 'adv-delta-up' : 'adv-delta-dn'}">
+          ${x.expected_delta_ch4_m3d > 0 ? '+' : ''}${fmt(x.expected_delta_ch4_m3d)} m³/d
+          (${x.expected_delta_pct > 0 ? '+' : ''}${fmt(x.expected_delta_pct, 2)}%)</span></div>
+        <div style="font-size:11.5px; color:#303030;">근거 — 채택 모델(${band})에 대한 반사실 질의.
+          민감도 ${fmt(x.sensitivity_m3d_per_unit, 1)} m³/d per ${x.unit || '단위'}</div>
+      </div>`).join('');
+  }
+  h += `<div style="margin-top:10px; font-size:12px;"><b>상태 진단 (90일 기준선 대비)</b></div>
+    <table class="band-table"><thead><tr><th>변수</th><th>현재</th><th>기준선</th><th>편차%</th><th>등급</th><th>지침 대비</th></tr></thead>
+    <tbody>${a.diagnostics.map(d => `<tr><td>${d.variable}</td><td class="num">${fmt(d.value, 3)}</td>
+      <td class="num">${fmt(d.baseline_90d, 3)}</td><td class="num">${d.deviation_pct > 0 ? '+' : ''}${fmt(d.deviation_pct, 1)}</td>
+      <td style="text-align:center;" class="${d.level === '정상' ? 'ok' : 'bad'}">${d.level}</td>
+      <td style="font-size:11.5px;">${d.guideline_note}</td></tr>`).join('')}</tbody></table>`;
+  $('advBody').innerHTML = h;
+}
+
+/* ── 경보 이력 ──────────────────────────────────────────────────────────── */
+async function renderAlarms() {
+  const a = await get('/api/alarms?days=365' + (ASOF ? `&asof=${ASOF}` : ''));
+  $('almMeta').textContent = `주의 ≥${a.thresholds.caution_pct}% · 위험 ≥${a.thresholds.danger_pct}% · 총 ${a.n}건`;
+  $('almTable').innerHTML =
+    `<thead><tr><th>일자</th><th>변수</th><th>값</th><th>기준선</th><th>편차%</th><th>등급</th></tr></thead><tbody>` +
+    a.items.map(r => `<tr><td>${r.date}</td><td>${r.variable}</td><td class="num">${fmt(r.value, 3)}</td>
+      <td class="num">${fmt(r.baseline_90d, 3)}</td><td class="num">${r.deviation_pct > 0 ? '+' : ''}${fmt(r.deviation_pct, 1)}</td>
+      <td style="text-align:center;" class="${r.level === '위험' ? 'bad' : ''}">${r.level}</td></tr>`).join('') +
+    '</tbody>';
+}
+
+/* ── 시뮬레이터 ─────────────────────────────────────────────────────────── */
+const SIM_VARS = [
+  ['feed_AB_tpd', '소화조 투입량', 'x', 0.7, 1.3, 0.05, 1.0],
+  ['mix_foodww', '음폐수 배합비', 'x', 0.7, 1.3, 0.05, 1.0],
+  ['mix_manure', '가축분뇨 배합비', 'x', 0.7, 1.3, 0.05, 1.0],
+  ['mix_food', '음식물류 배합비', 'x', 0.7, 1.3, 0.05, 1.0],
+  ['dig_T_A_C', '소화조 온도', '+℃', -2, 2, 0.5, 0],
+  ['dewater_tpd', '탈수 처리량', 'x', 0.7, 1.3, 0.05, 1.0],
+];
+function renderSimControls() {
+  $('simControls').innerHTML = SIM_VARS.map(([k, label, kind, lo, hi, step, def]) => `
+    <div>
+      <div style="font-size:12px; font-weight:bold;">${label} <span style="color:#404040;">(${kind})</span></div>
+      <input type="range" id="sim_${k}" min="${lo}" max="${hi}" step="${step}" value="${def}" style="width:100%;">
+      <span class="kv" id="simv_${k}">${def}</span>
+    </div>`).join('');
+  SIM_VARS.forEach(([k]) => {
+    $(`sim_${k}`).addEventListener('input', e => { $(`simv_${k}`).textContent = e.target.value; });
+  });
+}
+async function runSim() {
+  const changes = {};
+  SIM_VARS.forEach(([k, , kind, , , , def]) => {
+    const v = parseFloat($(`sim_${k}`).value);
+    if (Math.abs(v - def) > 1e-9) changes[k] = v;
+  });
+  const r = await post('/api/simulate', {band: $('simBandSel').value, asof: ASOF, changes});
+  $('simOut').innerHTML = `기준 ${fmt(r.baseline_mean_ch4)} → 시나리오 ${fmt(r.scenario_mean_ch4)} m³/d ` +
+    `<span class="${r.delta_ch4 >= 0 ? 'adv-delta-up' : 'adv-delta-dn'}">(${r.delta_ch4 > 0 ? '+' : ''}${fmt(r.delta_ch4)} / ${r.delta_pct > 0 ? '+' : ''}${fmt(r.delta_pct, 2)}%)</span>`;
+  $('simTable').innerHTML = `<thead><tr><th>리드타임</th><th>기준 예측</th><th>시나리오</th><th>차이</th></tr></thead><tbody>` +
+    r.points.map(p => `<tr><td class="num">T+${p.h}</td><td class="num">${fmt(p.baseline)}</td>
+      <td class="num">${fmt(p.scenario)}</td>
+      <td class="num ${p.scenario - p.baseline >= 0 ? 'ok' : 'bad'}">${fmt(p.scenario - p.baseline)}</td></tr>`).join('') + '</tbody>';
+}
+
+/* ── 화면 전환 ──────────────────────────────────────────────────────────── */
+document.querySelectorAll('#menu span').forEach(el => {
+  el.addEventListener('click', async () => {
+    document.querySelectorAll('#menu span').forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+    const v = el.dataset.view;
+    document.querySelectorAll('.view').forEach(x => x.classList.toggle('on', x.id === 'view-' + v));
+    try {
+      if (v === 'trend') await renderForecastTable();
+      if (v === 'advisory') await renderAdvisory();
+      if (v === 'alarms') await renderAlarms();
+    } catch (e) { showOffline(e); }
+  });
+});
+
+function showOffline(e) {
+  $('offline').style.display = 'block';
+  $('offline').textContent = 'API ERROR — ' + (e && e.message ? e.message : e);
+  $('conn').textContent = 'API: ERROR';
+}
+
+/* ── 초기화 ─────────────────────────────────────────────────────────────── */
+async function refresh() {
+  const q = ASOF ? `?asof=${ASOF}` : '';
+  const [ov, tel] = await Promise.all([get('/api/overview' + q), get('/api/telemetry' + q)]);
+  LATEST = ov;
+  setLamp(ov.lamp);
+  $('almTitle').textContent = `${ov.alarm.code}: ${ov.alarm.title}`;
+  $('almDetail').textContent = ov.alarm.detail;
+  renderGauges(ov.gauges);
+  renderTelemetry(tel);
+  const band = $('bandSel').value || Object.keys(BANDS)[0];
+  renderChart(await get(`/api/trend?band=${band}&back=21` + (ASOF ? `&asof=${ASOF}` : '')));
+}
+
+async function init() {
+  try {
+    const h = await get('/api/health');
+    if (!h.ready) { showOffline({message: h.reason}); return; }
+    $('conn').textContent = 'API: ONLINE';
+    $('sbData').textContent = `DATA: ${h.data_range[0]} ~ ${h.data_range[1]}`;
+    BANDS = await get('/api/bands');
+    const opts = Object.keys(BANDS).map(k =>
+      `<option value="${k}">${k} (h ${BANDS[k].range_days[0]}–${BANDS[k].range_days[1]}일)</option>`).join('');
+    ['bandSel', 'advBandSel', 'simBandSel'].forEach(id => { $(id).innerHTML = opts; });
+    $('advBandSel').value = BANDS['h7_14'] ? 'h7_14' : Object.keys(BANDS)[0];
+    $('simBandSel').value = $('advBandSel').value;
+    $('asofInput').value = h.data_range[1];
+    const good = Object.entries(BANDS).filter(([, v]) => v.meets_r2_goal).map(([k]) => k);
+    $('sbModel').textContent = `MODEL: ${Object.keys(BANDS).length}개 구간 · R²≥0.85 달성 ${good.length}개`;
+    renderBands(BANDS);
+    renderSimControls();
+    await refresh();
+  } catch (e) { showOffline(e); }
+}
+
+$('bandSel').addEventListener('change', refresh);
+$('advBandSel').addEventListener('change', () => renderAdvisory().catch(showOffline));
+$('simRun').addEventListener('click', () => runSim().catch(showOffline));
+$('btnRefresh').addEventListener('click', () => refresh().catch(showOffline));
+$('btnAdvisory').addEventListener('click', () => renderAdvisory().catch(showOffline));
+$('asofInput').addEventListener('change', e => {
+  ASOF = e.target.value || null;
+  refresh().catch(showOffline);
+});
+$('ackBtn').addEventListener('click', () => { $('almTitle').textContent += '  [ACK]'; });
+$('btnExport').addEventListener('click', async () => {
+  const q = ASOF ? `?asof=${ASOF}` : '';
+  const tel = await get('/api/telemetry' + q);
+  const csv = ['variable,label,value,unit,baseline_90d,deviation_pct,level']
+    .concat(tel.rows.map(r => [r.variable, r.label, r.value, r.unit, r.baseline_90d, r.deviation_pct, r.level].join(',')))
+    .join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + csv], {type: 'text/csv'}));
+  a.download = `bioguard_telemetry_${tel.asof}.csv`;
+  a.click();
+});
+
+init();
+</script>
+
+</body>
+</html>

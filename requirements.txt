@@ -1,8 +1,19 @@
+# 코어
 pandas>=2.0
 numpy>=1.24
 scipy>=1.10
 scikit-learn>=1.3
 openpyxl>=3.1
 matplotlib>=3.7
+joblib>=1.3
+
+# 시계열 (SARIMAX)
+statsmodels>=0.14
+
+# 시계열 심층학습 (GRU) — 선택. 없으면 --with-gru 만 비활성화된다
 torch>=2.0
 
+# 백엔드
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.0
