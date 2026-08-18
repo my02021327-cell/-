@@ -83,6 +83,24 @@ GUIDELINE = {
 # 시설 자체 기준선 대비 상대편차 경보 (90일 이동 중앙값 대비)
 RELATIVE_ALARM = {"baseline_days": 90, "caution_pct": 15.0, "danger_pct": 25.0}
 
+# 경보를 낼 '나쁜 방향'. 편차의 절대값만 보면 개선을 경보로 띄운다 —
+# 예컨대 VFA/알칼리도가 기준선보다 32 % 낮은 것은 완충능이 좋아진 것이지 이상이 아니다.
+#   up   : 증가가 나쁨 (산 축적·저해·과부하)
+#   down : 감소가 나쁨 (생산 저하)
+#   both : 어느 쪽이든 이탈이 나쁨 (설정치 관리 대상)
+ALARM_DIRECTION = {
+    "VFA_ALK_A": "up",          # 산 축적
+    "FAN_calc": "up",           # 암모니아 저해
+    "OLR_calc": "up",           # 과부하
+    "dig_pH_A": "both",         # 완충 붕괴는 양방향
+    "dig_T_A_C": "both",        # 중온 설정치 관리
+    "biogas_AB_m3d": "down",    # 생산 저하
+    "CH4_pct": "down",          # 가스 품질 저하
+    "feed_AB_tpd": "both",      # 투입 급변은 어느 쪽이든 주목
+    "VS_destruction_pct": "down",
+    "Y_COD": "both",
+}
+
 # ── 화학양론 상수 ────────────────────────────────────────────────────────────
 CH4_PER_KG_COD = 0.35              # ㎥CH₄/kgCOD_제거 (이론 최대, 표준상태)
 COD_PER_VS = 1.42                  # kgCOD/kgVS

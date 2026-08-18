@@ -26,12 +26,12 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from src.bgp import config as C
-from src.bgp.advisor import diagnose, recommend
+from src.bgp.advisor import SAFETY_GATES, diagnose, recommend
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC = os.path.join(HERE, "static")
@@ -162,8 +162,53 @@ def _predict_band(band: str, t0: int) -> list[dict]:
     return out
 
 
+def _alarm_title(d: dict, tag: str) -> str:
+    if d.get("deviation_pct") is None:
+        return f"{d['variable']}: {d.get('guideline_note') or '이상'} [{tag}]"
+    return f"{d['variable']} 기준선 대비 {d['deviation_pct']:+.1f}% [{tag}]"
+
+
+def _alarm_line(d: dict) -> str:
+    if d.get("deviation_pct") is None:
+        return f"{d['variable']}: {d['value']} ({d.get('guideline_note') or '기준선 없음'})"
+    return f"{d['variable']}: {d['value']} ({d['deviation_pct']:+.1f}% vs 90d)"
+
+
 def _state(t0: int) -> pd.Series:
-    return STORE.df.iloc[t0]
+    """
+    원점의 공정 상태 — 결측은 **직전 관측값**으로 채운다.
+
+    소화조 이화학은 주 2~3회 측정이라 임의의 날짜에서 40~50 %가 결측이다. 원 행을 그대로
+    쓰면 진단·안전게이트·조작단 현재값이 대부분 NaN 이 되어 판정 자체가 사라진다.
+    운전원이 보는 값도 「마지막으로 측정된 값」이므로 이쪽이 실제 의사결정과 일치한다.
+    값의 나이는 `_last_known()` 이 따로 보고하므로 신선도가 감춰지지는 않는다.
+    """
+    row = STORE.df.iloc[: t0 + 1].ffill().iloc[-1].copy()
+    row["date"] = STORE.df["date"].iloc[t0]
+    return row
+
+
+def _last_known(t0: int, cols: list[str]) -> dict:
+    """
+    표시용 '최근 알려진 값'과 그 나이(일).
+
+    소화조 이화학은 주 2~3회 측정이라 임의의 날짜를 찍으면 40~50 %가 결측이다.
+    그 자리에 「—」를 띄우면 관제 화면이 절반쯤 비어 쓸모가 없어진다. 산업용 HMI 의
+    통상 동작대로 **마지막 알려진 값과 그 나이**를 함께 보여준다. 나이를 감추지 않는 것이
+    핵심이다 — 5일 된 pH 와 오늘 측정한 pH 는 다른 정보다.
+    """
+    out = {}
+    for c in cols:
+        if c not in STORE.df.columns:
+            continue
+        ser = STORE.df[c].iloc[: t0 + 1]
+        obs = ser.dropna()
+        if obs.empty:
+            out[c] = {"value": None, "age_days": None}
+            continue
+        pos = int(obs.index[-1])
+        out[c] = {"value": float(obs.iloc[-1]), "age_days": int(t0 - pos)}
+    return out
 
 
 def _baseline(t0: int, days: int = C.RELATIVE_ALARM["baseline_days"]) -> pd.Series:
@@ -176,9 +221,14 @@ def _baseline(t0: int, days: int = C.RELATIVE_ALARM["baseline_days"]) -> pd.Seri
 # ══════════════════════════════════════════════════════════════════════════════
 @app.get("/api/health")
 def health():
+    imp = STORE.manifest.get("info", {}).get("imputation", {})
     return {
         "ready": STORE.ready, "reason": STORE.reason,
         "bands": list(STORE.models),
+        "imputation": {"labels": imp.get("selected_method_labels"),
+                       "features": imp.get("selected_method_features"),
+                       "labels_observed": imp.get("labels_observed"),
+                       "labels_after_fill": imp.get("labels_after_fill")},
         "data_range": [str(STORE.df["date"].min().date()), str(STORE.df["date"].max().date())]
         if STORE.df is not None else None,
     }
@@ -213,7 +263,9 @@ def overview(asof: str | None = Query(None)):
     t0 = _origin_index(asof)
     st, bl = _state(t0), _baseline(t0)
     diag = diagnose(st, bl)
-    worst = max(diag, key=lambda d: {"정상": 0, "주의": 1, "위험": 2}[d["level"]]) if diag else None
+    rank = {"정상": 0, "주의": 1, "위험": 2}
+    worst = max(diag, key=lambda d: (rank[d["level"]],
+                                     abs(d.get("deviation_pct") or 0.0))) if diag else None
     lamp = worst["level"] if worst else "정상"
 
     band = "h1_3" if "h1_3" in STORE.models else list(STORE.models)[0]
@@ -229,32 +281,31 @@ def overview(asof: str | None = Query(None)):
                 return d["level"]
         return "정상"
 
+    lk = _last_known(t0, ["dig_T_A_C", "VFA_ALK_A", C.CONC, "dig_pH_A"])
+
+    def g(col, label, unit, nd):
+        e = lk.get(col, {"value": None, "age_days": None})
+        return {"label": label,
+                "value": None if e["value"] is None else round(e["value"], nd),
+                "unit": unit, "status": tag(lv(col)), "age_days": e["age_days"]}
+
     return {
         "asof": str(st["date"].date()),
         "lamp": lamp,
         "alarm": {
             "code": f"ALARM {worst['variable']}" if worst and lamp != "정상" else "NO ACTIVE ALARM",
-            "title": (f"{worst['variable']} 기준선 대비 {worst['deviation_pct']:+.1f}% "
-                      f"[{tag(lamp)}]") if worst else "전 계통 정상",
-            "detail": " | ".join(
-                f"{d['variable']}: {d['value']} ({d['deviation_pct']:+.1f}% vs 90d)"
-                for d in diag[:3]),
+            # 편차가 없는 항목(열역학 위반 등)은 편차 대신 사유를 그대로 싣는다
+            "title": (_alarm_title(worst, tag(lamp)) if worst else "전 계통 정상"),
+            "detail": " | ".join(_alarm_line(d) for d in diag[:3]),
         },
         "gauges": [
             {"label": f"메탄생산 예측 (T+{tomorrow['h']})" if tomorrow else "메탄생산 예측",
              "value": tomorrow["ch4_m3d"] if tomorrow else None, "unit": "m³",
              "status": "NORMAL" if _trustworthy(band) else "NO-MODEL",
              "note": f"{band} · R²={STORE.manifest['bands'][band]['cv'].get('pooled_R2')}"},
-            {"label": "소화조 온도", "value": None if not np.isfinite(st.get("dig_T_A_C", np.nan))
-             else round(float(st["dig_T_A_C"]), 1), "unit": "℃",
-             "status": tag(lv("dig_T_A_C"))},
-            {"label": "VFA / Alk 비율", "value": None if not np.isfinite(st.get("VFA_ALK_A", np.nan))
-             else round(float(st["VFA_ALK_A"]), 3), "unit": "RATIO",
-             "status": tag(lv("VFA_ALK_A"))},
-            {"label": "메탄 가스 순도",
-             "value": round(float(st.get("CH4_pct_filled", np.nan)), 1)
-             if np.isfinite(st.get("CH4_pct_filled", np.nan)) else None,
-             "unit": "%", "status": tag(lv(C.CONC))},
+            g("dig_T_A_C", "소화조 온도", "℃", 1),
+            g("VFA_ALK_A", "VFA / Alk 비율", "RATIO", 3),
+            g(C.CONC, "메탄 가스 순도", "%", 1),
         ],
         "diagnostics": diag,
     }
@@ -297,15 +348,15 @@ def telemetry(asof: str | None = None):
         "VS_destruction_pct": ("VS 분해율", "%"), "Y_COD": ("COD 기준 메탄수율", "㎥/kgCOD"),
     }
     diag = {d["variable"]: d for d in diagnose(st, bl)}
+    lk = _last_known(t0, list(labels))
     rows = []
     for col, (label, unit) in labels.items():
-        v = st.get(col, np.nan)
-        if col == C.CONC and not np.isfinite(v):
-            v = st.get("CH4_pct_filled", np.nan)
+        e = lk.get(col, {"value": None, "age_days": None})
         d = diag.get(col, {})
         rows.append({
             "variable": col, "label": label, "unit": unit,
-            "value": None if not np.isfinite(v) else round(float(v), 3),
+            "value": None if e["value"] is None else round(e["value"], 3),
+            "age_days": e["age_days"],
             "baseline_90d": d.get("baseline_90d"),
             "deviation_pct": d.get("deviation_pct"),
             "level": d.get("level", "정상"),
@@ -342,8 +393,11 @@ def advisory(asof: str | None = None, band: str = "h7_14"):
     meta = STORE.manifest.get("bands", {}).get(band, {})
     responds = meta.get("responds_to_actuators", True)
 
+    # 게이트 근거의 신선도 — 오래된 측정으로 조용히 판정하지 않는다
+    ages = {k: v["age_days"]
+            for k, v in _last_known(t0, [g[0] for g in SAFETY_GATES]).items()}
     rec = recommend(m["model"], row, st, list(row.columns), band, base_ch4,
-                    model_is_trustworthy=_trustworthy(band) and responds)
+                    model_is_trustworthy=_trustworthy(band) and responds, ages=ages)
     rec["asof"] = str(st["date"].date())
     rec["model"] = m["model_name"]
     rec["responds_to_actuators"] = bool(responds)
@@ -415,7 +469,8 @@ def alarms(asof: str | None = None, days: int = 180):
         for d in diagnose(st, bl):
             if d["level"] != "정상":
                 out.append({"date": str(st["date"].date()), **d})
-    out.sort(key=lambda r: (r["date"], -abs(r["deviation_pct"])), reverse=True)
+    # 편차가 없는 항목(열역학 위반 등)도 목록에 남는다 — 정렬에서만 0 으로 취급한다
+    out.sort(key=lambda r: (r["date"], -abs(r.get("deviation_pct") or 0.0)), reverse=True)
     return {"n": len(out), "thresholds": {"caution_pct": cau, "danger_pct": dan},
             "items": out[:300]}
 
@@ -424,6 +479,15 @@ def alarms(asof: str | None = None, days: int = 180):
 @app.get("/")
 def index():
     return FileResponse(os.path.join(STATIC, "index.html"))
+
+
+@app.get("/favicon.ico")
+def favicon():
+    """브라우저가 자동으로 찾는 경로. 없으면 콘솔에 404 가 남아 진짜 오류를 가린다."""
+    p = os.path.join(STATIC, "favicon.ico")
+    if os.path.exists(p):
+        return FileResponse(p)
+    return Response(status_code=204)
 
 
 if os.path.isdir(STATIC):

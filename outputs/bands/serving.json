@@ -1,8 +1,8 @@
 {
   "h1_3": {
-    "model": "FlowAnchor",
-    "pooled_R2": 0.8639,
-    "RMSSE_pct": 84.1,
+    "model": "Stack",
+    "pooled_R2": 0.8646,
+    "RMSSE_pct": 83.8,
     "meets_r2_goal": true,
     "beats_naive": true
   },
@@ -14,37 +14,37 @@
     "beats_naive": true
   },
   "h5_7": {
-    "model": "FlowAnchor",
-    "pooled_R2": 0.5694,
-    "RMSSE_pct": 97.1,
+    "model": "Stack",
+    "pooled_R2": 0.5744,
+    "RMSSE_pct": 96.5,
     "meets_r2_goal": false,
     "beats_naive": true
   },
   "h7_14": {
     "model": "Stack",
-    "pooled_R2": 0.3513,
+    "pooled_R2": 0.3512,
     "RMSSE_pct": 93.9,
     "meets_r2_goal": false,
     "beats_naive": true
   },
   "h14_30": {
     "model": "ExtraTrees",
-    "pooled_R2": -0.203,
-    "RMSSE_pct": 99.0,
+    "pooled_R2": -0.1736,
+    "RMSSE_pct": 97.8,
     "meets_r2_goal": false,
     "beats_naive": true
   },
   "h30_60": {
     "model": "Stack",
-    "pooled_R2": -0.5121,
-    "RMSSE_pct": 92.2,
+    "pooled_R2": -0.5062,
+    "RMSSE_pct": 92.0,
     "meets_r2_goal": false,
     "beats_naive": true
   },
   "h60_90": {
     "model": "RandomForest",
-    "pooled_R2": -0.8617,
-    "RMSSE_pct": 87.8,
+    "pooled_R2": -0.8747,
+    "RMSSE_pct": 88.1,
     "meets_r2_goal": false,
     "beats_naive": true
   }

@@ -46,28 +46,38 @@
       "labels_after_fill": 2086
     },
     "features": {
-      "n_total": 547,
+      "n_total": 548,
       "by_angle": {
         "substrate": 198,
         "chemistry": 165,
         "vsbalance": 143,
-        "temporal": 41
+        "temporal": 42
       }
     },
     "outliers_flagged": 42
   },
   "bands": {
     "h1_3": {
-      "model": "FlowAnchor",
+      "model": "Stack",
       "n_features": 120,
       "n_train": 6072,
       "path": "outputs/models/band_h1_3.joblib",
-      "stack_members": {},
-      "responds_to_actuators": false,
+      "stack_members": {
+        "ExtraTrees": 0.1404,
+        "kNN": 0.0883,
+        "ElasticNet": 0.0757,
+        "Naive": 0.0612,
+        "RandomForest": 0.0494,
+        "HistGBM": 0.0392,
+        "FlowConc": 0.0215,
+        "BayesianRidge": 0.0199,
+        "SeasonalNaive": 0.0085
+      },
+      "responds_to_actuators": true,
       "cv": {
-        "model": "FlowAnchor",
-        "pooled_R2": 0.8639,
-        "RMSSE_pct": 84.1,
+        "model": "Stack",
+        "pooled_R2": 0.8646,
+        "RMSSE_pct": 83.8,
         "meets_r2_goal": true,
         "beats_naive": true
       }
@@ -88,16 +98,26 @@
       }
     },
     "h5_7": {
-      "model": "FlowAnchor",
+      "model": "Stack",
       "n_features": 120,
       "n_train": 6060,
       "path": "outputs/models/band_h5_7.joblib",
-      "stack_members": {},
-      "responds_to_actuators": false,
+      "stack_members": {
+        "Naive": 0.1337,
+        "kNN": 0.0669,
+        "BayesianRidge": 0.0646,
+        "RandomForest": 0.0594,
+        "HistGBM": 0.0563,
+        "FlowConc": 0.0451,
+        "ExtraTrees": 0.0442,
+        "SeasonalNaive": 0.0358,
+        "ElasticNet": 0.0305
+      },
+      "responds_to_actuators": true,
       "cv": {
-        "model": "FlowAnchor",
-        "pooled_R2": 0.5694,
-        "RMSSE_pct": 97.1,
+        "model": "Stack",
+        "pooled_R2": 0.5744,
+        "RMSSE_pct": 96.5,
         "meets_r2_goal": false,
         "beats_naive": true
       }
@@ -108,17 +128,20 @@
       "n_train": 16124,
       "path": "outputs/models/band_h7_14.joblib",
       "stack_members": {
-        "RandomForest": 0.1706,
-        "ExtraTrees": 0.1014,
-        "ElasticNet": 0.0366,
-        "kNN": 0.0366,
-        "HistGBM": 0.0316,
-        "BayesianRidge": 0.0283
+        "RandomForest": 0.1459,
+        "Naive": 0.0785,
+        "SeasonalNaive": 0.0755,
+        "ExtraTrees": 0.0726,
+        "kNN": 0.0577,
+        "HistGBM": 0.0515,
+        "ElasticNet": 0.0265,
+        "BayesianRidge": 0.024,
+        "FlowConc": 0.0186
       },
       "responds_to_actuators": true,
       "cv": {
         "model": "Stack",
-        "pooled_R2": 0.3513,
+        "pooled_R2": 0.3512,
         "RMSSE_pct": 93.9,
         "meets_r2_goal": false,
         "beats_naive": true
@@ -133,8 +156,8 @@
       "responds_to_actuators": true,
       "cv": {
         "model": "ExtraTrees",
-        "pooled_R2": -0.203,
-        "RMSSE_pct": 99.0,
+        "pooled_R2": -0.1736,
+        "RMSSE_pct": 97.8,
         "meets_r2_goal": false,
         "beats_naive": true
       }
@@ -145,18 +168,20 @@
       "n_train": 30000,
       "path": "outputs/models/band_h30_60.joblib",
       "stack_members": {
-        "ExtraTrees": 0.2488,
-        "kNN": 0.1057,
-        "ElasticNet": 0.0658,
-        "BayesianRidge": 0.0583,
+        "ExtraTrees": 0.2671,
+        "SeasonalNaive": 0.1429,
+        "kNN": 0.1062,
+        "ElasticNet": 0.0666,
+        "Naive": 0.0623,
+        "BayesianRidge": 0.0566,
         "HistGBM": 0.047,
-        "RandomForest": 0.0037
+        "FlowConc": 0.0329
       },
       "responds_to_actuators": true,
       "cv": {
         "model": "Stack",
-        "pooled_R2": -0.5121,
-        "RMSSE_pct": 92.2,
+        "pooled_R2": -0.5062,
+        "RMSSE_pct": 92.0,
         "meets_r2_goal": false,
         "beats_naive": true
       }
@@ -170,8 +195,8 @@
       "responds_to_actuators": true,
       "cv": {
         "model": "RandomForest",
-        "pooled_R2": -0.8617,
-        "RMSSE_pct": 87.8,
+        "pooled_R2": -0.8747,
+        "RMSSE_pct": 88.1,
         "meets_r2_goal": false,
         "beats_naive": true
       }

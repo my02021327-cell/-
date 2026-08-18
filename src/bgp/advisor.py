@@ -38,9 +38,9 @@ from src.bgp import config as C
 # 조작단 정의 : (열, 표시명, 단위, 스텝 탐색 배수, 부하증대 방향인가)
 ACTUATORS = [
     ("feed_AB_tpd", "소화조 투입량", "t/d", (0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15), True),
-    ("mix_foodww", "음폐수 배합비", "-", (0.8, 0.9, 1.0, 1.1, 1.2), True),
-    ("mix_manure", "가축분뇨 배합비", "-", (0.8, 0.9, 1.0, 1.1, 1.2), True),
-    ("mix_food", "음식물류 배합비", "-", (0.8, 0.9, 1.0, 1.1, 1.2), True),
+    ("mix_foodww", "음폐수 배합비", "비율", (0.8, 0.9, 1.0, 1.1, 1.2), True),
+    ("mix_manure", "가축분뇨 배합비", "비율", (0.8, 0.9, 1.0, 1.1, 1.2), True),
+    ("mix_food", "음식물류 배합비", "비율", (0.8, 0.9, 1.0, 1.1, 1.2), True),
     ("dig_T_A_C", "소화조 온도", "℃", (-1.0, -0.5, 0.0, 0.5, 1.0), False),
     ("dewater_tpd", "탈수 처리량", "t/d", (0.8, 0.9, 1.0, 1.1, 1.2), False),
 ]
@@ -53,16 +53,34 @@ SAFETY_GATES = [
 ]
 
 
-def check_safety(state: pd.Series) -> list[dict]:
-    """안전 게이트 판정. 걸린 게이트는 '부하 증대' 방향 권고를 봉쇄한다."""
+# 게이트를 발화시킬 수 있는 측정의 최대 나이(일). 이보다 오래된 값은 여전히 보수적으로
+# 게이트를 걸되 '오래된 값'임을 명시한다 — 이 시설은 NH₃-N 이 89 % 결측이고 FAN 이
+# 1년 넘게 갱신되지 않는 구간이 있다. 그 값으로 조용히 판정하면 근거를 속이는 것이다.
+GATE_MAX_AGE_DAYS = 30
+
+
+def check_safety(state: pd.Series, ages: dict | None = None) -> list[dict]:
+    """
+    안전 게이트 판정. 걸린 게이트는 '부하 증대' 방향 권고를 봉쇄한다.
+
+    `ages` 는 변수별 측정 나이(일)다. 오래된 값으로도 게이트는 걸지만(보수적 선택),
+    응답에 나이와 stale 표시를 실어 운전원이 근거의 신선도를 볼 수 있게 한다.
+    """
+    ages = ages or {}
     hits = []
     for col, thr, op, msg in SAFETY_GATES:
         v = state.get(col, np.nan)
         if not np.isfinite(v):
             continue
         if (op == "ge" and v >= thr) or (op == "le" and v <= thr):
+            age = ages.get(col)
+            stale = age is not None and age > GATE_MAX_AGE_DAYS
+            m = msg.format(v=float(v))
+            if age is not None:
+                m += f" (측정 {age}일 전{' — 오래된 값' if stale else ''})"
             hits.append({"variable": col, "value": round(float(v), 3),
-                         "threshold": thr, "message": msg.format(v=float(v))})
+                         "threshold": thr, "age_days": age, "stale": bool(stale),
+                         "message": m})
     return hits
 
 
@@ -93,14 +111,14 @@ def counterfactual_curve(model, x_row: pd.DataFrame, feature_cols: list[str],
 
 def recommend(model, x_row: pd.DataFrame, state: pd.Series, design_cols: list[str],
               band: str, baseline_ch4: float, model_is_trustworthy: bool = True,
-              max_actions: int = 3) -> dict:
+              max_actions: int = 3, ages: dict | None = None) -> dict:
     """
     반환 : 예측·안전판정·권고 목록.
 
     권고는 「예상 ΔCH₄ 가 큰 순서」로 정렬하되, 안전 게이트에 걸린 방향은 제외한다.
     """
     pred_now = float(np.asarray(model.predict(x_row), float).ravel()[0])
-    gates = check_safety(state)
+    gates = check_safety(state, ages)
     load_blocked = len(gates) > 0
 
     out = {
@@ -177,7 +195,17 @@ def diagnose(state: pd.Series, baseline: pd.Series) -> list[dict]:
         if not (np.isfinite(v) and np.isfinite(b)) or b == 0:
             continue
         dev = 100.0 * (v - b) / abs(b)
-        level = "정상" if abs(dev) < cau else ("주의" if abs(dev) < dan else "위험")
+
+        # 나쁜 방향으로의 이탈만 등급을 올린다. 절대값만 보면 개선이 경보가 된다.
+        direction = C.ALARM_DIRECTION.get(col, "both")
+        if direction == "up":
+            mag = max(dev, 0.0)
+        elif direction == "down":
+            mag = max(-dev, 0.0)
+        else:
+            mag = abs(dev)
+        level = "정상" if mag < cau else ("주의" if mag < dan else "위험")
+
         ref = ""
         gb = C.GUIDELINE.get(col if col != "OLR_calc" else "OLR_kgVS_m3d")
         if gb:
@@ -186,5 +214,15 @@ def diagnose(state: pd.Series, baseline: pd.Series) -> list[dict]:
         rows.append({"variable": col, "value": round(float(v), 3),
                      "baseline_90d": round(float(b), 3),
                      "deviation_pct": round(float(dev), 1),
+                     "direction": direction,
                      "level": level, "guideline_note": ref})
+
+    # 열역학 검사 — Y_COD 는 0 < Y ≤ 0.35 밖이면 값이 아니라 계측 오류의 신호다.
+    y = state.get("Y_COD", np.nan)
+    if np.isfinite(y) and (y <= 0 or y > C.CH4_PER_KG_COD):
+        rows.append({"variable": "Y_COD", "value": round(float(y), 3),
+                     "baseline_90d": None, "deviation_pct": None, "direction": "both",
+                     "level": "위험",
+                     "guideline_note": f"열역학 상한 {C.CH4_PER_KG_COD} 초과 — "
+                                       "COD·유량·가스 중 하나가 잘못 계측된 날이다"})
     return rows

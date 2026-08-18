@@ -557,7 +557,10 @@ function renderGauges(gauges) {
   const cls = {NORMAL: '', CAUTION: 'led-warn', ACTION: 'led-danger', 'NO-MODEL': 'led-warn'};
   $('gaugeRack').innerHTML = gauges.map(g => `
     <div class="gauge-bay">
-      <div class="gauge-bay-top"><span>${g.label}</span></div>
+      <div class="gauge-bay-top"><span>${g.label}</span>${
+        g.age_days === null || g.age_days === undefined ? '' :
+        `<span style="font-size:11px; color:${g.age_days > 3 ? '#B00000' : '#404040'};">${
+          g.age_days === 0 ? '금일' : `${g.age_days}일 전`}</span>`}</div>
       <div class="hmi-led-display">
         <div style="display:flex; align-items:baseline; gap:5px;">
           <span class="led-number ${cls[g.status] || ''}">${fmt(g.value, g.unit === 'RATIO' ? 3 : (g.unit === '%' || g.unit === '℃' ? 1 : 0))}</span>
@@ -643,7 +646,8 @@ function renderTelemetry(d) {
     return `<tr>
       <td><b title="${r.guideline_note || ''}">${r.label}</b></td>
       <td style="font-family:var(--font-led); font-weight:bold; color:${col}; text-align:right;">
-        ${fmt(r.value, Math.abs(r.value) < 10 ? 2 : 1)} ${r.unit}</td>
+        ${fmt(r.value, Math.abs(r.value) < 10 ? 2 : 1)} ${r.unit}
+        ${r.age_days ? `<span style="font-size:10.5px; font-weight:normal; color:${r.age_days > 3 ? '#B00000' : '#606060'};"> (${r.age_days}d)</span>` : ''}</td>
       <td style="font-family:var(--font-led); text-align:right;">${fmt(r.baseline_90d, Math.abs(r.baseline_90d||0) < 10 ? 2 : 1)}
         <span style="font-size:11px; color:#404040;">(${r.deviation_pct > 0 ? '+' : ''}${fmt(r.deviation_pct, 1)}%)</span></td>
       <td style="text-align:center;"><span class="table-lamp ${c}"></span><b style="color:${col};">${txt}</b></td>
@@ -698,7 +702,7 @@ async function renderAdvisory() {
       ${a.delta_vs_baseline_pct > 0 ? '+' : ''}${fmt(a.delta_vs_baseline_pct, 1)}%</span></div>`;
 
   if (a.safety_gates.length) {
-    h += a.safety_gates.map(g => `<div class="gate">⛔ SAFETY GATE — ${g.message}</div>`).join('');
+    h += a.safety_gates.map(g => `<div class="gate">${g.stale ? '⚠' : '⛔'} SAFETY GATE — ${g.message}</div>`).join('');
   }
   if (a.responds_to_actuators === false) {
     h += `<div class="gate">ℹ 채택 모델: ${a.model} — ${a.note}</div>`;
@@ -817,6 +821,10 @@ async function init() {
     if (!h.ready) { showOffline({message: h.reason}); return; }
     $('conn').textContent = 'API: ONLINE';
     $('sbData').textContent = `DATA: ${h.data_range[0]} ~ ${h.data_range[1]}`;
+    if (h.imputation) {
+      $('sbImp').textContent = `IMPUTE: 라벨 ${h.imputation.labels} / 피처 ${h.imputation.features}` +
+        ` (${h.imputation.labels_observed}→${h.imputation.labels_after_fill})`;
+    }
     BANDS = await get('/api/bands');
     const opts = Object.keys(BANDS).map(k =>
       `<option value="${k}">${k} (h ${BANDS[k].range_days[0]}–${BANDS[k].range_days[1]}일)</option>`).join('');

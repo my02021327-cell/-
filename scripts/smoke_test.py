@@ -62,13 +62,23 @@ def main():
     check("네 각도 모두 생성", set(groups) == {"substrate", "chemistry", "vsbalance", "temporal"},
           str({k: len(v) for k, v in groups.items()}))
     # 인과성 : 미래를 참조하면 마지막 행 이후 값을 바꿔도 과거 피처가 흔들린다
+    from src.bgp.features import build_features
+
+    # prepare() 와 **같은 타깃 열**로 다시 만들어야 비교가 성립한다.
+    # (다른 열로 만들면 시계열 각도 전체가 달라져 누출과 무관하게 불일치가 난다)
+    X0, _ = build_features(d2, target_col="CH4_m3d_causal")
     d3 = d2.copy()
     d3.loc[d3.index[-30:], C.FLOW] = d3[C.FLOW].iloc[-30:] * 3.0
-    from src.bgp.features import build_features
-    X3, _ = build_features(d3, target_col="CH4_m3d_filled")
-    same = np.allclose(np.nan_to_num(X.iloc[:-30].to_numpy(float)),
-                       np.nan_to_num(X3.iloc[:-30].to_numpy(float)))
-    check("미래 값을 바꿔도 과거 피처가 불변(누출 없음)", same)
+    X3, _ = build_features(d3, target_col="CH4_m3d_causal")
+    a = np.nan_to_num(X0.iloc[:-30].to_numpy(float))
+    b = np.nan_to_num(X3.iloc[:-30].to_numpy(float))
+    same = np.allclose(a, b)
+    if not same:
+        bad = np.where(~np.isclose(a, b).all(axis=0))[0]
+        detail = ", ".join(X0.columns[i] for i in bad[:5])
+    else:
+        detail = f"{X0.shape[1]}개 열 · 마지막 30일 유량 3배 교란"
+    check("미래 값을 바꿔도 과거 피처가 불변(누출 없음)", same, detail)
 
     print("[4/4] API")
     try:
