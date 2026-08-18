@@ -129,6 +129,7 @@ def run_band(df: pd.DataFrame, X: pd.DataFrame, y_train_label: pd.Series,
     oof: dict[str, list[np.ndarray]] = {k: [] for k in per_fold}
     oof_y, oof_t, oof_h, oof_fold = [], [], [], []
     sel_hist: dict[str, int] = {}
+    stack_w: dict[str, list[float]] = {}
 
     # naive 기준선의 앵커 : 마지막 '실측' 메탄. 기준선은 보간의 도움을 받지 않는다.
     anchor_all = y_true.ffill().to_numpy(float)
@@ -189,16 +190,28 @@ def run_band(df: pd.DataFrame, X: pd.DataFrame, y_train_label: pd.Series,
         per_fold["FlowAnchor"].append(_rmse(yte, p_fa))
         oof["FlowAnchor"].append(p_fa)
 
-        sn = SeasonalNaive().fit(pd.DataFrame({"tmp__y_ma30": X["tmp__y_ma30"].to_numpy()[o_all[tr]]}), ytr)
-        p_sn = sn.predict(pd.DataFrame({"tmp__y_ma30": X["tmp__y_ma30"].to_numpy()[o_all[te]]}))
+        ma30 = X["tmp__y_ma30"].to_numpy()
+        sn = SeasonalNaive().fit(pd.DataFrame({"tmp__y_ma30": ma30[o_all[tr]]}), ytr)
+        p_sn = sn.predict(pd.DataFrame({"tmp__y_ma30": ma30[o_all[te]]}))
         per_fold["SeasonalNaive"].append(_rmse(yte, p_sn))
         oof["SeasonalNaive"].append(p_sn)
 
-        # 잔차 표적용 앵커 : naive 와 같은 값을 써야 delta=0 이 naive 로 수렴한다
+        # 잔차 표적용 앵커 : FlowAnchor 와 같은 값을 써야 delta=0 이 FlowAnchor 로 수렴한다
         a_fit, a_va = delta_anchor[o_all[fit]], delta_anchor[o_all[va]]
         a_tr, a_te = delta_anchor[o_all[tr]], delta_anchor[o_all[te]]
 
-        val_preds, test_preds = {}, {}
+        # ── 기준선도 스태킹 멤버로 넣는다 ────────────────────────────────────
+        # 짧은 지평에서는 FlowAnchor 가 학습 모델 전부를 이긴다. 그 사실을 알고도
+        # 학습 모델끼리만 결합하면 앙상블이 최선 단일 모델보다 나빠진다 — 실제로 그랬다
+        # (h1_3 에서 Stack 0.818 < FlowAnchor 0.864). NNLS 는 비음수 가중이므로
+        # 「FlowAnchor 에 큰 가중 + 모델에 작은 보정 가중」을 스스로 찾을 수 있고,
+        # 쓸모없는 멤버는 0 으로 배제한다.
+        val_preds = {
+            "FlowAnchor": a_va,
+            "Naive": anchor[o_all[va]],
+            "SeasonalNaive": sn.predict(pd.DataFrame({"tmp__y_ma30": ma30[o_all[va]]})),
+        }
+        test_preds = {"FlowAnchor": p_fa, "Naive": naive_te, "SeasonalNaive": p_sn}
         for mname, cands in zoo.items():
             if mname == "SARIMAX":
                 # 유량 계열을 상태공간 모형으로 앞으로 굴리고 농도를 곱해 메탄으로 되돌린다.
@@ -292,6 +305,9 @@ def run_band(df: pd.DataFrame, X: pd.DataFrame, y_train_label: pd.Series,
             p_stack = Pt @ w
             per_fold["Stack"].append(_rmse(yte, p_stack))
             oof["Stack"].append(p_stack)
+            tot = float(w.sum()) or 1.0
+            for k, wi in zip(names, w):
+                stack_w.setdefault(k, []).append(float(wi) / tot)
 
         oof_y.append(yte)
         oof_t.append(o_all[te])
@@ -309,7 +325,10 @@ def run_band(df: pd.DataFrame, X: pd.DataFrame, y_train_label: pd.Series,
     Y = np.concatenate(oof_y)
     res = {"band": name, "lo": lo, "hi": hi, "n_folds": len(oof_y),
            "n_test": int(len(Y)), "y_mean": round(float(Y.mean()), 1),
-           "y_sd": round(float(Y.std()), 1), "models": {}, "selected_candidates": sel_hist}
+           "y_sd": round(float(Y.std()), 1), "models": {}, "selected_candidates": sel_hist,
+           "stack_weights_mean": {k: round(float(np.mean(v)), 4)
+                                  for k, v in sorted(stack_w.items(),
+                                                     key=lambda kv: -np.mean(kv[1]))}}
 
     naive_pool = np.concatenate(oof["Naive"])
     naive_rmse_pool = _rmse(Y, naive_pool)

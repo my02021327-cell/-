@@ -1,0 +1,995 @@
+{
+  "info": {
+    "quality": {
+      "n_days": 2086,
+      "date_range": [
+        "2018-01-01",
+        "2023-09-17"
+      ],
+      "target_observed": 1265,
+      "target_missing_pct": 39.4,
+      "flow_missing_pct": 0.0,
+      "conc_missing_pct": 39.4,
+      "thermo_violation_pct": 15.1,
+      "missing_by_angle": {
+        "substrate": 21.3,
+        "chemistry": 47.6,
+        "vsbalance": 32.4,
+        "temporal": 26.2
+      },
+      "thermo_violation_by_year": {
+        "2018": 72.0,
+        "2019": 12.6,
+        "2020": 12.1,
+        "2021": 0.9,
+        "2022": 13.2,
+        "2023": 27.8
+      }
+    },
+    "imputation": {
+      "selected_method_labels": "linear",
+      "selected_method_features": "ffill",
+      "candidate_MAE_pp": {
+        "linear": 0.536,
+        "ffill": 0.768,
+        "softsensor": 1.499,
+        "soft_neigh": 0.64
+      },
+      "candidate_MAE_pp_causal": {
+        "ffill": 0.768,
+        "softsensor": 1.499,
+        "soft_neigh": 0.768
+      },
+      "fit_end": "2021-12-30",
+      "causal_only": false,
+      "labels_observed": 1265,
+      "labels_after_fill": 2086
+    },
+    "features": {
+      "n_total": 547,
+      "by_angle": {
+        "substrate": 198,
+        "chemistry": 165,
+        "vsbalance": 143,
+        "temporal": 41
+      }
+    },
+    "outliers_flagged": 42
+  },
+  "bands": {
+    "h1_3": {
+      "band": "h1_3",
+      "lo": 1,
+      "hi": 3,
+      "n_folds": 12,
+      "n_test": 2502,
+      "y_mean": 6593.6,
+      "y_sd": 1215.4,
+      "models": {
+        "FlowAnchor": {
+          "pooled_R2": 0.8639,
+          "pooled_RMSE": 448.4,
+          "pooled_MAE": 310.2,
+          "pooled_MAPE": 4.85,
+          "RMSSE_pct": 84.1,
+          "CV_RMSE": 433.9,
+          "p_vs_naive": 0.0002
+        },
+        "ExtraTrees": {
+          "pooled_R2": 0.8398,
+          "pooled_RMSE": 486.4,
+          "pooled_MAE": 361.4,
+          "pooled_MAPE": 5.78,
+          "RMSSE_pct": 91.2,
+          "CV_RMSE": 467.9,
+          "p_vs_naive": 0.0527
+        },
+        "HistGBM": {
+          "pooled_R2": 0.8219,
+          "pooled_RMSE": 512.9,
+          "pooled_MAE": 381.9,
+          "pooled_MAPE": 6.13,
+          "RMSSE_pct": 96.1,
+          "CV_RMSE": 504.8,
+          "p_vs_naive": 0.4952
+        },
+        "Stack": {
+          "pooled_R2": 0.8176,
+          "pooled_RMSE": 519.1,
+          "pooled_MAE": 381.2,
+          "pooled_MAPE": 6.13,
+          "RMSSE_pct": 97.3,
+          "CV_RMSE": 484.4,
+          "p_vs_naive": 0.1998
+        },
+        "RandomForest": {
+          "pooled_R2": 0.8047,
+          "pooled_RMSE": 537.2,
+          "pooled_MAE": 388.2,
+          "pooled_MAPE": 6.22,
+          "RMSSE_pct": 100.7,
+          "CV_RMSE": 506.9,
+          "p_vs_naive": 0.8318
+        },
+        "FlowConc": {
+          "pooled_R2": 0.7966,
+          "pooled_RMSE": 548.1,
+          "pooled_MAE": 416.8,
+          "pooled_MAPE": 6.68,
+          "RMSSE_pct": 102.7,
+          "CV_RMSE": 530.4,
+          "p_vs_naive": 0.3918
+        },
+        "kNN": {
+          "pooled_R2": 0.7924,
+          "pooled_RMSE": 553.8,
+          "pooled_MAE": 390.6,
+          "pooled_MAPE": 6.09,
+          "RMSSE_pct": 103.8,
+          "CV_RMSE": 508.9,
+          "p_vs_naive": 0.8309
+        },
+        "ElasticNet": {
+          "pooled_R2": 0.7812,
+          "pooled_RMSE": 568.5,
+          "pooled_MAE": 435.9,
+          "pooled_MAPE": 7.09,
+          "RMSSE_pct": 106.6,
+          "CV_RMSE": 532.9,
+          "p_vs_naive": 0.5795
+        },
+        "BayesianRidge": {
+          "pooled_R2": 0.5859,
+          "pooled_RMSE": 782.1,
+          "pooled_MAE": 556.9,
+          "pooled_MAPE": 8.91,
+          "RMSSE_pct": 146.6,
+          "CV_RMSE": 655.6,
+          "p_vs_naive": 0.1183
+        },
+        "SeasonalNaive": {
+          "pooled_R2": 0.4098,
+          "pooled_RMSE": 933.7,
+          "pooled_MAE": 702.0,
+          "pooled_MAPE": 11.35,
+          "RMSSE_pct": 175.0,
+          "CV_RMSE": 897.1,
+          "p_vs_naive": 0.0
+        }
+      },
+      "selected_candidates": {
+        "HistGBM#1/delta": 3,
+        "RandomForest#0/delta": 7,
+        "ExtraTrees#0/delta": 9,
+        "ElasticNet#2/level": 2,
+        "BayesianRidge#0/level": 12,
+        "kNN#2/level": 1,
+        "HistGBM#0/delta": 3,
+        "ElasticNet#0/level": 3,
+        "kNN#0/delta": 2,
+        "ElasticNet#3/level": 6,
+        "kNN#1/delta": 2,
+        "HistGBM#0/level": 5,
+        "RandomForest#0/level": 5,
+        "ExtraTrees#0/level": 3,
+        "ElasticNet#5/level": 1,
+        "kNN#2/delta": 7,
+        "HistGBM#1/level": 1
+      },
+      "naive": {
+        "pooled_R2": 0.8074,
+        "pooled_RMSE": 533.5,
+        "CV_RMSE": 516.6
+      }
+    },
+    "h3_5": {
+      "band": "h3_5",
+      "lo": 3,
+      "hi": 5,
+      "n_folds": 12,
+      "n_test": 2499,
+      "y_mean": 6590.6,
+      "y_sd": 1213.1,
+      "models": {
+        "FlowAnchor": {
+          "pooled_R2": 0.7198,
+          "pooled_RMSE": 642.2,
+          "pooled_MAE": 468.3,
+          "pooled_MAPE": 7.4,
+          "RMSSE_pct": 91.1,
+          "CV_RMSE": 615.9,
+          "p_vs_naive": 0.0031
+        },
+        "ExtraTrees": {
+          "pooled_R2": 0.6594,
+          "pooled_RMSE": 708.0,
+          "pooled_MAE": 530.0,
+          "pooled_MAPE": 8.51,
+          "RMSSE_pct": 100.4,
+          "CV_RMSE": 671.0,
+          "p_vs_naive": 0.9083
+        },
+        "Stack": {
+          "pooled_R2": 0.6178,
+          "pooled_RMSE": 749.9,
+          "pooled_MAE": 566.2,
+          "pooled_MAPE": 9.19,
+          "RMSSE_pct": 106.4,
+          "CV_RMSE": 706.4,
+          "p_vs_naive": 0.2984
+        },
+        "kNN": {
+          "pooled_R2": 0.6006,
+          "pooled_RMSE": 766.6,
+          "pooled_MAE": 573.6,
+          "pooled_MAPE": 9.05,
+          "RMSSE_pct": 108.7,
+          "CV_RMSE": 715.2,
+          "p_vs_naive": 0.3286
+        },
+        "ElasticNet": {
+          "pooled_R2": 0.5852,
+          "pooled_RMSE": 781.3,
+          "pooled_MAE": 595.0,
+          "pooled_MAPE": 9.79,
+          "RMSSE_pct": 110.8,
+          "CV_RMSE": 740.5,
+          "p_vs_naive": 0.0703
+        },
+        "RandomForest": {
+          "pooled_R2": 0.5135,
+          "pooled_RMSE": 846.1,
+          "pooled_MAE": 597.6,
+          "pooled_MAPE": 9.46,
+          "RMSSE_pct": 120.0,
+          "CV_RMSE": 763.2,
+          "p_vs_naive": 0.342
+        },
+        "HistGBM": {
+          "pooled_R2": 0.502,
+          "pooled_RMSE": 856.1,
+          "pooled_MAE": 624.1,
+          "pooled_MAPE": 9.77,
+          "RMSSE_pct": 121.4,
+          "CV_RMSE": 796.9,
+          "p_vs_naive": 0.115
+        },
+        "FlowConc": {
+          "pooled_R2": 0.4714,
+          "pooled_RMSE": 882.0,
+          "pooled_MAE": 672.9,
+          "pooled_MAPE": 10.78,
+          "RMSSE_pct": 125.1,
+          "CV_RMSE": 832.6,
+          "p_vs_naive": 0.0147
+        },
+        "BayesianRidge": {
+          "pooled_R2": 0.339,
+          "pooled_RMSE": 986.3,
+          "pooled_MAE": 752.9,
+          "pooled_MAPE": 12.21,
+          "RMSSE_pct": 139.9,
+          "CV_RMSE": 905.1,
+          "p_vs_naive": 0.0096
+        },
+        "SeasonalNaive": {
+          "pooled_R2": 0.3181,
+          "pooled_RMSE": 1001.7,
+          "pooled_MAE": 755.5,
+          "pooled_MAPE": 12.24,
+          "RMSSE_pct": 142.1,
+          "CV_RMSE": 965.8,
+          "p_vs_naive": 0.0002
+        }
+      },
+      "selected_candidates": {
+        "HistGBM#0/level": 4,
+        "RandomForest#0/level": 4,
+        "ExtraTrees#0/level": 3,
+        "ElasticNet#4/level": 2,
+        "BayesianRidge#0/level": 12,
+        "kNN#2/level": 1,
+        "HistGBM#0/delta": 5,
+        "RandomForest#0/delta": 8,
+        "ExtraTrees#0/delta": 9,
+        "ElasticNet#3/level": 5,
+        "kNN#1/delta": 4,
+        "kNN#2/delta": 6,
+        "ElasticNet#5/level": 3,
+        "HistGBM#1/level": 2,
+        "HistGBM#1/delta": 1,
+        "kNN#0/delta": 1,
+        "ElasticNet#1/level": 1,
+        "ElasticNet#2/level": 1
+      },
+      "naive": {
+        "pooled_R2": 0.6622,
+        "pooled_RMSE": 705.0,
+        "CV_RMSE": 674.8
+      }
+    },
+    "h5_7": {
+      "band": "h5_7",
+      "lo": 5,
+      "hi": 7,
+      "n_folds": 12,
+      "n_test": 2496,
+      "y_mean": 6587.6,
+      "y_sd": 1210.7,
+      "models": {
+        "FlowAnchor": {
+          "pooled_R2": 0.5694,
+          "pooled_RMSE": 794.5,
+          "pooled_MAE": 590.7,
+          "pooled_MAPE": 9.42,
+          "RMSSE_pct": 97.1,
+          "CV_RMSE": 753.8,
+          "p_vs_naive": 0.0655
+        },
+        "ExtraTrees": {
+          "pooled_R2": 0.505,
+          "pooled_RMSE": 851.8,
+          "pooled_MAE": 659.6,
+          "pooled_MAPE": 10.7,
+          "RMSSE_pct": 104.1,
+          "CV_RMSE": 810.3,
+          "p_vs_naive": 0.3267
+        },
+        "RandomForest": {
+          "pooled_R2": 0.4357,
+          "pooled_RMSE": 909.5,
+          "pooled_MAE": 685.2,
+          "pooled_MAPE": 11.08,
+          "RMSSE_pct": 111.2,
+          "CV_RMSE": 844.1,
+          "p_vs_naive": 0.2571
+        },
+        "kNN": {
+          "pooled_R2": 0.4328,
+          "pooled_RMSE": 911.8,
+          "pooled_MAE": 694.6,
+          "pooled_MAPE": 11.05,
+          "RMSSE_pct": 111.4,
+          "CV_RMSE": 841.8,
+          "p_vs_naive": 0.2662
+        },
+        "Stack": {
+          "pooled_R2": 0.4307,
+          "pooled_RMSE": 913.5,
+          "pooled_MAE": 696.9,
+          "pooled_MAPE": 11.44,
+          "RMSSE_pct": 111.7,
+          "CV_RMSE": 866.3,
+          "p_vs_naive": 0.0807
+        },
+        "ElasticNet": {
+          "pooled_R2": 0.3988,
+          "pooled_RMSE": 938.8,
+          "pooled_MAE": 727.9,
+          "pooled_MAPE": 12.01,
+          "RMSSE_pct": 114.7,
+          "CV_RMSE": 891.6,
+          "p_vs_naive": 0.0679
+        },
+        "SeasonalNaive": {
+          "pooled_R2": 0.2356,
+          "pooled_RMSE": 1058.5,
+          "pooled_MAE": 801.7,
+          "pooled_MAPE": 13.0,
+          "RMSSE_pct": 129.4,
+          "CV_RMSE": 1024.3,
+          "p_vs_naive": 0.001
+        },
+        "BayesianRidge": {
+          "pooled_R2": 0.169,
+          "pooled_RMSE": 1103.7,
+          "pooled_MAE": 862.0,
+          "pooled_MAPE": 13.97,
+          "RMSSE_pct": 134.9,
+          "CV_RMSE": 1041.0,
+          "p_vs_naive": 0.0113
+        },
+        "HistGBM": {
+          "pooled_R2": 0.1621,
+          "pooled_RMSE": 1108.3,
+          "pooled_MAE": 806.0,
+          "pooled_MAPE": 13.17,
+          "RMSSE_pct": 135.5,
+          "CV_RMSE": 1001.1,
+          "p_vs_naive": 0.0791
+        },
+        "FlowConc": {
+          "pooled_R2": 0.1148,
+          "pooled_RMSE": 1139.1,
+          "pooled_MAE": 862.5,
+          "pooled_MAPE": 14.05,
+          "RMSSE_pct": 139.2,
+          "CV_RMSE": 1056.9,
+          "p_vs_naive": 0.0179
+        }
+      },
+      "selected_candidates": {
+        "HistGBM#0/level": 4,
+        "RandomForest#0/level": 2,
+        "ExtraTrees#0/level": 5,
+        "ElasticNet#3/level": 6,
+        "BayesianRidge#0/level": 12,
+        "kNN#2/level": 2,
+        "HistGBM#1/delta": 2,
+        "RandomForest#0/delta": 10,
+        "ExtraTrees#0/delta": 7,
+        "kNN#2/delta": 8,
+        "HistGBM#0/delta": 5,
+        "ElasticNet#4/level": 4,
+        "HistGBM#1/level": 1,
+        "ElasticNet#1/level": 1,
+        "kNN#1/delta": 1,
+        "ElasticNet#5/level": 1,
+        "kNN#0/level": 1
+      },
+      "naive": {
+        "pooled_R2": 0.5433,
+        "pooled_RMSE": 818.2,
+        "CV_RMSE": 779.6
+      }
+    },
+    "h7_14": {
+      "band": "h7_14",
+      "lo": 7,
+      "hi": 14,
+      "n_folds": 12,
+      "n_test": 6627,
+      "y_mean": 6577.2,
+      "y_sd": 1202.8,
+      "models": {
+        "FlowAnchor": {
+          "pooled_R2": 0.2813,
+          "pooled_RMSE": 1019.7,
+          "pooled_MAE": 775.2,
+          "pooled_MAPE": 12.39,
+          "RMSSE_pct": 98.8,
+          "CV_RMSE": 970.1,
+          "p_vs_naive": 0.2555
+        },
+        "ExtraTrees": {
+          "pooled_R2": 0.2432,
+          "pooled_RMSE": 1046.4,
+          "pooled_MAE": 817.0,
+          "pooled_MAPE": 13.48,
+          "RMSSE_pct": 101.4,
+          "CV_RMSE": 1001.4,
+          "p_vs_naive": 0.785
+        },
+        "ElasticNet": {
+          "pooled_R2": 0.1372,
+          "pooled_RMSE": 1117.3,
+          "pooled_MAE": 871.0,
+          "pooled_MAPE": 14.37,
+          "RMSSE_pct": 108.3,
+          "CV_RMSE": 1039.3,
+          "p_vs_naive": 0.4813
+        },
+        "RandomForest": {
+          "pooled_R2": 0.0841,
+          "pooled_RMSE": 1151.1,
+          "pooled_MAE": 913.0,
+          "pooled_MAPE": 15.12,
+          "RMSSE_pct": 111.6,
+          "CV_RMSE": 1087.9,
+          "p_vs_naive": 0.1739
+        },
+        "SeasonalNaive": {
+          "pooled_R2": 0.0762,
+          "pooled_RMSE": 1156.1,
+          "pooled_MAE": 880.3,
+          "pooled_MAPE": 14.31,
+          "RMSSE_pct": 112.0,
+          "CV_RMSE": 1129.7,
+          "p_vs_naive": 0.0247
+        },
+        "kNN": {
+          "pooled_R2": 0.0146,
+          "pooled_RMSE": 1194.0,
+          "pooled_MAE": 919.9,
+          "pooled_MAPE": 15.04,
+          "RMSSE_pct": 115.7,
+          "CV_RMSE": 1134.0,
+          "p_vs_naive": 0.0716
+        },
+        "Stack": {
+          "pooled_R2": -0.0039,
+          "pooled_RMSE": 1205.2,
+          "pooled_MAE": 955.8,
+          "pooled_MAPE": 15.59,
+          "RMSSE_pct": 116.8,
+          "CV_RMSE": 1117.8,
+          "p_vs_naive": 0.239
+        },
+        "HistGBM": {
+          "pooled_R2": -0.059,
+          "pooled_RMSE": 1237.8,
+          "pooled_MAE": 969.6,
+          "pooled_MAPE": 16.24,
+          "RMSSE_pct": 120.0,
+          "CV_RMSE": 1184.6,
+          "p_vs_naive": 0.0108
+        },
+        "FlowConc": {
+          "pooled_R2": -0.2114,
+          "pooled_RMSE": 1323.9,
+          "pooled_MAE": 1076.3,
+          "pooled_MAPE": 17.61,
+          "RMSSE_pct": 128.3,
+          "CV_RMSE": 1275.8,
+          "p_vs_naive": 0.0009
+        },
+        "BayesianRidge": {
+          "pooled_R2": -0.4428,
+          "pooled_RMSE": 1444.8,
+          "pooled_MAE": 1106.7,
+          "pooled_MAPE": 17.36,
+          "RMSSE_pct": 140.0,
+          "CV_RMSE": 1312.8,
+          "p_vs_naive": 0.028
+        }
+      },
+      "selected_candidates": {
+        "HistGBM#0/delta": 3,
+        "RandomForest#0/delta": 5,
+        "ExtraTrees#0/delta": 10,
+        "ElasticNet#5/level": 2,
+        "BayesianRidge#0/level": 12,
+        "kNN#2/level": 5,
+        "HistGBM#0/level": 4,
+        "RandomForest#0/level": 7,
+        "ElasticNet#0/level": 1,
+        "HistGBM#1/level": 2,
+        "ElasticNet#4/level": 4,
+        "kNN#1/delta": 2,
+        "kNN#2/delta": 4,
+        "HistGBM#1/delta": 3,
+        "ElasticNet#2/level": 3,
+        "ExtraTrees#0/level": 2,
+        "ElasticNet#3/level": 1,
+        "kNN#0/level": 1,
+        "ElasticNet#1/level": 1
+      },
+      "naive": {
+        "pooled_R2": 0.264,
+        "pooled_RMSE": 1031.9,
+        "CV_RMSE": 991.7
+      }
+    },
+    "h14_30": {
+      "band": "h14_30",
+      "lo": 14,
+      "hi": 30,
+      "n_folds": 12,
+      "n_test": 13964,
+      "y_mean": 6560.7,
+      "y_sd": 1194.1,
+      "models": {
+        "ExtraTrees": {
+          "pooled_R2": -0.203,
+          "pooled_RMSE": 1309.7,
+          "pooled_MAE": 1040.2,
+          "pooled_MAPE": 17.14,
+          "RMSSE_pct": 99.0,
+          "CV_RMSE": 1209.0,
+          "p_vs_naive": 0.3855
+        },
+        "FlowAnchor": {
+          "pooled_R2": -0.2047,
+          "pooled_RMSE": 1310.7,
+          "pooled_MAE": 1004.9,
+          "pooled_MAPE": 16.29,
+          "RMSSE_pct": 99.0,
+          "CV_RMSE": 1262.8,
+          "p_vs_naive": 0.2258
+        },
+        "SeasonalNaive": {
+          "pooled_R2": -0.2316,
+          "pooled_RMSE": 1325.3,
+          "pooled_MAE": 1033.9,
+          "pooled_MAPE": 16.87,
+          "RMSSE_pct": 100.1,
+          "CV_RMSE": 1325.7,
+          "p_vs_naive": 0.5329
+        },
+        "HistGBM": {
+          "pooled_R2": -0.3916,
+          "pooled_RMSE": 1408.7,
+          "pooled_MAE": 1075.2,
+          "pooled_MAPE": 17.95,
+          "RMSSE_pct": 106.4,
+          "CV_RMSE": 1282.3,
+          "p_vs_naive": 0.9562
+        },
+        "RandomForest": {
+          "pooled_R2": -0.4729,
+          "pooled_RMSE": 1449.2,
+          "pooled_MAE": 1121.5,
+          "pooled_MAPE": 18.7,
+          "RMSSE_pct": 109.5,
+          "CV_RMSE": 1270.9,
+          "p_vs_naive": 0.8999
+        },
+        "ElasticNet": {
+          "pooled_R2": -0.503,
+          "pooled_RMSE": 1464.0,
+          "pooled_MAE": 1183.0,
+          "pooled_MAPE": 19.03,
+          "RMSSE_pct": 110.6,
+          "CV_RMSE": 1398.6,
+          "p_vs_naive": 0.2104
+        },
+        "kNN": {
+          "pooled_R2": -0.6443,
+          "pooled_RMSE": 1531.3,
+          "pooled_MAE": 1219.8,
+          "pooled_MAPE": 20.29,
+          "RMSSE_pct": 115.7,
+          "CV_RMSE": 1477.6,
+          "p_vs_naive": 0.083
+        },
+        "FlowConc": {
+          "pooled_R2": -0.7152,
+          "pooled_RMSE": 1563.9,
+          "pooled_MAE": 1208.3,
+          "pooled_MAPE": 19.75,
+          "RMSSE_pct": 118.2,
+          "CV_RMSE": 1423.1,
+          "p_vs_naive": 0.3857
+        },
+        "Stack": {
+          "pooled_R2": -0.8126,
+          "pooled_RMSE": 1607.7,
+          "pooled_MAE": 1266.5,
+          "pooled_MAPE": 20.43,
+          "RMSSE_pct": 121.5,
+          "CV_RMSE": 1498.6,
+          "p_vs_naive": 0.1529
+        },
+        "BayesianRidge": {
+          "pooled_R2": -2.9327,
+          "pooled_RMSE": 2368.1,
+          "pooled_MAE": 1949.9,
+          "pooled_MAPE": 30.36,
+          "RMSSE_pct": 179.0,
+          "CV_RMSE": 2129.7,
+          "p_vs_naive": 0.0048
+        }
+      },
+      "selected_candidates": {
+        "HistGBM#0/delta": 4,
+        "RandomForest#0/delta": 8,
+        "ExtraTrees#0/level": 4,
+        "ElasticNet#4/level": 6,
+        "BayesianRidge#0/level": 12,
+        "kNN#2/level": 6,
+        "HistGBM#0/level": 3,
+        "RandomForest#0/level": 4,
+        "ExtraTrees#0/delta": 8,
+        "ElasticNet#1/level": 2,
+        "kNN#0/level": 1,
+        "kNN#0/delta": 2,
+        "HistGBM#1/level": 2,
+        "ElasticNet#5/level": 1,
+        "HistGBM#1/delta": 3,
+        "ElasticNet#3/level": 2,
+        "ElasticNet#2/level": 1,
+        "kNN#2/delta": 2,
+        "kNN#1/delta": 1
+      },
+      "naive": {
+        "pooled_R2": -0.2281,
+        "pooled_RMSE": 1323.3,
+        "CV_RMSE": 1289.5
+      }
+    },
+    "h30_60": {
+      "band": "h30_60",
+      "lo": 30,
+      "hi": 60,
+      "n_folds": 11,
+      "n_test": 24997,
+      "y_mean": 6536.3,
+      "y_sd": 1188.7,
+      "models": {
+        "ExtraTrees": {
+          "pooled_R2": -0.6398,
+          "pooled_RMSE": 1522.1,
+          "pooled_MAE": 1264.7,
+          "pooled_MAPE": 20.89,
+          "RMSSE_pct": 96.0,
+          "CV_RMSE": 1501.1,
+          "p_vs_naive": 0.688
+        },
+        "RandomForest": {
+          "pooled_R2": -0.6509,
+          "pooled_RMSE": 1527.3,
+          "pooled_MAE": 1280.9,
+          "pooled_MAPE": 21.09,
+          "RMSSE_pct": 96.3,
+          "CV_RMSE": 1500.5,
+          "p_vs_naive": 0.7149
+        },
+        "SeasonalNaive": {
+          "pooled_R2": -0.7162,
+          "pooled_RMSE": 1557.2,
+          "pooled_MAE": 1285.5,
+          "pooled_MAPE": 20.83,
+          "RMSSE_pct": 98.2,
+          "CV_RMSE": 1518.0,
+          "p_vs_naive": 0.7046
+        },
+        "FlowAnchor": {
+          "pooled_R2": -0.7771,
+          "pooled_RMSE": 1584.6,
+          "pooled_MAE": 1262.2,
+          "pooled_MAPE": 20.51,
+          "RMSSE_pct": 100.0,
+          "CV_RMSE": 1536.9,
+          "p_vs_naive": 0.7967
+        },
+        "HistGBM": {
+          "pooled_R2": -0.9852,
+          "pooled_RMSE": 1674.8,
+          "pooled_MAE": 1354.2,
+          "pooled_MAPE": 22.15,
+          "RMSSE_pct": 105.6,
+          "CV_RMSE": 1580.2,
+          "p_vs_naive": 0.7797
+        },
+        "FlowConc": {
+          "pooled_R2": -1.125,
+          "pooled_RMSE": 1732.8,
+          "pooled_MAE": 1439.8,
+          "pooled_MAPE": 23.74,
+          "RMSSE_pct": 109.3,
+          "CV_RMSE": 1686.5,
+          "p_vs_naive": 0.3614
+        },
+        "kNN": {
+          "pooled_R2": -1.2378,
+          "pooled_RMSE": 1778.1,
+          "pooled_MAE": 1486.5,
+          "pooled_MAPE": 24.51,
+          "RMSSE_pct": 112.2,
+          "CV_RMSE": 1750.9,
+          "p_vs_naive": 0.0936
+        },
+        "ElasticNet": {
+          "pooled_R2": -1.5059,
+          "pooled_RMSE": 1881.7,
+          "pooled_MAE": 1571.3,
+          "pooled_MAPE": 26.02,
+          "RMSSE_pct": 118.7,
+          "CV_RMSE": 1835.5,
+          "p_vs_naive": 0.1108
+        },
+        "Stack": {
+          "pooled_R2": -1.6027,
+          "pooled_RMSE": 1917.6,
+          "pooled_MAE": 1577.0,
+          "pooled_MAPE": 25.49,
+          "RMSSE_pct": 121.0,
+          "CV_RMSE": 1824.4,
+          "p_vs_naive": 0.052
+        },
+        "BayesianRidge": {
+          "pooled_R2": -3.0182,
+          "pooled_RMSE": 2382.7,
+          "pooled_MAE": 1923.0,
+          "pooled_MAPE": 30.71,
+          "RMSSE_pct": 150.3,
+          "CV_RMSE": 2190.1,
+          "p_vs_naive": 0.0771
+        }
+      },
+      "selected_candidates": {
+        "HistGBM#1/level": 3,
+        "RandomForest#0/delta": 3,
+        "ExtraTrees#0/level": 7,
+        "ElasticNet#4/level": 6,
+        "BayesianRidge#0/level": 11,
+        "kNN#2/level": 6,
+        "HistGBM#0/level": 6,
+        "RandomForest#0/level": 8,
+        "kNN#1/level": 3,
+        "ElasticNet#1/level": 2,
+        "ExtraTrees#0/delta": 4,
+        "ElasticNet#0/level": 1,
+        "ElasticNet#2/level": 1,
+        "HistGBM#1/delta": 2,
+        "kNN#2/delta": 1,
+        "ElasticNet#3/level": 1,
+        "kNN#1/delta": 1
+      },
+      "naive": {
+        "pooled_R2": -0.7786,
+        "pooled_RMSE": 1585.2,
+        "CV_RMSE": 1539.5
+      }
+    },
+    "h60_90": {
+      "band": "h60_90",
+      "lo": 60,
+      "hi": 90,
+      "n_folds": 11,
+      "n_test": 24345,
+      "y_mean": 6522.6,
+      "y_sd": 1180.6,
+      "models": {
+        "RandomForest": {
+          "pooled_R2": -0.8617,
+          "pooled_RMSE": 1610.8,
+          "pooled_MAE": 1340.3,
+          "pooled_MAPE": 22.47,
+          "RMSSE_pct": 87.8,
+          "CV_RMSE": 1533.8,
+          "p_vs_naive": 0.1689
+        },
+        "ExtraTrees": {
+          "pooled_R2": -0.8989,
+          "pooled_RMSE": 1626.8,
+          "pooled_MAE": 1347.6,
+          "pooled_MAPE": 22.79,
+          "RMSSE_pct": 88.7,
+          "CV_RMSE": 1554.4,
+          "p_vs_naive": 0.203
+        },
+        "kNN": {
+          "pooled_R2": -0.9592,
+          "pooled_RMSE": 1652.4,
+          "pooled_MAE": 1330.6,
+          "pooled_MAPE": 22.11,
+          "RMSSE_pct": 90.1,
+          "CV_RMSE": 1572.7,
+          "p_vs_naive": 0.2123
+        },
+        "SeasonalNaive": {
+          "pooled_R2": -1.2051,
+          "pooled_RMSE": 1753.1,
+          "pooled_MAE": 1506.8,
+          "pooled_MAPE": 24.44,
+          "RMSSE_pct": 95.6,
+          "CV_RMSE": 1702.2,
+          "p_vs_naive": 0.2154
+        },
+        "FlowConc": {
+          "pooled_R2": -1.3612,
+          "pooled_RMSE": 1814.0,
+          "pooled_MAE": 1496.5,
+          "pooled_MAPE": 24.62,
+          "RMSSE_pct": 98.9,
+          "CV_RMSE": 1738.7,
+          "p_vs_naive": 0.7802
+        },
+        "HistGBM": {
+          "pooled_R2": -1.4032,
+          "pooled_RMSE": 1830.1,
+          "pooled_MAE": 1468.6,
+          "pooled_MAPE": 24.95,
+          "RMSSE_pct": 99.8,
+          "CV_RMSE": 1725.3,
+          "p_vs_naive": 0.7145
+        },
+        "FlowAnchor": {
+          "pooled_R2": -1.4317,
+          "pooled_RMSE": 1840.9,
+          "pooled_MAE": 1537.6,
+          "pooled_MAPE": 24.86,
+          "RMSSE_pct": 100.4,
+          "CV_RMSE": 1791.9,
+          "p_vs_naive": 0.6695
+        },
+        "Stack": {
+          "pooled_R2": -1.6432,
+          "pooled_RMSE": 1919.4,
+          "pooled_MAE": 1591.5,
+          "pooled_MAPE": 26.67,
+          "RMSSE_pct": 104.7,
+          "CV_RMSE": 1765.4,
+          "p_vs_naive": 0.9304
+        },
+        "ElasticNet": {
+          "pooled_R2": -2.0298,
+          "pooled_RMSE": 2054.9,
+          "pooled_MAE": 1661.3,
+          "pooled_MAPE": 27.83,
+          "RMSSE_pct": 112.0,
+          "CV_RMSE": 1947.7,
+          "p_vs_naive": 0.5897
+        },
+        "BayesianRidge": {
+          "pooled_R2": -2.3447,
+          "pooled_RMSE": 2159.1,
+          "pooled_MAE": 1782.0,
+          "pooled_MAPE": 29.37,
+          "RMSSE_pct": 117.7,
+          "CV_RMSE": 2116.6,
+          "p_vs_naive": 0.1496
+        }
+      },
+      "selected_candidates": {
+        "HistGBM#0/level": 4,
+        "RandomForest#0/level": 10,
+        "ExtraTrees#0/level": 10,
+        "ElasticNet#4/level": 4,
+        "BayesianRidge#0/level": 11,
+        "kNN#2/level": 6,
+        "HistGBM#1/level": 4,
+        "kNN#0/delta": 1,
+        "ElasticNet#0/level": 1,
+        "HistGBM#1/delta": 1,
+        "ElasticNet#2/level": 1,
+        "kNN#2/delta": 3,
+        "HistGBM#0/delta": 2,
+        "RandomForest#0/delta": 1,
+        "ExtraTrees#0/delta": 1,
+        "ElasticNet#3/level": 2,
+        "ElasticNet#1/level": 2,
+        "kNN#0/level": 1,
+        "ElasticNet#5/level": 1
+      },
+      "naive": {
+        "pooled_R2": -1.4134,
+        "pooled_RMSE": 1834.0,
+        "CV_RMSE": 1787.6
+      }
+    }
+  },
+  "target_r2_goal": 0.85,
+  "serving": {
+    "h1_3": {
+      "model": "FlowAnchor",
+      "pooled_R2": 0.8639,
+      "RMSSE_pct": 84.1,
+      "meets_r2_goal": true,
+      "beats_naive": true
+    },
+    "h3_5": {
+      "model": "FlowAnchor",
+      "pooled_R2": 0.7198,
+      "RMSSE_pct": 91.1,
+      "meets_r2_goal": false,
+      "beats_naive": true
+    },
+    "h5_7": {
+      "model": "FlowAnchor",
+      "pooled_R2": 0.5694,
+      "RMSSE_pct": 97.1,
+      "meets_r2_goal": false,
+      "beats_naive": true
+    },
+    "h7_14": {
+      "model": "FlowAnchor",
+      "pooled_R2": 0.2813,
+      "RMSSE_pct": 98.8,
+      "meets_r2_goal": false,
+      "beats_naive": true
+    },
+    "h14_30": {
+      "model": "ExtraTrees",
+      "pooled_R2": -0.203,
+      "RMSSE_pct": 99.0,
+      "meets_r2_goal": false,
+      "beats_naive": true
+    },
+    "h30_60": {
+      "model": "ExtraTrees",
+      "pooled_R2": -0.6398,
+      "RMSSE_pct": 96.0,
+      "meets_r2_goal": false,
+      "beats_naive": true
+    },
+    "h60_90": {
+      "model": "RandomForest",
+      "pooled_R2": -0.8617,
+      "RMSSE_pct": 87.8,
+      "meets_r2_goal": false,
+      "beats_naive": true
+    }
+  }
+}

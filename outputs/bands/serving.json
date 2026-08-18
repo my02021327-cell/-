@@ -1,0 +1,51 @@
+{
+  "h1_3": {
+    "model": "FlowAnchor",
+    "pooled_R2": 0.8639,
+    "RMSSE_pct": 84.1,
+    "meets_r2_goal": true,
+    "beats_naive": true
+  },
+  "h3_5": {
+    "model": "FlowAnchor",
+    "pooled_R2": 0.7198,
+    "RMSSE_pct": 91.1,
+    "meets_r2_goal": false,
+    "beats_naive": true
+  },
+  "h5_7": {
+    "model": "FlowAnchor",
+    "pooled_R2": 0.5694,
+    "RMSSE_pct": 97.1,
+    "meets_r2_goal": false,
+    "beats_naive": true
+  },
+  "h7_14": {
+    "model": "FlowAnchor",
+    "pooled_R2": 0.2813,
+    "RMSSE_pct": 98.8,
+    "meets_r2_goal": false,
+    "beats_naive": true
+  },
+  "h14_30": {
+    "model": "ExtraTrees",
+    "pooled_R2": -0.203,
+    "RMSSE_pct": 99.0,
+    "meets_r2_goal": false,
+    "beats_naive": true
+  },
+  "h30_60": {
+    "model": "ExtraTrees",
+    "pooled_R2": -0.6398,
+    "RMSSE_pct": 96.0,
+    "meets_r2_goal": false,
+    "beats_naive": true
+  },
+  "h60_90": {
+    "model": "RandomForest",
+    "pooled_R2": -0.8617,
+    "RMSSE_pct": 87.8,
+    "meets_r2_goal": false,
+    "beats_naive": true
+  }
+}
