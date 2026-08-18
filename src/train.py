@@ -20,8 +20,6 @@ import sys
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.data import (  # noqa: E402
@@ -31,6 +29,7 @@ from src.data import (  # noqa: E402
     load_raw,
 )
 from src.ensemble import NNLSMetaCombiner, make_tabular_models  # noqa: E402
+from src.metrics import score  # noqa: E402
 from src.sequences import build_sequences  # noqa: E402
 from src.torch_models import make_lstm, make_transformer  # noqa: E402
 
@@ -41,13 +40,15 @@ WINDOW = 14
 HOLDOUT_YEAR = 2023
 
 
-def evaluate(y_true, y_pred) -> dict:
-    yt, yp = np.ravel(y_true), np.ravel(y_pred)
-    return {
-        "R2": round(float(r2_score(yt, yp)), 4),
-        "RMSE": round(float(np.sqrt(mean_squared_error(yt, yp))), 4),
-        "MAE": round(float(mean_absolute_error(yt, yp)), 4),
-    }
+def evaluate(y_true, y_pred, y_prev=None, gap=None) -> dict:
+    """
+    R²·RMSE·MAE 에 더해 naive(persistence) 대비 RMSSE 를 함께 낸다.
+
+    절대 R² 만 보고하면 자기상관이 강한 계열에서 성능을 크게 과대평가한다.
+    Meola & Weinrich (2025) 의 주지표를 병기해 '전일값 하나보다 나은가'를 즉시 보이게 한다
+    (EXPERT_REVIEW §A3 정규화 지표 공백). RMSSE ≥ 100 % 는 채택 불가를 뜻한다.
+    """
+    return score(y_true, y_pred, y_prev, gap)
 
 
 def _fit_predict(proto_or_factory, is_torch, X_fit, Y_fit, X_pred):
@@ -111,14 +112,27 @@ def main():
     ens_test = meta.combine(test_preds)
 
     Y_te = Y[test_mask]
-    results = {name: evaluate(Y_te, pred) for name, pred in test_preds.items()}
-    results["Ensemble_NNLS"] = evaluate(Y_te, ens_test)
+
+    # naive(persistence) 기준선 : 직전 '관측' 메탄과 그 간격
+    y_all = Y.ravel()
+    prev_all = np.concatenate([[np.nan], y_all[:-1]])
+    gap_all = np.concatenate([[np.nan], np.diff(dt_index.values).astype("timedelta64[D]").astype(float)])
+    y_prev_te, gap_te = prev_all[test_mask], gap_all[test_mask]
+
+    results = {name: evaluate(Y_te, pred, y_prev_te, gap_te) for name, pred in test_preds.items()}
+    results["Ensemble_NNLS"] = evaluate(Y_te, ens_test, y_prev_te, gap_te)
+    results["Naive_persistence"] = evaluate(Y_te[1:], y_prev_te[1:], y_prev_te[1:], gap_te[1:])
     weight_report = {"methane": meta.normalized_weights()[0]}
 
     print("\n================ 2023 홀드아웃 : 메탄생성량 ================")
-    print(f"{'Model':<16}|   R²     RMSE      MAE")
+    print(f"{'Model':<18}|   R²     RMSE      MAE    RMSSE%   RMSSE%(gap1)")
     for name, r in results.items():
-        print(f"{name:<16}| {r['R2']:>7.3f}  {r['RMSE']:>8.1f}  {r['MAE']:>8.1f}")
+        rs = r.get("RMSSE_pct")
+        rs1 = r.get("RMSSE_pct_gap1")
+        print(f"{name:<18}| {r['R2']:>7.3f}  {r['RMSE']:>8.1f}  {r['MAE']:>8.1f}  "
+              f"{(f'{rs:8.1f}' if rs is not None else '       —')}  "
+              f"{(f'{rs1:10.1f}' if rs1 is not None else '         —')}")
+    print("  * RMSSE = 모델 RMSE / naive RMSE. 100% 이상이면 전일값 예측기보다 못하다 → 채택 불가.")
     print("\n---------------- NNLS 비음수 가중치(정규화) ----------------")
     print(weight_report["methane"])
 

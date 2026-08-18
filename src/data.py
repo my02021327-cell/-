@@ -79,18 +79,21 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     # 1) 결측 과다 열 제거
     df = df.drop(columns=[c for c in HIGH_MISSING_COLS if c in df.columns])
 
-    # 2) 피처 후보 선형 보간(타깃/진단 제외)
+    # 2) 피처 후보 결측 채움 — 인과적(과거 방향)으로만.
+    #    v1 은 여기서 `interpolate(method="linear", limit_direction="both")` 를 썼으나
+    #    이는 분할 이전에 전체 계열에 적용되므로 bfill 성분이 미래값을 과거로 끌어온다
+    #    (학습셋이 홀드아웃 구간 정보를 본다). ffill 만 쓰면 과거만 참조하므로 누출이 없다.
+    #    ffill 후 남는 결측은 '첫 관측 이전' 선두 구간뿐이고, 이를 채우는 값은 반드시
+    #    최초 관측치(2018년, 학습 구간)이므로 마지막에 bfill 로 마감해도 누출이 아니다.
     exclude = {"date", "year", TARGET_COL, *DIAG_COLS}
     base_feats = [c for c in df.columns if c not in exclude and df[c].dtype != "O"]
-    df[base_feats] = (
-        df[base_feats].interpolate(method="linear", limit_direction="both").ffill().bfill()
-    )
+    df[base_feats] = df[base_feats].ffill()
 
     # 3) 파생(건강·부하) — 단일 피처로 사용
     df = _add_derived(df)
     for c in ["VFA_ALK", "VS_load_ratio"]:
         if c in df.columns:
-            df[c] = df[c].interpolate(method="linear", limit_direction="both").ffill().bfill()
+            df[c] = df[c].ffill()
 
     new = {}
     # 4) 리치 시계열 통계 : rmean·rstd·lag
@@ -112,8 +115,10 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
 
     df = pd.concat([df, pd.DataFrame(new, index=df.index)], axis=1)
 
-    lag_cols = [c for c in new if "_lag" in c]
-    df[lag_cols] = df[lag_cols].bfill()
+    # ffill 이후 남은 결측은 계열 선두(첫 관측 이전)뿐이다. 이 구간을 bfill 로 마감하면
+    # 채워지는 값은 항상 최초 관측치 = 2018년 학습 구간의 값이므로 홀드아웃 누출이 없다.
+    feat_cols = [c for c in df.columns if c not in exclude and df[c].dtype != "O"]
+    df[feat_cols] = df[feat_cols].bfill()
     return df
 
 

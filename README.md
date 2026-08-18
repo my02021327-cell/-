@@ -43,6 +43,8 @@
 | `train.py` | 학습·평가 파이프라인(엔드투엔드) |
 | `signal.py` | **VFA/알칼리도 건강 신호등** + 메탄 예측 시각화 |
 | `eda.py` | 생물학적 지연(교차상관)·체류창·건강 밴드 분석 |
+| **`metrics.py`** | **RMSSE(naive 대비 정규화 오차)·persistence 기준선·폴드별 대응 t검정** |
+| **`benchmark.py`** | **논문 정합 벤치마크** — rolling-origin + 지평 분리(od1/h90) + 폴드 내부 모델선택 |
 
 ### 앙상블 구조
 - **Base** : RandomForest·MLP(테이블 피처) + LSTM·Transformer(과거 14일 시퀀스).
@@ -55,8 +57,9 @@
 
 ```bash
 pip install -r requirements.txt
-python -m src.train   # 학습·평가·건강 신호등·시각화
-python -m src.eda     # 생물학적 지연·건강 분석
+python -m src.train       # 학습·평가·건강 신호등·시각화
+python -m src.eda         # 생물학적 지연·건강 분석
+python -m src.benchmark   # 논문 정합 벤치마크(rolling-origin · RMSSE · 지평 분리)
 ```
 
 ## 결과 (2023 홀드아웃, 목표 = 메탄생성량)
