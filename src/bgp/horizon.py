@@ -124,14 +124,21 @@ def run_band(df: pd.DataFrame, X: pd.DataFrame, y_train_label: pd.Series,
     DELTA_FAMILIES = {"HistGBM", "RandomForest", "ExtraTrees", "kNN", "GradientBoosting"}
 
     origins = list(range(C.CV_INITIAL_TRAIN_DAYS, n - hi, C.CV_STEP_DAYS))
-    per_fold: dict[str, list[float]] = {k: [] for k in list(zoo) + ["Naive", "SeasonalNaive", "Stack"]}
+    per_fold: dict[str, list[float]] = {
+        k: [] for k in list(zoo) + ["Naive", "SeasonalNaive", "FlowAnchor", "Stack"]}
     oof: dict[str, list[np.ndarray]] = {k: [] for k in per_fold}
     oof_y, oof_t, oof_h, oof_fold = [], [], [], []
     sel_hist: dict[str, int] = {}
 
+    # naive 기준선의 앵커 : 마지막 '실측' 메탄. 기준선은 보간의 도움을 받지 않는다.
     anchor_all = y_true.ffill().to_numpy(float)
     flow_all = df[C.FLOW].ffill().to_numpy(float)
-    conc_all = df.get("CH4_pct_filled", df[C.CONC]).ffill().to_numpy(float)
+    conc_all = df.get("CH4_pct_causal", df[C.CONC]).ffill().to_numpy(float)
+    # delta 표적의 앵커 : 원점의 인과 재구성 메탄 = 당일 실측 유량 × 최근 관측 농도.
+    # 유량은 결측 0 % 라 원점에서 항상 알 수 있고, 농도만 지속성으로 채운다.
+    # 실측 메탄이 며칠 묵었을 때 naive 앵커보다 훨씬 신선하다.
+    delta_anchor = (df["CH4_m3d_causal"] if "CH4_m3d_causal" in df.columns
+                    else y_true.ffill()).to_numpy(float)
 
     gru_panel = None
     if with_gru:
@@ -176,14 +183,20 @@ def run_band(df: pd.DataFrame, X: pd.DataFrame, y_train_label: pd.Series,
         per_fold["Naive"].append(_rmse(yte, naive_te))
         oof["Naive"].append(naive_te)
 
+        # FlowAnchor : 당일 실측 유량 × 최근 관측 농도를 그대로 미는 기준선.
+        # naive 보다 강하며, 모델은 이것도 이겨야 의미가 있다.
+        p_fa = delta_anchor[o_all[te]]
+        per_fold["FlowAnchor"].append(_rmse(yte, p_fa))
+        oof["FlowAnchor"].append(p_fa)
+
         sn = SeasonalNaive().fit(pd.DataFrame({"tmp__y_ma30": X["tmp__y_ma30"].to_numpy()[o_all[tr]]}), ytr)
         p_sn = sn.predict(pd.DataFrame({"tmp__y_ma30": X["tmp__y_ma30"].to_numpy()[o_all[te]]}))
         per_fold["SeasonalNaive"].append(_rmse(yte, p_sn))
         oof["SeasonalNaive"].append(p_sn)
 
         # 잔차 표적용 앵커 : naive 와 같은 값을 써야 delta=0 이 naive 로 수렴한다
-        a_fit, a_va = anchor[o_all[fit]], anchor[o_all[va]]
-        a_tr, a_te = anchor[o_all[tr]], anchor[o_all[te]]
+        a_fit, a_va = delta_anchor[o_all[fit]], delta_anchor[o_all[va]]
+        a_tr, a_te = delta_anchor[o_all[tr]], delta_anchor[o_all[te]]
 
         val_preds, test_preds = {}, {}
         for mname, cands in zoo.items():

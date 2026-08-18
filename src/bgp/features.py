@@ -81,7 +81,9 @@ def build_features(df: pd.DataFrame, angles: tuple[str, ...] | None = None,
             tb[f"tmp__flow_tr{w}"] = flow - flow.rolling(w, min_periods=1).mean()
 
         # 농도
-        conc = df.get("CH4_pct_filled", df[C.CONC]).ffill()
+        # 인과 채움 계열을 쓴다. `CH4_pct_filled` 는 양방향 보간이라 원점 이후 관측을
+        # 참조할 수 있고, 그것을 피처로 쓰면 예측 시점에 없는 정보가 들어간다.
+        conc = df.get("CH4_pct_causal", df[C.CONC]).ffill()
         tb["tmp__conc"] = conc
         for w in (7, 30):
             tb[f"tmp__conc_ma{w}"] = conc.rolling(w, min_periods=1).mean()

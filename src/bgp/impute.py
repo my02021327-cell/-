@@ -233,19 +233,25 @@ def naive_fill_baselines(df: pd.DataFrame, gaps=(1, 2, 3, 5, 7),
 # 그대로 쓰면 보간 오차를 4배로 키운다.
 
 def _neighbour_features(df: pd.DataFrame, col: str) -> pd.DataFrame:
-    """직전/직후 관측값과 그 거리 — 시간 이웃 정보를 소프트센서에 넣기 위한 열."""
+    """
+    직전/직후 관측값과 그 거리 — 시간 이웃 정보를 소프트센서에 넣기 위한 열.
+
+    **반드시 전체 프레임에서 한 번 계산한 뒤 행을 잘라 써야 한다.** 학습용 부분집합에서
+    따로 계산하면 실제로는 떨어져 있는 행이 '이웃'으로 잡혀 학습과 예측의 피처 정의가
+    달라진다.
+    """
     v = df[col]
     idx = pd.Series(np.arange(len(df)), index=df.index)
-    prev_v, next_v = v.ffill().shift(0), v.bfill()
+    prev_v, next_v = v.ffill(), v.bfill()
     prev_i = idx.where(v.notna()).ffill()
     next_i = idx.where(v.notna()).bfill()
     return pd.DataFrame({
-        f"{col}_prev_obs": v.ffill(),
+        f"{col}_prev_obs": prev_v,
         f"{col}_next_obs": next_v,
         f"{col}_gap_prev": idx - prev_i,
         f"{col}_gap_next": next_i - idx,
-        f"{col}_neigh_mean": (v.ffill() + next_v) / 2.0,
-    }, index=df.index).drop(columns=[]) if prev_v is not None else None
+        f"{col}_neigh_mean": (prev_v + next_v) / 2.0,
+    }, index=df.index)
 
 
 class HybridImputer:
@@ -285,9 +291,9 @@ class HybridImputer:
         pcols = list(self._pred_cols)
         fit_src = fit_df
         if method == "soft_neigh":
-            nb = _neighbour_features(df, col)
+            nb = _neighbour_features(df, col)          # 전체 프레임에서 한 번
             work = pd.concat([df, nb], axis=1)
-            fit_src = pd.concat([fit_df, _neighbour_features(fit_df, col)], axis=1)
+            fit_src = work.loc[fit_df.index]           # 행만 잘라 쓴다
             pcols = pcols + list(nb.columns)
             if self.causal_only:
                 # 미래 관측을 참조하는 이웃 피처는 실시간 경로에서 존재하지 않는다
