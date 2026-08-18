@@ -84,15 +84,6 @@
           "CV_RMSE": 467.9,
           "p_vs_naive": 0.0527
         },
-        "Stack": {
-          "pooled_R2": 0.8253,
-          "pooled_RMSE": 507.9,
-          "pooled_MAE": 368.1,
-          "pooled_MAPE": 5.87,
-          "RMSSE_pct": 95.2,
-          "CV_RMSE": 473.5,
-          "p_vs_naive": 0.0878
-        },
         "HistGBM": {
           "pooled_R2": 0.8219,
           "pooled_RMSE": 512.9,
@@ -101,6 +92,15 @@
           "RMSSE_pct": 96.1,
           "CV_RMSE": 504.8,
           "p_vs_naive": 0.4952
+        },
+        "Stack": {
+          "pooled_R2": 0.8144,
+          "pooled_RMSE": 523.6,
+          "pooled_MAE": 380.5,
+          "pooled_MAPE": 6.02,
+          "RMSSE_pct": 98.2,
+          "CV_RMSE": 487.4,
+          "p_vs_naive": 0.2833
         },
         "RandomForest": {
           "pooled_R2": 0.8047,
@@ -177,17 +177,18 @@
         "HistGBM#1/level": 1
       },
       "stack_weights_mean": {
-        "kNN": 0.1846,
-        "ExtraTrees": 0.1598,
-        "FlowAnchor": 0.1131,
-        "RandomForest": 0.1106,
-        "BayesianRidge": 0.1078,
-        "HistGBM": 0.0975,
-        "Naive": 0.0892,
-        "FlowConc": 0.0561,
-        "ElasticNet": 0.0452,
-        "SeasonalNaive": 0.036
+        "_sum": 1.0627,
+        "ExtraTrees": 0.2385,
+        "kNN": 0.2135,
+        "Naive": 0.1409,
+        "HistGBM": 0.1216,
+        "BayesianRidge": 0.1033,
+        "RandomForest": 0.0963,
+        "ElasticNet": 0.076,
+        "FlowConc": 0.0555,
+        "SeasonalNaive": 0.0172
       },
+      "stack_base": "FlowAnchor",
       "naive": {
         "pooled_R2": 0.8074,
         "pooled_RMSE": 533.5,
@@ -221,15 +222,6 @@
           "CV_RMSE": 671.0,
           "p_vs_naive": 0.9083
         },
-        "Stack": {
-          "pooled_R2": 0.6399,
-          "pooled_RMSE": 727.9,
-          "pooled_MAE": 541.9,
-          "pooled_MAPE": 8.71,
-          "RMSSE_pct": 103.2,
-          "CV_RMSE": 683.5,
-          "p_vs_naive": 0.7672
-        },
         "kNN": {
           "pooled_R2": 0.6006,
           "pooled_RMSE": 766.6,
@@ -247,6 +239,15 @@
           "RMSSE_pct": 110.8,
           "CV_RMSE": 740.5,
           "p_vs_naive": 0.0703
+        },
+        "Stack": {
+          "pooled_R2": 0.5557,
+          "pooled_RMSE": 808.6,
+          "pooled_MAE": 588.2,
+          "pooled_MAPE": 9.34,
+          "RMSSE_pct": 114.7,
+          "CV_RMSE": 744.3,
+          "p_vs_naive": 0.1637
         },
         "RandomForest": {
           "pooled_R2": 0.5135,
@@ -315,17 +316,18 @@
         "ElasticNet#2/level": 1
       },
       "stack_weights_mean": {
-        "HistGBM": 0.1935,
-        "BayesianRidge": 0.1894,
-        "ExtraTrees": 0.1577,
-        "FlowAnchor": 0.1009,
-        "kNN": 0.0994,
-        "ElasticNet": 0.0714,
-        "RandomForest": 0.0558,
-        "SeasonalNaive": 0.0541,
-        "FlowConc": 0.0448,
-        "Naive": 0.0329
+        "_sum": 1.1549,
+        "ExtraTrees": 0.2255,
+        "Naive": 0.1779,
+        "HistGBM": 0.1658,
+        "BayesianRidge": 0.143,
+        "kNN": 0.1386,
+        "ElasticNet": 0.1222,
+        "RandomForest": 0.1049,
+        "FlowConc": 0.0418,
+        "SeasonalNaive": 0.0354
       },
+      "stack_base": "FlowAnchor",
       "naive": {
         "pooled_R2": 0.6622,
         "pooled_RMSE": 705.0,
@@ -359,15 +361,6 @@
           "CV_RMSE": 810.3,
           "p_vs_naive": 0.3267
         },
-        "Stack": {
-          "pooled_R2": 0.4526,
-          "pooled_RMSE": 895.8,
-          "pooled_MAE": 673.5,
-          "pooled_MAPE": 10.89,
-          "RMSSE_pct": 109.5,
-          "CV_RMSE": 862.3,
-          "p_vs_naive": 0.0649
-        },
         "RandomForest": {
           "pooled_R2": 0.4357,
           "pooled_RMSE": 909.5,
@@ -385,6 +378,15 @@
           "RMSSE_pct": 111.4,
           "CV_RMSE": 841.8,
           "p_vs_naive": 0.2662
+        },
+        "Stack": {
+          "pooled_R2": 0.4309,
+          "pooled_RMSE": 913.3,
+          "pooled_MAE": 693.1,
+          "pooled_MAPE": 11.14,
+          "RMSSE_pct": 111.6,
+          "CV_RMSE": 863.7,
+          "p_vs_naive": 0.1185
         },
         "ElasticNet": {
           "pooled_R2": 0.3988,
@@ -452,17 +454,18 @@
         "kNN#0/level": 1
       },
       "stack_weights_mean": {
-        "BayesianRidge": 0.2035,
-        "kNN": 0.152,
-        "HistGBM": 0.1423,
-        "ExtraTrees": 0.1148,
-        "FlowAnchor": 0.1009,
-        "SeasonalNaive": 0.0976,
-        "ElasticNet": 0.0681,
-        "FlowConc": 0.056,
-        "Naive": 0.0428,
-        "RandomForest": 0.0221
+        "_sum": 1.2559,
+        "kNN": 0.2349,
+        "ExtraTrees": 0.2225,
+        "Naive": 0.2033,
+        "ElasticNet": 0.1826,
+        "BayesianRidge": 0.149,
+        "HistGBM": 0.0962,
+        "SeasonalNaive": 0.0603,
+        "RandomForest": 0.0568,
+        "FlowConc": 0.0504
       },
+      "stack_base": "FlowAnchor",
       "naive": {
         "pooled_R2": 0.5433,
         "pooled_RMSE": 818.2,
@@ -495,6 +498,15 @@
           "RMSSE_pct": 101.4,
           "CV_RMSE": 1001.4,
           "p_vs_naive": 0.785
+        },
+        "Stack": {
+          "pooled_R2": 0.1963,
+          "pooled_RMSE": 1078.3,
+          "pooled_MAE": 828.9,
+          "pooled_MAPE": 13.48,
+          "RMSSE_pct": 104.5,
+          "CV_RMSE": 1030.3,
+          "p_vs_naive": 0.4952
         },
         "ElasticNet": {
           "pooled_R2": 0.1372,
@@ -531,15 +543,6 @@
           "RMSSE_pct": 115.7,
           "CV_RMSE": 1134.0,
           "p_vs_naive": 0.0716
-        },
-        "Stack": {
-          "pooled_R2": 0.0131,
-          "pooled_RMSE": 1194.9,
-          "pooled_MAE": 930.2,
-          "pooled_MAPE": 15.13,
-          "RMSSE_pct": 115.8,
-          "CV_RMSE": 1110.4,
-          "p_vs_naive": 0.2388
         },
         "HistGBM": {
           "pooled_R2": -0.059,
@@ -591,17 +594,18 @@
         "ElasticNet#1/level": 1
       },
       "stack_weights_mean": {
-        "ElasticNet": 0.2315,
-        "RandomForest": 0.1899,
-        "ExtraTrees": 0.1417,
-        "SeasonalNaive": 0.1389,
-        "kNN": 0.0762,
-        "BayesianRidge": 0.0703,
-        "HistGBM": 0.0556,
-        "FlowAnchor": 0.0452,
-        "Naive": 0.0433,
-        "FlowConc": 0.0073
+        "_sum": 1.0917,
+        "Naive": 0.2203,
+        "ExtraTrees": 0.2105,
+        "ElasticNet": 0.2013,
+        "RandomForest": 0.1735,
+        "SeasonalNaive": 0.1376,
+        "BayesianRidge": 0.0675,
+        "kNN": 0.0397,
+        "HistGBM": 0.0286,
+        "FlowConc": 0.0128
       },
+      "stack_base": "FlowAnchor",
       "naive": {
         "pooled_R2": 0.264,
         "pooled_RMSE": 1031.9,
@@ -690,13 +694,13 @@
           "p_vs_naive": 0.3857
         },
         "Stack": {
-          "pooled_R2": -0.8075,
-          "pooled_RMSE": 1605.5,
-          "pooled_MAE": 1258.4,
-          "pooled_MAPE": 20.25,
-          "RMSSE_pct": 121.3,
-          "CV_RMSE": 1528.3,
-          "p_vs_naive": 0.0717
+          "pooled_R2": -0.8189,
+          "pooled_RMSE": 1610.5,
+          "pooled_MAE": 1239.8,
+          "pooled_MAPE": 19.87,
+          "RMSSE_pct": 121.7,
+          "CV_RMSE": 1457.9,
+          "p_vs_naive": 0.3486
         },
         "BayesianRidge": {
           "pooled_R2": -2.9327,
@@ -730,17 +734,18 @@
         "kNN#1/delta": 1
       },
       "stack_weights_mean": {
-        "FlowConc": 0.1905,
-        "ElasticNet": 0.1549,
-        "HistGBM": 0.1452,
-        "SeasonalNaive": 0.1436,
-        "kNN": 0.1059,
-        "Naive": 0.0888,
-        "BayesianRidge": 0.0631,
-        "ExtraTrees": 0.0625,
-        "RandomForest": 0.0244,
-        "FlowAnchor": 0.0211
+        "_sum": 1.3051,
+        "ExtraTrees": 0.2347,
+        "Naive": 0.2067,
+        "FlowConc": 0.1966,
+        "HistGBM": 0.1901,
+        "SeasonalNaive": 0.1775,
+        "BayesianRidge": 0.1162,
+        "kNN": 0.0908,
+        "ElasticNet": 0.0467,
+        "RandomForest": 0.0458
       },
+      "stack_base": "FlowAnchor",
       "naive": {
         "pooled_R2": -0.2281,
         "pooled_RMSE": 1323.3,
@@ -819,15 +824,6 @@
           "CV_RMSE": 1750.9,
           "p_vs_naive": 0.0936
         },
-        "Stack": {
-          "pooled_R2": -1.2914,
-          "pooled_RMSE": 1799.3,
-          "pooled_MAE": 1483.3,
-          "pooled_MAPE": 23.99,
-          "RMSSE_pct": 113.5,
-          "CV_RMSE": 1730.2,
-          "p_vs_naive": 0.1526
-        },
         "ElasticNet": {
           "pooled_R2": -1.5059,
           "pooled_RMSE": 1881.7,
@@ -836,6 +832,15 @@
           "RMSSE_pct": 118.7,
           "CV_RMSE": 1835.5,
           "p_vs_naive": 0.1108
+        },
+        "Stack": {
+          "pooled_R2": -1.616,
+          "pooled_RMSE": 1922.5,
+          "pooled_MAE": 1495.8,
+          "pooled_MAPE": 24.09,
+          "RMSSE_pct": 121.3,
+          "CV_RMSE": 1716.6,
+          "p_vs_naive": 0.4823
         },
         "BayesianRidge": {
           "pooled_R2": -3.0182,
@@ -867,17 +872,18 @@
         "kNN#1/delta": 1
       },
       "stack_weights_mean": {
-        "ExtraTrees": 0.1689,
-        "ElasticNet": 0.1489,
-        "RandomForest": 0.14,
-        "FlowConc": 0.125,
-        "SeasonalNaive": 0.1098,
-        "kNN": 0.0871,
-        "HistGBM": 0.0757,
-        "FlowAnchor": 0.0594,
-        "BayesianRidge": 0.0455,
-        "Naive": 0.0396
+        "_sum": 1.2748,
+        "ExtraTrees": 0.4025,
+        "RandomForest": 0.1847,
+        "Naive": 0.1758,
+        "ElasticNet": 0.1597,
+        "kNN": 0.1033,
+        "HistGBM": 0.0856,
+        "FlowConc": 0.0782,
+        "SeasonalNaive": 0.0728,
+        "BayesianRidge": 0.0123
       },
+      "stack_base": "FlowAnchor",
       "naive": {
         "pooled_R2": -0.7786,
         "pooled_RMSE": 1585.2,
@@ -938,6 +944,15 @@
           "CV_RMSE": 1738.7,
           "p_vs_naive": 0.7802
         },
+        "Stack": {
+          "pooled_R2": -1.3956,
+          "pooled_RMSE": 1827.2,
+          "pooled_MAE": 1542.5,
+          "pooled_MAPE": 25.71,
+          "RMSSE_pct": 99.6,
+          "CV_RMSE": 1793.4,
+          "p_vs_naive": 0.963
+        },
         "HistGBM": {
           "pooled_R2": -1.4032,
           "pooled_RMSE": 1830.1,
@@ -955,15 +970,6 @@
           "RMSSE_pct": 100.4,
           "CV_RMSE": 1791.9,
           "p_vs_naive": 0.6695
-        },
-        "Stack": {
-          "pooled_R2": -1.661,
-          "pooled_RMSE": 1925.8,
-          "pooled_MAE": 1615.5,
-          "pooled_MAPE": 27.11,
-          "RMSSE_pct": 105.0,
-          "CV_RMSE": 1811.3,
-          "p_vs_naive": 0.9005
         },
         "ElasticNet": {
           "pooled_R2": -2.0298,
@@ -1006,17 +1012,18 @@
         "ElasticNet#5/level": 1
       },
       "stack_weights_mean": {
-        "FlowConc": 0.2305,
-        "SeasonalNaive": 0.1577,
-        "BayesianRidge": 0.1433,
-        "ExtraTrees": 0.1177,
-        "ElasticNet": 0.1073,
-        "RandomForest": 0.079,
-        "HistGBM": 0.0652,
-        "kNN": 0.054,
-        "FlowAnchor": 0.0453,
-        "Naive": 0.0
+        "_sum": 1.1392,
+        "FlowConc": 0.3829,
+        "SeasonalNaive": 0.2455,
+        "BayesianRidge": 0.1482,
+        "ElasticNet": 0.138,
+        "kNN": 0.0839,
+        "HistGBM": 0.0795,
+        "ExtraTrees": 0.0367,
+        "RandomForest": 0.0221,
+        "Naive": 0.0025
       },
+      "stack_base": "FlowAnchor",
       "naive": {
         "pooled_R2": -1.4134,
         "pooled_RMSE": 1834.0,

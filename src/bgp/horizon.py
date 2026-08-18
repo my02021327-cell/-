@@ -307,18 +307,34 @@ def run_band(df: pd.DataFrame, X: pd.DataFrame, y_train_label: pd.Series,
         # 잔차 공간에서는 멤버끼리 실제로 다르므로 결합이 의미를 갖고, w=0 이면 정확히
         # FlowAnchor 로 돌아가므로 **하한이 보장된다.**
         # (LESSONS_LEARNED §B1 「관성은 수준이 아니라 잔차에 붙여야 한다」의 스태킹판)
-        if len(val_preds) >= 2:
+        if len(val_preds) >= 2 and len(va) >= 60:
             names = [k for k in val_preds if k != "FlowAnchor"]
             base_va, base_te = a_va, p_fa
             Rv = np.column_stack([val_preds[k] - base_va for k in names])
             Rt = np.column_stack([test_preds[k] - base_te for k in names])
-            w = nnls_stack(Rv, yva - base_va)
-            p_stack = base_te + Rt @ w
+
+            # 검증블록을 반으로 나눠 가중과 수축계수를 서로 다른 자료로 정한다.
+            # 같은 자료로 둘 다 고르면 순환이고, 실제로 그렇게 하면 Σw 가 1 을 넘어
+            # 보정을 **증폭**한다(측정됨: Σw = 1.06~1.31, 전 구간에서 앵커보다 나빠졌다).
+            half = len(va) // 2
+            w = nnls_stack(Rv[:half], (yva - base_va)[:half])
+
+            # 수축계수 s : p = anchor + s·(보정). s=0 이면 정확히 FlowAnchor 다.
+            # 모델이 보탤 것이 없으면 자료가 s=0 을 고르고, 그 사실이 그대로 보고된다.
+            corr_b = Rv[half:] @ w
+            best_s, best_e = 0.0, _rmse(yva[half:], base_va[half:])
+            for cand_s in (0.25, 0.5, 0.75, 1.0):
+                e = _rmse(yva[half:], base_va[half:] + cand_s * corr_b)
+                if e < best_e:
+                    best_s, best_e = cand_s, e
+
+            p_stack = base_te + best_s * (Rt @ w)
             per_fold["Stack"].append(_rmse(yte, p_stack))
             oof["Stack"].append(p_stack)
             for k, wi in zip(names, w):
-                stack_w.setdefault(k, []).append(float(wi))
-            stack_w.setdefault("_sum", []).append(float(w.sum()))
+                stack_w.setdefault(k, []).append(float(best_s * wi))
+            stack_w.setdefault("_sum", []).append(float(best_s * w.sum()))
+            stack_w.setdefault("_shrink", []).append(float(best_s))
 
         oof_y.append(yte)
         oof_t.append(o_all[te])
