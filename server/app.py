@@ -339,9 +339,22 @@ def advisory(asof: str | None = None, band: str = "h7_14"):
     st = _state(t0)
     bl = _baseline(t0)
     base_ch4 = float(bl.get("CH4_m3d_filled", STORE.df["CH4_m3d_filled"].median()))
+    meta = STORE.manifest.get("bands", {}).get(band, {})
+    responds = meta.get("responds_to_actuators", True)
+
     rec = recommend(m["model"], row, st, list(row.columns), band, base_ch4,
-                    model_is_trustworthy=_trustworthy(band))
+                    model_is_trustworthy=_trustworthy(band) and responds)
     rec["asof"] = str(st["date"].date())
+    rec["model"] = m["model_name"]
+    rec["responds_to_actuators"] = bool(responds)
+    if not responds:
+        # 이 구간의 채택 모델은 앵커(당일 유량 × 최근 농도)뿐이라 조작단에 반응하지 않는다.
+        # 빈 권고를 보여주는 대신 이유를 그대로 말한다.
+        rec["note"] = (
+            f"이 구간({band})의 채택 모델은 {m['model_name']} 이며, 조작단이 아니라 "
+            "원점의 실측 유량·농도만으로 예측한다. 교차검증에서 이 기준선이 학습 모델 "
+            "전부를 이겼기 때문이다(자세한 성적은 /api/bands). 따라서 이 지평에서 "
+            "제어 권고를 낼 근거가 없다 — 조작 효과를 보려면 더 긴 지평 구간을 쓸 것.")
     rec["diagnostics"] = diagnose(st, bl)
     return rec
 

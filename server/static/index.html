@@ -700,7 +700,9 @@ async function renderAdvisory() {
   if (a.safety_gates.length) {
     h += a.safety_gates.map(g => `<div class="gate">⛔ SAFETY GATE — ${g.message}</div>`).join('');
   }
-  if (!a.model_trustworthy) {
+  if (a.responds_to_actuators === false) {
+    h += `<div class="gate">ℹ 채택 모델: ${a.model} — ${a.note}</div>`;
+  } else if (!a.model_trustworthy) {
     h += `<div class="gate">⛔ ${a.note}</div>`;
   } else if (!a.actions.length) {
     h += `<div class="adv-card">현 상태에서 유의한 개선을 주는 조작이 없다. 현 운전 유지.</div>`;
