@@ -51,6 +51,7 @@ A/B 계열 분리 + DQ 플래그 반영. 수용 검증은 `python scripts/valida
 | `docs/영천BGP_메탄발생량_예측경험식.md` | 현장 경험식 (ADM1 가수분해 + Buswell, L-BFGS-B 보정) |
 | `docs/EMPIRICAL_VS_MODEL.md` | **경험식 대조 · 결함 수정 · 필요 정보 · 개선 방향** |
 | `docs/INERTIA_AND_MISSING.md` | **반응조 관성의 활용 형태 · 결측 처리 정책** |
+| `docs/LESSONS_LEARNED.md` | **교훈집 — 실제로 해보고 알게 된 것 + 착수 체크리스트** |
 
 ## 3트랙 + 통합 앙상블 (현행 파이프라인)
 
