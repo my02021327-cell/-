@@ -142,6 +142,9 @@ ANGLE_VSBALANCE = [                       # C. VS 물질수지
     "VS_in_kgd", "VS_out_kgd", "VS_destroyed_kgd", "VS_destruction_pct",
     "VS_reactor_kg", "VS_load_tpd", "COD_removed_kgd", "Y_COD",
     "OLR_calc", "HRT_calc", "CH4_per_VS_in", "gas_per_feed",
+    # 탈수 처리량은 고형물 인출 경로다. 운전원이 조작할 수 있는 몇 안 되는 변수라
+    # 권고(advisor) 대상이 되려면 반드시 설계행렬에 있어야 한다.
+    "dewater_tpd",
 ]
 ANGLE_TEMPORAL_BASE = [C.FLOW, C.TARGET, C.CONC]   # D. 시계열 구조의 원천
 

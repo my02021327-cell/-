@@ -47,6 +47,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--fast", action="store_true")
     ap.add_argument("--with-gru", action="store_true")
+    ap.add_argument("--with-sarimax", action="store_true")
     ap.add_argument("--ablation", action="store_true")
     ap.add_argument("--bands", default="", help="쉼표구분 band 이름. 비우면 전부")
     ap.add_argument("--n-features", type=int, default=120)
@@ -67,6 +68,7 @@ def main():
         t = time.time()
         res = run_band(df, X, df["CH4_m3d_filled"], df[C.TARGET], band,
                        fast=args.fast, with_gru=args.with_gru,
+                       with_sarimax=args.with_sarimax,
                        n_features=args.n_features, max_train=args.max_train,
                        verbose=False)
         if "error" in res:

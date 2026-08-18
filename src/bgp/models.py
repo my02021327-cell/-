@@ -242,32 +242,63 @@ class SARIMAXBand:
     """
     유량 계열을 SARIMAX 로 예측하고 농도를 곱해 메탄으로 되돌린다.
 
-    유량은 결측 0 % 라 순수 시계열 모형을 적용할 수 있는 유일한 계열이다.
+    유량(`biogas_AB_m3d`)은 결측 0 % 라 순수 시계열 모형을 적용할 수 있는 유일한 계열이다.
     외생변수로 투입 물량을 넣어 「기질이 들어와야 가스가 난다」는 인과를 반영한다.
+    논문에서 SARIMAX 는 데이터셋 B 의 24 h OD 에서 유일하게 RMSSE<100 % 를 낸 모델이었다.
+
+    ■ 원점마다 다시 적합하지 않는다
+      폴드 시험창 안의 원점 수만큼 재적합하면 비용이 감당되지 않는다. statsmodels 의
+      `append(..., refit=False)` 로 상태만 갱신하며 앞으로 굴린다 — 계수는 폴드 원점에서
+      고정되고 상태는 새 관측으로 갱신되므로, 실제 운전에서 「주기적으로 재학습하고
+      그 사이에는 상태만 갱신한다」와 같은 구조다.
     """
 
-    def __init__(self, order=(2, 1, 2), seasonal_order=(0, 0, 0, 0)):
+    def __init__(self, order=(2, 1, 2), seasonal_order=(0, 0, 0, 0), maxiter: int = 50):
         self.order = order
         self.seasonal_order = seasonal_order
+        self.maxiter = maxiter
 
-    def fit_forecast(self, flow: pd.Series, exog: pd.DataFrame,
-                     origin: int, steps: int) -> np.ndarray:
+    def rolling_forecast(self, flow: np.ndarray, exog: np.ndarray,
+                         origin: int, origins: np.ndarray, hs: np.ndarray) -> np.ndarray:
+        """
+        (origins, hs) 쌍마다 「그 원점에서 h 일 앞」 유량 예측을 낸다.
+
+        origin  : 폴드 원점 (여기까지로 계수를 적합)
+        origins : 시험 쌍의 원점 인덱스 (origin 이상)
+        hs      : 각 쌍의 지평
+        """
+        import warnings
+
         from statsmodels.tsa.statespace.sarimax import SARIMAX
 
-        y = flow.iloc[: origin + 1].astype(float)
-        ex = exog.iloc[: origin + 1].astype(float)
-        ex_f = exog.iloc[origin + 1 : origin + 1 + steps].astype(float)
+        out = np.full(len(origins), np.nan)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             try:
-                res = SARIMAX(y, exog=ex, order=self.order,
-                              seasonal_order=self.seasonal_order,
+                res = SARIMAX(flow[: origin + 1], exog=exog[: origin + 1],
+                              order=self.order, seasonal_order=self.seasonal_order,
                               enforce_stationarity=False,
-                              enforce_invertibility=False).fit(disp=False, maxiter=60)
-                fc = res.forecast(steps=len(ex_f), exog=ex_f)
-                return np.asarray(fc, float)
+                              enforce_invertibility=False).fit(disp=False, maxiter=self.maxiter)
             except Exception:
-                return np.full(len(ex_f), float(y.iloc[-1]))
+                return out
+
+            cur = origin
+            order_idx = np.argsort(origins)
+            for k in order_idx:
+                o, h = int(origins[k]), int(hs[k])
+                if o > cur:                       # 상태만 앞으로 굴린다 (재적합 없음)
+                    try:
+                        res = res.append(flow[cur + 1 : o + 1],
+                                         exog=exog[cur + 1 : o + 1], refit=False)
+                        cur = o
+                    except Exception:
+                        break
+                try:
+                    fc = res.forecast(steps=h, exog=exog[o + 1 : o + 1 + h])
+                    out[k] = float(np.asarray(fc, float)[-1])
+                except Exception:
+                    out[k] = float(flow[o])
+        return out
 
 
 def nnls_stack(pred_matrix: np.ndarray, y: np.ndarray) -> np.ndarray:

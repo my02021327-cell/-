@@ -29,6 +29,7 @@ from src.bgp import config as C
 from src.bgp.features import horizon_pairs
 from src.bgp.models import (
     GRUForecaster,
+    SARIMAXBand,
     PersistenceBand,
     SeasonalNaive,
     model_zoo,
@@ -84,7 +85,8 @@ def run_band(df: pd.DataFrame, X: pd.DataFrame, y_train_label: pd.Series,
              y_true: pd.Series, band: tuple[str, int, int],
              fast: bool = True, with_gru: bool = False,
              n_features: int = 120, max_train: int = 8000,
-             verbose: bool = True, with_flowconc: bool = True) -> dict:
+             verbose: bool = True, with_flowconc: bool = True,
+             with_sarimax: bool = False) -> dict:
     """
     한 지평 구간의 rolling-origin 전 과정.
 
@@ -110,6 +112,8 @@ def run_band(df: pd.DataFrame, X: pd.DataFrame, y_train_label: pd.Series,
         zoo["GRU"] = ["__gru__"]
     if with_flowconc:
         zoo["FlowConc"] = ["__flowconc__"]
+    if with_sarimax:
+        zoo["SARIMAX"] = ["__sarimax__"]
 
     # ── 잔차 표적(delta) 변형 ────────────────────────────────────────────────
     # y(t+h) 를 직접 맞히는 대신 「원점 실측 대비 변화량」 y(t+h) − anchor(t) 를 맞히고
@@ -183,7 +187,25 @@ def run_band(df: pd.DataFrame, X: pd.DataFrame, y_train_label: pd.Series,
 
         val_preds, test_preds = {}, {}
         for mname, cands in zoo.items():
-            if mname == "FlowConc":
+            if mname == "SARIMAX":
+                # 유량 계열을 상태공간 모형으로 앞으로 굴리고 농도를 곱해 메탄으로 되돌린다.
+                # 농도는 원점의 최근값을 쓴다 — ACF(1)=0.968 로 지속성이 매우 강하다.
+                sx = SARIMAXBand()
+                exog = df[["feed_AB_tpd"]].ffill().bfill().to_numpy(float)
+                try:
+                    f_va = sx.rolling_forecast(flow_all, exog, int(o_all[fit].max()),
+                                               o_all[va], h_all[va])
+                    f_te = sx.rolling_forecast(flow_all, exog, int(o_all[tr].max()),
+                                               o_all[te], h_all[te])
+                except Exception:
+                    continue
+                if not np.isfinite(f_va).any() or not np.isfinite(f_te).any():
+                    continue
+                cva = conc_all[o_all[va]]
+                cte = conc_all[o_all[te]]
+                p_va = np.where(np.isfinite(f_va), f_va, flow_all[o_all[va]]) * cva / 100.0
+                p_te = np.where(np.isfinite(f_te), f_te, flow_all[o_all[te]]) * cte / 100.0
+            elif mname == "FlowConc":
                 # CH₄ = 유량 × 농도 / 100. 두 성분을 각자 맞히고 곱한다.
                 from sklearn.ensemble import HistGradientBoostingRegressor
                 from sklearn.pipeline import Pipeline

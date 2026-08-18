@@ -87,6 +87,36 @@ def main():
         parts.append("")
 
     body = "\n".join(parts)
+
+    # README 요약표도 같이 갱신한다 (요약은 채택 모델 한 줄씩)
+    rd = os.path.join(ROOT, "README.md")
+    if os.path.exists(rd):
+        rows = ["## 결과 — 구간별 폴드밖 성적", "",
+                "| 지평 구간 | 채택 모델 | **pooled R²** | naive R² | RMSSE % | R²≥0.85 |",
+                "|---|---|---:|---:|---:|:---:|"]
+        for b, sv in d.get("serving", {}).items():
+            res = d["bands"][b]
+            m = res["models"][sv["model"]]
+            rows.append(f"| **{LABEL.get(b, b)}** | {sv['model']} | {m['pooled_R2']:.4f} | "
+                        f"{res['naive']['pooled_R2']:.4f} | {m['RMSSE_pct']:.1f} | "
+                        f"{'✅' if sv['meets_r2_goal'] else '❌'} |")
+        n_ok = sum(1 for v in d.get("serving", {}).values() if v["meets_r2_goal"])
+        rows += ["", f"R² ≥ 0.85 달성 **{n_ok}/{len(d.get('serving', {}))} 구간**. "
+                 "RMSSE 는 naive(원점값 유지) 대비 정규화 오차로, 100 미만이어야 채택 가능하다. "
+                 "전체 표와 각도별 단독 성능은 "
+                 "[`docs/METHANE_FORECAST_SYSTEM.md`](docs/METHANE_FORECAST_SYSTEM.md) §5.",
+                 ""]
+        rtxt = open(rd, encoding="utf-8").read()
+        blk = "\n".join(rows)
+        if "<!--README_RESULTS-->" in rtxt:
+            rtxt = rtxt.replace("<!--README_RESULTS-->", blk)
+        else:
+            import re as _re
+            rtxt = _re.sub(r"## 결과 — 구간별 폴드밖 성적.*?(?=\n## )", blk + "\n",
+                           rtxt, flags=_re.S)
+        open(rd, "w", encoding="utf-8").write(rtxt)
+        print("갱신 → README.md")
+
     doc = open(DOC, encoding="utf-8").read()
     marker = "<!--BAND_RESULTS-->"
     if marker in doc:
