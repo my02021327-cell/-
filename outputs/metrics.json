@@ -14,37 +14,78 @@
   ],
   "results": {
     "RandomForest": {
-      "R2": 0.5882,
-      "RMSE": 701.6563,
-      "MAE": 564.9007
+      "R2": 0.519,
+      "RMSE": 758.34,
+      "MAE": 613.04,
+      "MAPE": 10.18,
+      "n": 154,
+      "naive_RMSE": 383.52,
+      "RMSSE_pct": 197.7,
+      "RMSSE_pct_gap1": 277.3,
+      "n_gap1": 103
     },
     "MLP": {
-      "R2": -3.8182,
-      "RMSE": 2400.1992,
-      "MAE": 2026.2125
+      "R2": -6.1843,
+      "RMSE": 2930.88,
+      "MAE": 2697.24,
+      "MAPE": 43.26,
+      "n": 154,
+      "naive_RMSE": 383.52,
+      "RMSSE_pct": 764.2,
+      "RMSSE_pct_gap1": 1115.5,
+      "n_gap1": 103
     },
     "LSTM": {
-      "R2": 0.1703,
-      "RMSE": 996.0053,
-      "MAE": 811.3338
+      "R2": 0.1232,
+      "RMSE": 1023.91,
+      "MAE": 841.36,
+      "MAPE": 14.94,
+      "n": 154,
+      "naive_RMSE": 383.52,
+      "RMSSE_pct": 267.0,
+      "RMSSE_pct_gap1": 375.6,
+      "n_gap1": 103
     },
     "Transformer": {
-      "R2": 0.3997,
-      "RMSE": 847.2324,
-      "MAE": 705.8719
+      "R2": 0.4275,
+      "RMSE": 827.35,
+      "MAE": 690.19,
+      "MAPE": 11.93,
+      "n": 154,
+      "naive_RMSE": 383.52,
+      "RMSSE_pct": 215.7,
+      "RMSSE_pct_gap1": 299.7,
+      "n_gap1": 103
     },
     "Ensemble_NNLS": {
-      "R2": 0.5384,
-      "RMSE": 742.9292,
-      "MAE": 612.1771
+      "R2": 0.3526,
+      "RMSE": 879.83,
+      "MAE": 770.02,
+      "MAPE": 12.81,
+      "n": 154,
+      "naive_RMSE": 383.52,
+      "RMSSE_pct": 229.4,
+      "RMSSE_pct_gap1": 325.7,
+      "n_gap1": 103
+    },
+    "Naive_persistence": {
+      "R2": 0.8797,
+      "RMSE": 380.2,
+      "MAE": 258.17,
+      "MAPE": 4.26,
+      "n": 153,
+      "naive_RMSE": 380.2,
+      "RMSSE_pct": 100.0,
+      "RMSSE_pct_gap1": 100.0,
+      "n_gap1": 103
     }
   },
   "nnls_weights_normalized": {
     "methane": {
       "RandomForest": 0.0,
       "MLP": 0.0,
-      "LSTM": 0.32,
-      "Transformer": 0.68
+      "LSTM": 0.8104,
+      "Transformer": 0.1896
     }
   },
   "health_distribution_2023": {
