@@ -1,0 +1,21 @@
+[Unit]
+Description=BioGuard backend API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@SERVICE_USER@
+Group=@SERVICE_GROUP@
+WorkingDirectory=@PROJECT_DIR@
+EnvironmentFile=@PROJECT_DIR@/.env
+Environment=HOST=127.0.0.1
+Environment=PORT=8000
+ExecStart=@PROJECT_DIR@/.venv/bin/python -m backend.run
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
