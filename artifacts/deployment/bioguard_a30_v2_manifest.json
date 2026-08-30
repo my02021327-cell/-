@@ -1,0 +1,443 @@
+{
+  "system_id": "A30_INVERSE_ERROR_RELIABILITY_WEIGHT_V2",
+  "model_version": "2.0.0",
+  "supported_horizons": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "targets": [
+    "CH4_m3d_observed",
+    "biogas_AB_m3d"
+  ],
+  "expert_pool": [
+    "B10",
+    "B11",
+    "M2",
+    "M1F",
+    "RIDGE"
+  ],
+  "training_period": {
+    "start": "2018-01-01",
+    "end": "2022-12-31"
+  },
+  "selection_period_new_horizons": {
+    "start": "2018-01-01",
+    "end": "2021-12-31"
+  },
+  "validation_period": {
+    "start": "2022-01-01",
+    "end": "2022-12-31"
+  },
+  "retrospective_evaluation_period": {
+    "start": "2023-01-01",
+    "end": "2023-09-17"
+  },
+  "availability_rules": {
+    "B10": "CURRENT_TARGET_OBSERVED",
+    "B11": "LAST_OBSERVATION_AVAILABLE_NO_MAX_AGE",
+    "M2": "CURRENT_TARGET_OBSERVED_AND_KINETIC_STATE_AVAILABLE",
+    "M1F": "KINETIC_STATE_COVERAGE_GTE_0.90",
+    "RIDGE": "PREPROCESSOR_TRANSFORM_AND_FINITE_PREDICTION"
+  },
+  "a30": {
+    "minimum_matured_errors": 20,
+    "weight_formula": "1/(MSE+epsilon)",
+    "epsilon": "max(1e-12,1e-8*variance_of_mature_truth)",
+    "fallback_observed": [
+      "B10",
+      "M2",
+      "RIDGE",
+      "M1F",
+      "B11"
+    ],
+    "fallback_missing": [
+      "B11",
+      "RIDGE",
+      "M1F"
+    ]
+  },
+  "purity": {
+    "horizon": 1,
+    "method": "DERIVED_FROM_CH4_AND_BIOGAS_FORECAST",
+    "formula": "100 * CH4_h1 / biogas_h1"
+  },
+  "models": {
+    "CH4_m3d_observed__h1": {
+      "k": 0.35,
+      "kernel_max_lag": 19,
+      "minimum_kernel_coverage": 0.9,
+      "tau_res": 14,
+      "m1f": {
+        "beta0": 1381.7548372535477,
+        "beta1": 27.641483187029085,
+        "n_train": 1099
+      },
+      "m1f_current": {
+        "beta0": 1154.3159292784962,
+        "beta1": 28.763329121759426,
+        "n_train": 1099
+      },
+      "ridge": {
+        "alpha": 10.0,
+        "features": [
+          "feed_AB_tpd",
+          "feed_A",
+          "feed_B"
+        ],
+        "n_train": 1109
+      },
+      "spec_provenance": "PHASE11_LOCKED"
+    },
+    "CH4_m3d_observed__h2": {
+      "k": 0.35,
+      "kernel_max_lag": 19,
+      "minimum_kernel_coverage": 0.9,
+      "tau_res": 14,
+      "m1f": {
+        "beta0": 1503.1883795143278,
+        "beta1": 27.041463386524793,
+        "n_train": 1097
+      },
+      "m1f_current": {
+        "beta0": 1154.3159292784962,
+        "beta1": 28.763329121759426,
+        "n_train": 1099
+      },
+      "ridge": {
+        "alpha": 10.0,
+        "features": [
+          "feed_AB_tpd",
+          "feed_A",
+          "feed_B"
+        ],
+        "n_train": 1108
+      },
+      "spec_provenance": "V2_DEVELOPMENT_2018_2021"
+    },
+    "CH4_m3d_observed__h3": {
+      "k": 0.35,
+      "kernel_max_lag": 19,
+      "minimum_kernel_coverage": 0.9,
+      "tau_res": 21,
+      "m1f": {
+        "beta0": 1628.7946801914381,
+        "beta1": 26.40925254108927,
+        "n_train": 1095
+      },
+      "m1f_current": {
+        "beta0": 1154.3159292784962,
+        "beta1": 28.763329121759426,
+        "n_train": 1099
+      },
+      "ridge": {
+        "alpha": 10.0,
+        "features": [
+          "feed_AB_tpd",
+          "feed_A",
+          "feed_B"
+        ],
+        "n_train": 1107
+      },
+      "spec_provenance": "PHASE11_LOCKED"
+    },
+    "CH4_m3d_observed__h4": {
+      "k": 0.35,
+      "kernel_max_lag": 19,
+      "minimum_kernel_coverage": 0.9,
+      "tau_res": 14,
+      "m1f": {
+        "beta0": 1784.4267757051637,
+        "beta1": 25.595878834452307,
+        "n_train": 1094
+      },
+      "m1f_current": {
+        "beta0": 1154.3159292784962,
+        "beta1": 28.763329121759426,
+        "n_train": 1099
+      },
+      "ridge": {
+        "alpha": 10.0,
+        "features": [
+          "feed_AB_tpd",
+          "feed_A",
+          "feed_B"
+        ],
+        "n_train": 1106
+      },
+      "spec_provenance": "V2_DEVELOPMENT_2018_2021"
+    },
+    "CH4_m3d_observed__h5": {
+      "k": 0.35,
+      "kernel_max_lag": 19,
+      "minimum_kernel_coverage": 0.9,
+      "tau_res": 14,
+      "m1f": {
+        "beta0": 2018.6334674937516,
+        "beta1": 24.428747224526397,
+        "n_train": 1093
+      },
+      "m1f_current": {
+        "beta0": 1154.3159292784962,
+        "beta1": 28.763329121759426,
+        "n_train": 1099
+      },
+      "ridge": {
+        "alpha": 1.0,
+        "features": [
+          "feed_AB_tpd",
+          "feed_A",
+          "feed_B"
+        ],
+        "n_train": 1106
+      },
+      "spec_provenance": "V2_DEVELOPMENT_2018_2021"
+    },
+    "CH4_m3d_observed__h6": {
+      "k": 0.35,
+      "kernel_max_lag": 19,
+      "minimum_kernel_coverage": 0.9,
+      "tau_res": 14,
+      "m1f": {
+        "beta0": 2237.1176411930837,
+        "beta1": 23.34103414008361,
+        "n_train": 1093
+      },
+      "m1f_current": {
+        "beta0": 1154.3159292784962,
+        "beta1": 28.763329121759426,
+        "n_train": 1099
+      },
+      "ridge": {
+        "alpha": 10.0,
+        "features": [
+          "feed_AB_tpd",
+          "feed_A",
+          "feed_B"
+        ],
+        "n_train": 1106
+      },
+      "spec_provenance": "V2_DEVELOPMENT_2018_2021"
+    },
+    "CH4_m3d_observed__h7": {
+      "k": 0.35,
+      "kernel_max_lag": 19,
+      "minimum_kernel_coverage": 0.9,
+      "tau_res": 30,
+      "m1f": {
+        "beta0": 2407.725665340096,
+        "beta1": 22.504910058678988,
+        "n_train": 1094
+      },
+      "m1f_current": {
+        "beta0": 1154.3159292784962,
+        "beta1": 28.763329121759426,
+        "n_train": 1099
+      },
+      "ridge": {
+        "alpha": 10.0,
+        "features": [
+          "feed_AB_tpd",
+          "feed_A",
+          "feed_B"
+        ],
+        "n_train": 1106
+      },
+      "spec_provenance": "PHASE11_LOCKED"
+    },
+    "biogas_AB_m3d__h1": {
+      "k": 0.35,
+      "kernel_max_lag": 19,
+      "minimum_kernel_coverage": 0.9,
+      "tau_res": 21,
+      "m1f": {
+        "beta0": 3003.245761997349,
+        "beta1": 37.715439807710716,
+        "n_train": 1804
+      },
+      "m1f_current": {
+        "beta0": 2556.986368431016,
+        "beta1": 39.962776490914855,
+        "n_train": 1806
+      },
+      "ridge": {
+        "alpha": 10.0,
+        "features": [
+          "feed_AB_tpd",
+          "feed_A",
+          "feed_B"
+        ],
+        "n_train": 1823
+      },
+      "spec_provenance": "PHASE11_LOCKED"
+    },
+    "biogas_AB_m3d__h2": {
+      "k": 0.35,
+      "kernel_max_lag": 19,
+      "minimum_kernel_coverage": 0.9,
+      "tau_res": 14,
+      "m1f": {
+        "beta0": 3348.0698743862417,
+        "beta1": 35.99478622260747,
+        "n_train": 1802
+      },
+      "m1f_current": {
+        "beta0": 2556.986368431016,
+        "beta1": 39.962776490914855,
+        "n_train": 1806
+      },
+      "ridge": {
+        "alpha": 10.0,
+        "features": [
+          "feed_AB_tpd",
+          "feed_A",
+          "feed_B"
+        ],
+        "n_train": 1822
+      },
+      "spec_provenance": "V2_DEVELOPMENT_2018_2021"
+    },
+    "biogas_AB_m3d__h3": {
+      "k": 0.35,
+      "kernel_max_lag": 19,
+      "minimum_kernel_coverage": 0.9,
+      "tau_res": 21,
+      "m1f": {
+        "beta0": 3571.780266812899,
+        "beta1": 34.87240702790161,
+        "n_train": 1801
+      },
+      "m1f_current": {
+        "beta0": 2556.986368431016,
+        "beta1": 39.962776490914855,
+        "n_train": 1806
+      },
+      "ridge": {
+        "alpha": 10.0,
+        "features": [
+          "feed_AB_tpd",
+          "feed_A",
+          "feed_B"
+        ],
+        "n_train": 1821
+      },
+      "spec_provenance": "PHASE11_LOCKED"
+    },
+    "biogas_AB_m3d__h4": {
+      "k": 0.35,
+      "kernel_max_lag": 19,
+      "minimum_kernel_coverage": 0.9,
+      "tau_res": 14,
+      "m1f": {
+        "beta0": 3848.19717936817,
+        "beta1": 33.47717962290985,
+        "n_train": 1800
+      },
+      "m1f_current": {
+        "beta0": 2556.986368431016,
+        "beta1": 39.962776490914855,
+        "n_train": 1806
+      },
+      "ridge": {
+        "alpha": 10.0,
+        "features": [
+          "feed_AB_tpd",
+          "feed_A",
+          "feed_B"
+        ],
+        "n_train": 1820
+      },
+      "spec_provenance": "V2_DEVELOPMENT_2018_2021"
+    },
+    "biogas_AB_m3d__h5": {
+      "k": 0.35,
+      "kernel_max_lag": 19,
+      "minimum_kernel_coverage": 0.9,
+      "tau_res": 14,
+      "m1f": {
+        "beta0": 4145.552797111016,
+        "beta1": 31.976321732729705,
+        "n_train": 1799
+      },
+      "m1f_current": {
+        "beta0": 2556.986368431016,
+        "beta1": 39.962776490914855,
+        "n_train": 1806
+      },
+      "ridge": {
+        "alpha": 10.0,
+        "features": [
+          "feed_AB_tpd",
+          "feed_A",
+          "feed_B"
+        ],
+        "n_train": 1819
+      },
+      "spec_provenance": "V2_DEVELOPMENT_2018_2021"
+    },
+    "biogas_AB_m3d__h6": {
+      "k": 0.35,
+      "kernel_max_lag": 19,
+      "minimum_kernel_coverage": 0.9,
+      "tau_res": 21,
+      "m1f": {
+        "beta0": 4441.900502870108,
+        "beta1": 30.476067866591787,
+        "n_train": 1798
+      },
+      "m1f_current": {
+        "beta0": 2556.986368431016,
+        "beta1": 39.962776490914855,
+        "n_train": 1806
+      },
+      "ridge": {
+        "alpha": 10.0,
+        "features": [
+          "feed_AB_tpd",
+          "feed_A",
+          "feed_B"
+        ],
+        "n_train": 1818
+      },
+      "spec_provenance": "V2_DEVELOPMENT_2018_2021"
+    },
+    "biogas_AB_m3d__h7": {
+      "k": 0.35,
+      "kernel_max_lag": 19,
+      "minimum_kernel_coverage": 0.9,
+      "tau_res": 30,
+      "m1f": {
+        "beta0": 4755.331808740072,
+        "beta1": 28.91093662377292,
+        "n_train": 1797
+      },
+      "m1f_current": {
+        "beta0": 2556.986368431016,
+        "beta1": 39.962776490914855,
+        "n_train": 1806
+      },
+      "ridge": {
+        "alpha": 10.0,
+        "features": [
+          "feed_AB_tpd",
+          "feed_A",
+          "feed_B"
+        ],
+        "n_train": 1817
+      },
+      "spec_provenance": "PHASE11_LOCKED"
+    }
+  },
+  "provenance": {
+    "phase11_lock_sha256": "8b2b50d2f2a4b8b1340b14dec32233b6dddfca81ec2ade7b45604c425b521bfc",
+    "phase11_manifest_sha256": "c39188253423063b4e67dac17c3e3a9500fdde189987a7790323f71917a19abd",
+    "process_sha256": "c47bda02da2352799218469a5cca7fb63cb2b5acd87b6e1e6105ba213be21105",
+    "feature_sha256": "cf4b54b525c613f92b5bf114f2194b88e01d8719e1ec23ff0cac32c1e011b5d1",
+    "new_horizon_spec": "/Users/JinU-Lim/Desktop/project/outputs/v2/v2_model_spec_lock.json",
+    "reliability_seed": "/Users/JinU-Lim/Desktop/project/artifacts/deployment/a30_reliability_seed.parquet"
+  }
+}
